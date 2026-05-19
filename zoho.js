@@ -258,20 +258,23 @@ const Zoho = (() => {
     return all.map(r => ({
       id:                r.id,
       jobId:             r[JF.jobId]             || '—',
-      title:             r[JF.title]             || '—',
       status:            r[JF.status]            || '—',
       placementCategory: r[JF.placementCategory] || '—',
-      clientName:        r[JF.clientName]        || '—',
-      department:        r[JF.department]        || '—',
-      numPositions:      r[JF.numPositions]      || 0,
-      targetDate:        r[JF.targetDate]        || null,
-      dateOpened:        r[JF.dateOpened]        || null,
+      hostingCompany:    r[JF.hostingCompany]    || '—',
+      positionName:      r[JF.positionName]      || '—',
       city:              r[JF.city]              || '—',
       state:             r[JF.state]             || '—',
-      country:           r[JF.country]           || '—',
-      assignedTo:        Array.isArray(r[JF.assignedTo])
-                           ? r[JF.assignedTo].map(a => a.name || a).join(', ')
-                           : r[JF.assignedTo] || '—',
+      department:        r[JF.department]        || '—',
+      numPositions:      r[JF.numPositions]      || 0,
+      salary:            r[JF.salary]            || '—',
+      paymentFrequency:  r[JF.paymentFrequency]  || '—',
+      housingAvail:      r[JF.housingAvail]      || '—',
+      targetDate:        r[JF.targetDate]        || null,
+      contractLength:    r[JF.contractLength]    || '—',
+      j1ProgramType:     Array.isArray(r[JF.j1ProgramType])
+                           ? r[JF.j1ProgramType].join('; ')
+                           : r[JF.j1ProgramType] || '—',
+      clientName:        r[JF.clientName]        || '—',
     }));
   }
 

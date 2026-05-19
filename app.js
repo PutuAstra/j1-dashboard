@@ -813,17 +813,19 @@ const App = (() => {
     const filled = allJ1.filter(j => /filled|closed/i.test(j.status));
 
     const REQ_COLS = [
-      { label: '#',              key: null },
-      { label: 'Job ID',         key: 'jobId',        get: j => (j.jobId || '').toLowerCase() },
-      { label: 'Position Title', key: 'title',        get: j => (j.title || '').toLowerCase() },
-      { label: 'Client',         key: 'clientName',   get: j => (j.clientName || '').toLowerCase() },
-      { label: 'Department',     key: 'department',   get: j => (j.department || '').toLowerCase() },
-      { label: 'Openings',       key: 'numPositions', get: j => j.numPositions || 0 },
-      { label: 'Location',       key: 'city',         get: j => (j.city || '').toLowerCase() },
-      { label: 'Date Opened',    key: 'dateOpened',   get: j => j.dateOpened || '' },
-      { label: 'Target Date',    key: 'targetDate',   get: j => j.targetDate || '' },
-      { label: 'Assigned To',    key: 'assignedTo',   get: j => (j.assignedTo || '').toLowerCase() },
-      { label: 'Status',         key: 'status',       get: j => (j.status || '').toLowerCase() },
+      { label: '#',                  key: null },
+      { label: 'Hosting Company',    key: 'hostingCompany',   get: j => (j.hostingCompany || '').toLowerCase() },
+      { label: 'Position Name',      key: 'positionName',     get: j => (j.positionName || '').toLowerCase() },
+      { label: 'City',               key: 'city',             get: j => (j.city || '').toLowerCase() },
+      { label: 'Department',         key: 'department',       get: j => (j.department || '').toLowerCase() },
+      { label: 'Requisition',        key: 'numPositions',     get: j => j.numPositions || 0 },
+      { label: 'Salary',             key: 'salary',           get: j => String(j.salary || '') },
+      { label: 'Payment Frequency',  key: 'paymentFrequency', get: j => (j.paymentFrequency || '').toLowerCase() },
+      { label: 'Housing Availability', key: 'housingAvail',   get: j => (j.housingAvail || '').toLowerCase() },
+      { label: 'Target Date',        key: 'targetDate',       get: j => j.targetDate || '' },
+      { label: 'Contract Length',    key: 'contractLength',   get: j => (j.contractLength || '').toLowerCase() },
+      { label: 'J1 Program Type',    key: 'j1ProgramType',    get: j => (j.j1ProgramType || '').toLowerCase() },
+      { label: 'Client Name',        key: 'clientName',       get: j => (j.clientName || '').toLowerCase() },
     ];
 
     function rSortIcon(key) {
@@ -862,16 +864,18 @@ const App = (() => {
               ${sorted.map((j, i) => `
                 <tr>
                   <td class="row-num">${i + 1}</td>
-                  <td style="font-family:monospace;font-size:0.78rem">${j.jobId}</td>
-                  <td><strong>${j.title}</strong></td>
-                  <td>${j.clientName}</td>
+                  <td><strong>${j.hostingCompany}</strong></td>
+                  <td>${j.positionName}</td>
+                  <td>${[j.city, j.state].filter(v => v && v !== '—').join(', ') || '—'}</td>
                   <td>${j.department}</td>
                   <td style="text-align:center;font-weight:600">${j.numPositions || '—'}</td>
-                  <td>${[j.city, j.state, j.country].filter(v => v && v !== '—').join(', ') || '—'}</td>
-                  <td>${formatDate(j.dateOpened)}</td>
+                  <td>${j.salary !== '—' ? '$' + j.salary : '—'}</td>
+                  <td>${j.paymentFrequency}</td>
+                  <td>${j.housingAvail}</td>
                   <td>${formatDate(j.targetDate)}</td>
-                  <td>${j.assignedTo}</td>
-                  <td>${badge(j.status)}</td>
+                  <td>${j.contractLength}</td>
+                  <td style="font-size:0.75rem">${j.j1ProgramType}</td>
+                  <td>${j.clientName}</td>
                 </tr>
               `).join('')}
             </tbody>
