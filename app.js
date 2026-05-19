@@ -979,13 +979,17 @@ const App = (() => {
               </div>
             `).join('');
         })()}
-        <!-- Filters inline with stat cards -->
-        <div class="stat-card" style="display:flex;flex-direction:column;gap:8px;justify-content:center">
-          <select class="filter-select" id="reqFilterDept" style="margin:0">
+        <!-- Filters inline with stat cards — each in its own wider card -->
+        <div class="stat-card" style="grid-column:span 2;justify-content:center">
+          <div style="font-size:0.7rem;color:var(--muted);margin-bottom:5px;font-weight:600">Department</div>
+          <select class="filter-select" id="reqFilterDept" style="width:100%;margin:0">
             <option value="">All Departments</option>
             ${deptOptions.map(d => `<option value="${d.toLowerCase()}" ${_reqFilterDept === d.toLowerCase() ? 'selected' : ''}>${d}</option>`).join('')}
           </select>
-          <select class="filter-select" id="reqFilterHousing" style="margin:0">
+        </div>
+        <div class="stat-card" style="grid-column:span 2;justify-content:center">
+          <div style="font-size:0.7rem;color:var(--muted);margin-bottom:5px;font-weight:600">Housing Availability</div>
+          <select class="filter-select" id="reqFilterHousing" style="width:100%;margin:0">
             <option value="">All Housing</option>
             ${housingOptions.map(h => `<option value="${h.toLowerCase()}" ${_reqFilterHousing === h.toLowerCase() ? 'selected' : ''}>${h}</option>`).join('')}
           </select>
