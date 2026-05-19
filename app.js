@@ -554,6 +554,8 @@ const App = (() => {
   // ═══════════════════════════════════════════════════════════
   //  PAGE: TRAVEL
   // ═══════════════════════════════════════════════════════════
+  let _activeTravelTab = 'joining';
+
   async function renderTravel() {
     const mc = document.getElementById('main-content');
     mc.innerHTML = skeletonHTML();
@@ -561,33 +563,43 @@ const App = (() => {
     const participants = await loadData();
     if (!participants) { mc.innerHTML = connectPromptHTML(); return; }
 
-    const booked    = participants.filter(p =>  p.flightBooked === true || /yes|booked|confirmed/i.test(String(p.flightBooked)));
-    const notBooked = participants.filter(p => !(p.flightBooked === true || /yes|booked|confirmed/i.test(String(p.flightBooked))));
+    // ── Joining (outbound) helpers ───────────────────────────
+    const joiningBooked    = participants.filter(p =>  p.flightBooked === true || /yes|booked|confirmed/i.test(String(p.flightBooked)));
+    const joiningNotBooked = participants.filter(p => !(p.flightBooked === true || /yes|booked|confirmed/i.test(String(p.flightBooked))));
 
-    function travelTable(list) {
+    // ── Returning helpers ────────────────────────────────────
+    const returnBooked    = participants.filter(p => /yes|booked|confirmed/i.test(String(p.returnFlightStatus)));
+    const returnNotBooked = participants.filter(p => !/yes|booked|confirmed/i.test(String(p.returnFlightStatus)));
+
+    function joiningTable(list) {
       if (!list.length) return `<div class="empty-state"><p>No participants in this category.</p></div>`;
       return `
         <div class="table-wrap">
           <table>
             <thead>
               <tr>
-                <th>Name</th><th>Country</th><th>Route</th>
+                <th>#</th><th>Name</th><th>Country</th><th>Route</th>
                 <th>Departure</th><th>Arrival</th>
-                <th>Airline</th><th>PNR</th><th>Gateway</th><th>Flight</th>
+                <th>Airline</th><th>PNR</th><th>Gateway</th><th>Pick-Up</th>
+                <th>Flight Status</th><th>Ticket Payment</th><th>Pricing</th>
               </tr>
             </thead>
             <tbody>
-              ${list.map(p => `
+              ${list.map((p, i) => `
                 <tr>
+                  <td class="row-num">${i + 1}</td>
                   <td><strong>${p.name}</strong></td>
                   <td>${p.country}</td>
-                  <td style="font-size:0.8rem">${p.tripFrom} → ${p.tripTo}</td>
+                  <td style="font-size:0.8rem;white-space:nowrap">${p.tripFrom} → ${p.tripTo}</td>
                   <td>${formatDate(p.departureDate)}</td>
                   <td>${formatDate(p.arrivalDate)}</td>
                   <td>${p.airline}</td>
                   <td style="font-family:monospace;font-size:0.82rem">${p.pnrNumber}</td>
                   <td>${p.airportGateway}</td>
+                  <td>${p.airportPickup}</td>
                   <td>${flightBadge(p.flightBooked)}</td>
+                  <td>${badge(p.ticketPayStatus)}</td>
+                  <td>${p.ticketPricing ? '$' + p.ticketPricing : '—'}</td>
                 </tr>
               `).join('')}
             </tbody>
@@ -596,60 +608,108 @@ const App = (() => {
       `;
     }
 
-    mc.innerHTML = `
-      <div class="page-header">
-        <h1>Travel</h1>
-        <p>Track flight booking status for all participants</p>
-      </div>
+    function returningTable(list) {
+      if (!list.length) return `<div class="empty-state"><p>No participants in this category.</p></div>`;
+      return `
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>#</th><th>Name</th><th>Country</th><th>Route</th>
+                <th>Departure</th><th>Arrival</th>
+                <th>Airline</th><th>PNR</th><th>Gateway</th>
+                <th>Flight Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${list.map((p, i) => `
+                <tr>
+                  <td class="row-num">${i + 1}</td>
+                  <td><strong>${p.name}</strong></td>
+                  <td>${p.country}</td>
+                  <td style="font-size:0.8rem;white-space:nowrap">${p.returnTripFrom} → ${p.returnTripTo}</td>
+                  <td>${formatDate(p.returnDeparture)}</td>
+                  <td>${formatDate(p.returnArrival)}</td>
+                  <td>${p.returnAirline}</td>
+                  <td style="font-family:monospace;font-size:0.82rem">${p.returnPNR}</td>
+                  <td>${p.returnGateway}</td>
+                  <td>${badge(p.returnFlightStatus)}</td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        </div>
+      `;
+    }
 
-      <div class="stat-grid">
-        <div class="stat-card good">
-          <div class="stat-value">${booked.length}</div>
-          <div class="stat-label">Flights Booked</div>
-        </div>
-        <div class="stat-card accent">
-          <div class="stat-value">${notBooked.length}</div>
-          <div class="stat-label">Not Yet Booked</div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-value">${participants.length ? Math.round(booked.length / participants.length * 100) : 0}%</div>
-          <div class="stat-label">Booking Rate</div>
-        </div>
-      </div>
+    function renderTravelContent() {
+      const isJoining = _activeTravelTab === 'joining';
+      const booked    = isJoining ? joiningBooked    : returnBooked;
+      const notBooked = isJoining ? joiningNotBooked : returnNotBooked;
+      const total     = participants.length;
 
-      <div class="chart-grid" style="grid-template-columns: 280px 1fr; align-items: start;">
+      return `
+        <div class="stat-grid">
+          <div class="stat-card good">
+            <div class="stat-value">${booked.length}</div>
+            <div class="stat-label">Flights Booked</div>
+          </div>
+          <div class="stat-card accent">
+            <div class="stat-value">${notBooked.length}</div>
+            <div class="stat-label">Not Yet Booked</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value">${total ? Math.round(booked.length / total * 100) : 0}%</div>
+            <div class="stat-label">Booking Rate</div>
+          </div>
+        </div>
+
         <div class="card">
-          <div class="card-header"><div class="card-title">Booking Status</div></div>
-          <canvas id="chartTravelPie" height="200"></canvas>
+          <div class="card-header"><div class="card-title accent" style="color:var(--accent)">Not Yet Booked (${notBooked.length})</div></div>
+          ${isJoining ? joiningTable(notBooked) : returningTable(notBooked)}
         </div>
+
         <div class="card">
-          <div class="card-header"><div class="card-title">Not Yet Booked</div></div>
-          ${travelTable(notBooked)}
+          <div class="card-header"><div class="card-title" style="color:#166534">✓ Flights Booked (${booked.length})</div></div>
+          ${isJoining ? joiningTable(booked) : returningTable(booked)}
         </div>
-      </div>
+      `;
+    }
 
-      <div class="card">
-        <div class="card-header"><div class="card-title" style="color:#166534">✓ Flights Booked</div></div>
-        ${travelTable(booked)}
-      </div>
-    `;
+    function renderTravelPage() {
+      mc.innerHTML = `
+        <div class="page-header">
+          <h1>Travel</h1>
+          <p>Track flight booking status for all participants</p>
+        </div>
 
-    new Chart(document.getElementById('chartTravelPie').getContext('2d'), {
-      type: 'doughnut',
-      data: {
-        labels: ['Booked', 'Not Booked'],
-        datasets: [{ data: [booked.length, notBooked.length],
-          backgroundColor: ['#16a34a', '#B01A18'], borderWidth: 2,
-          borderColor: getComputedStyle(document.documentElement).getPropertyValue('--card').trim() || '#fff' }]
-      },
-      options: {
-        responsive: true, maintainAspectRatio: true,
-        plugins: {
-          legend: { position: 'bottom', labels: { font: { size: 12, family: 'Inter' }, padding: 12 } },
-          datalabels: { display: false }
-        }
-      }
-    });
+        <div class="participants-sticky-header">
+          <div class="tab-bar" id="travelTabBar">
+            <button class="tab-btn ${_activeTravelTab === 'joining'   ? 'active' : ''}" data-ttab="joining">
+              ✈️ Joining
+              <span class="tab-count-badge">${joiningBooked.length + joiningNotBooked.length}</span>
+            </button>
+            <button class="tab-btn ${_activeTravelTab === 'returning' ? 'active' : ''}" data-ttab="returning">
+              🏠 Returning
+              <span class="tab-count-badge">${returnBooked.length + returnNotBooked.length}</span>
+            </button>
+          </div>
+        </div>
+
+        <div id="travelContent" style="margin-top:12px">
+          ${renderTravelContent()}
+        </div>
+      `;
+
+      document.getElementById('travelTabBar').addEventListener('click', e => {
+        const btn = e.target.closest('[data-ttab]');
+        if (!btn) return;
+        _activeTravelTab = btn.dataset.ttab;
+        renderTravelPage();
+      });
+    }
+
+    renderTravelPage();
   }
 
   // ═══════════════════════════════════════════════════════════
