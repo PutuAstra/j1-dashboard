@@ -1177,9 +1177,14 @@ const App = (() => {
     if (_refreshTimer) { clearInterval(_refreshTimer); _refreshTimer = null; }
   }
 
+  function closeSidebar() {
+    document.getElementById('sidebar')?.classList.remove('open');
+    document.getElementById('sidebarOverlay')?.classList.remove('show');
+  }
+
   function init() {
     document.querySelectorAll('.nav-link').forEach(link =>
-      link.addEventListener('click', e => { e.preventDefault(); navigate(link.dataset.page); })
+      link.addEventListener('click', e => { e.preventDefault(); navigate(link.dataset.page); closeSidebar(); })
     );
     navigate('overview');
 
