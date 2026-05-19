@@ -578,7 +578,7 @@ const App = (() => {
       _participants = null; // clear cache
       renderCurrentPage();
       updateLastRefresh();
-    }, 60_000);
+    }, 600_000);
   }
 
   function stopAutoRefresh() {
