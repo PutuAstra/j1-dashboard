@@ -294,6 +294,32 @@ a { color: inherit; text-decoration: none; }
   margin-bottom: 14px;
 }
 
+/* ── Overview compact grid ──────────────────────────────── */
+.ov-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+.ov-card {
+  padding: 10px 12px 8px !important;
+}
+.ov-card-title {
+  font-size: 0.78rem;
+  font-weight: 600;
+  margin-bottom: 5px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.ov-sub {
+  font-size: 0.7rem;
+  font-weight: 400;
+  color: var(--muted);
+}
+.ov-full {
+  grid-column: 1 / -1;
+}
+
 /* ─────────────────────────────────────────────────────────────
    TABLE
 ───────────────────────────────────────────────────────── */
@@ -619,6 +645,8 @@ th.sorted {
   .stat-grid { grid-template-columns: repeat(2, 1fr); gap: 8px; }
   .stat-value { font-size: 1.3rem; }
   .chart-grid { grid-template-columns: 1fr; gap: 10px; }
+  .ov-grid { grid-template-columns: 1fr 1fr; gap: 6px; }
+  .ov-full { grid-column: 1 / -1; }
 
   .card { padding: 12px; }
 

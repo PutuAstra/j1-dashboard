@@ -179,54 +179,48 @@ const App = (() => {
     } catch(e) { /* job openings optional */ }
 
     mc.innerHTML = `
-      <div class="page-header">
-        <h1>Overview</h1>
-        <p>Live summary from Zoho CRM & Recruit — ${s.total} participants total</p>
+      <div class="page-header" style="padding-bottom:8px">
+        <h1 style="font-size:1.15rem;margin-bottom:2px">Overview</h1>
+        <p style="margin:0;font-size:0.78rem">Live summary · ${s.total} participants total</p>
       </div>
 
-      <!-- Row 1: Top Countries + Stage Progress -->
-      <div class="chart-grid" style="grid-template-columns: 1fr 1fr; align-items:start">
-        <div class="card">
-          <div class="card-header"><div><div class="card-title">Top Countries</div><div class="card-sub">Participants by nationality</div></div></div>
-          <canvas id="chartCountry" height="220"></canvas>
+      <div class="ov-grid">
+        <!-- Top Countries -->
+        <div class="card ov-card">
+          <div class="ov-card-title">Top Countries</div>
+          <canvas id="chartCountry" height="130"></canvas>
         </div>
-        <div class="card">
-          <div class="card-header"><div><div class="card-title">Stage Progress</div><div class="card-sub">Participants in active stages</div></div></div>
-          <canvas id="chartStage" height="220"></canvas>
+        <!-- Stage Progress -->
+        <div class="card ov-card">
+          <div class="ov-card-title">Stage Progress</div>
+          <canvas id="chartStage" height="130"></canvas>
         </div>
-      </div>
-
-      <!-- Row 2: Housing + Travel -->
-      <div class="chart-grid" style="grid-template-columns: 1fr 1fr 1fr; align-items:start">
-        <div class="card">
-          <div class="card-header"><div><div class="card-title">Housing</div><div class="card-sub">${housingRateOv}% housing rate</div></div></div>
-          <canvas id="chartHousing" height="200"></canvas>
+        <!-- Sponsor -->
+        <div class="card ov-card">
+          <div class="ov-card-title">Placement by Sponsor <span class="ov-sub">${placed.length} placed</span></div>
+          <canvas id="chartSponsor" height="130"></canvas>
         </div>
-        <div class="card">
-          <div class="card-header"><div><div class="card-title">✈️ Joining Flights</div><div class="card-sub">Visa approved — ${joiningOv.length} participants</div></div></div>
-          <canvas id="chartJoining" height="200"></canvas>
+        <!-- Housing -->
+        <div class="card ov-card">
+          <div class="ov-card-title">Housing <span class="ov-sub">${housingRateOv}% rate</span></div>
+          <canvas id="chartHousing" height="130"></canvas>
         </div>
-        <div class="card">
-          <div class="card-header"><div><div class="card-title">🏠 Return Flights</div><div class="card-sub">USA Onboard + Completed — ${returningOv.length}</div></div></div>
-          <canvas id="chartReturning" height="200"></canvas>
+        <!-- Joining Flights -->
+        <div class="card ov-card">
+          <div class="ov-card-title">✈️ Joining Flights <span class="ov-sub">${joiningOv.length} visa approved</span></div>
+          <canvas id="chartJoining" height="130"></canvas>
         </div>
-      </div>
-
-      <!-- Row 3: Requisition by client -->
-      ${reqActive.length ? `
-      <div class="card">
-        <div class="card-header">
-          <div><div class="card-title">Requisition</div><div class="card-sub">Active J1 openings — ${reqActive.length} hosting companies · ${reqTotalOpenings} total openings</div></div>
+        <!-- Return Flights -->
+        <div class="card ov-card">
+          <div class="ov-card-title">🏠 Return Flights <span class="ov-sub">${returningOv.length} onboard/completed</span></div>
+          <canvas id="chartReturning" height="130"></canvas>
         </div>
-        <canvas id="chartReq" height="120"></canvas>
-      </div>` : ''}
-
-      <!-- Row 4: Successful Placement by Sponsor -->
-      <div class="card">
-        <div class="card-header">
-          <div><div class="card-title">Successful Placement by Sponsor</div><div class="card-sub">USA Onboard + Program Completed — ${placed.length} total</div></div>
-        </div>
-        <canvas id="chartSponsor" height="120"></canvas>
+        <!-- Requisition full width -->
+        ${reqActive.length ? `
+        <div class="card ov-card ov-full">
+          <div class="ov-card-title">Requisition <span class="ov-sub">${reqActive.length} hosting companies · ${reqTotalOpenings} openings</span></div>
+          <canvas id="chartReq" height="75"></canvas>
+        </div>` : ''}
       </div>
     `;
 
@@ -238,15 +232,19 @@ const App = (() => {
       type: 'doughnut',
       data: { labels, datasets: [{ data, backgroundColor: colors || COLORS, borderWidth: 2, borderColor: cardBg() }] },
       options: { responsive: true, maintainAspectRatio: true,
-        plugins: { legend: { position: 'bottom', labels: { font: { size: 11, family: 'Inter' }, padding: 10, boxWidth: 12 } }, datalabels: { display: false } } }
+        plugins: { legend: { position: 'bottom', labels: { font: { size: 10, family: 'Inter' }, padding: 6, boxWidth: 10 } }, datalabels: { display: false } } }
     });
 
     const hBarOpts = (labels, data, color) => ({
       type: 'bar',
-      data: { labels, datasets: [{ data, backgroundColor: color || '#1B3A6B', borderRadius: 6 }] },
+      data: { labels, datasets: [{ data, backgroundColor: color || '#1B3A6B', borderRadius: 4 }] },
       options: { responsive: true, maintainAspectRatio: true, indexAxis: 'y',
         plugins: { legend: { display: false }, datalabels: { display: false } },
-        scales: { x: { beginAtZero: true, ticks: { font: { size: 11 } } }, y: { ticks: { font: { size: 11 } } } } }
+        scales: {
+          x: { beginAtZero: true, ticks: { font: { size: 9 } }, grid: { display: false } },
+          y: { ticks: { font: { size: 9 } } }
+        }
+      }
     });
 
     // Top Countries — horizontal bar
