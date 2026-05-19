@@ -560,11 +560,44 @@ const App = (() => {
     updateZohoStatus();
   }
 
+  // Auto-refresh every 60 seconds
+  let _refreshTimer = null;
+
+  function updateLastRefresh() {
+    const el = document.getElementById('lastRefresh');
+    if (el) {
+      el.textContent = '🔄 ' + new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+      el.style.display = 'block';
+    }
+  }
+
+  function startAutoRefresh() {
+    stopAutoRefresh();
+    updateLastRefresh();
+    _refreshTimer = setInterval(() => {
+      _participants = null; // clear cache
+      renderCurrentPage();
+      updateLastRefresh();
+    }, 60_000);
+  }
+
+  function stopAutoRefresh() {
+    if (_refreshTimer) { clearInterval(_refreshTimer); _refreshTimer = null; }
+  }
+
   function init() {
     document.querySelectorAll('.nav-link').forEach(link =>
       link.addEventListener('click', e => { e.preventDefault(); navigate(link.dataset.page); })
     );
     navigate('overview');
+
+    // Start auto-refresh if Zoho is connected
+    if (ZohoAuth.isConnected()) startAutoRefresh();
+
+    // Also start auto-refresh after Zoho connects
+    document.getElementById('zohoStatus').addEventListener('click', () => {
+      setTimeout(() => { if (ZohoAuth.isConnected()) startAutoRefresh(); }, 3000);
+    });
   }
 
   return { init, navigate };
