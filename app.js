@@ -231,24 +231,6 @@ const App = (() => {
     `;
 
     // Charts
-    const COLORS = ['#B01A18','#1B3A6B','#16a34a','#d97706','#2563eb','#7c3aed','#db2777','#0891b2'];
-
-    const chartOpts = (labels, data, type = 'doughnut') => ({
-      type,
-      data: {
-        labels,
-        datasets: [{ data, backgroundColor: COLORS, borderWidth: 2,
-          borderColor: getComputedStyle(document.documentElement).getPropertyValue('--card').trim() || '#fff' }]
-      },
-      options: {
-        responsive: true, maintainAspectRatio: true,
-        plugins: {
-          legend: { position: 'right', labels: { font: { size: 12, family: 'Inter' }, padding: 12, boxWidth: 12 } },
-          datalabels: { display: false }
-        }
-      }
-    });
-
     const COLORS = ['#B01A18','#1B3A6B','#16a34a','#d97706','#2563eb','#7c3aed','#db2777','#0891b2','#059669','#dc2626'];
     const cardBg = () => getComputedStyle(document.documentElement).getPropertyValue('--card').trim() || '#fff';
 
