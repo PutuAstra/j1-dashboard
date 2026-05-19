@@ -22,10 +22,28 @@ const CONFIG = {
   ZOHO_DOMAIN: 'https://accounts.zoho.com',
   RECRUIT_API:  'https://recruit.zoho.com/recruit/v2',
 
-  // 4. Your J1 Participants module API name
-  //    → In Zoho Recruit: Settings → Modules → find your J1 module → note the API Name
-  //    → It's usually something like "J1_Participants" or "J1Participants"
+  // 4. Your J1 Participants module API name (Zoho Recruit)
   J1_MODULE: 'J1_Participants',
+
+  // 4b. Zoho CRM — J1 Participants module
+  //     → In Zoho CRM: Settings → Modules → J1 Participants → note the API Name
+  //     → From your URL it appears to be CustomModule22
+  CRM_MODULE: 'CustomModule22',
+
+  // 4c. Zoho CRM field API names
+  //     → CRM: Settings → Modules → J1 Participants → Fields → API Name column
+  CRM_FIELDS: {
+    firstName:     'First_Name',
+    lastName:      'Last_Name',
+    email:         'Email',
+    country:       'Country',
+    phone:         'Phone',
+    gender:        'Gender',
+    appStatus:     'J1_Application_Status',
+    programSource: 'J1_Program_Source',
+    programType:   'Program_Option',        // Intern / Trainee (if exists in CRM)
+    hostCompany:   'Hosting_Company',       // adjust if different
+  },
 
   // 5. Verified field API names from Zoho Recruit → Developer Space → API Names
   FIELDS: {

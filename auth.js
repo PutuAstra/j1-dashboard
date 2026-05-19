@@ -44,7 +44,7 @@ const Auth = (() => {
 // ─────────────────────────────────────────────────────────────
 const ZohoAuth = (() => {
   const TOKEN_KEY = 'zoho_token';
-  const SCOPE     = 'ZohoRecruit.modules.ALL,ZohoRecruit.settings.ALL';
+  const SCOPE     = 'ZohoRecruit.modules.ALL,ZohoRecruit.settings.ALL,ZohoCRM.modules.ALL,ZohoCRM.settings.ALL';
 
   function startOAuth() {
     const params = new URLSearchParams({

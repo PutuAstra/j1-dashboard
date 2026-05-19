@@ -1,16 +1,16 @@
 // ─────────────────────────────────────────────────────────────
-//  ZOHO RECRUIT API CLIENT
+//  ZOHO API CLIENT  (Recruit + CRM combined)
 // ─────────────────────────────────────────────────────────────
 const Zoho = (() => {
 
-  // Cloudflare CORS proxy — routes requests through zoho-proxy worker
+  // Cloudflare CORS proxy
   const PROXY = 'https://zoho-proxy.putuastrawijaya.workers.dev';
 
+  // ── Recruit API request ───────────────────────────────────
   async function request(endpoint, params = {}) {
     const token = ZohoAuth.getToken();
     if (!token) throw new Error('NO_TOKEN');
 
-    // Use proxy URL instead of calling Zoho directly (avoids CORS)
     const url = new URL(`${PROXY}/recruit/v2/${endpoint}`);
     Object.entries(params).forEach(([k, v]) => url.searchParams.set(k, v));
 
@@ -23,8 +23,25 @@ const Zoho = (() => {
     return resp.json();
   }
 
-  // Fetch ALL records from the J1 module (handles pagination automatically)
-  async function getAllParticipants() {
+  // ── CRM API request ───────────────────────────────────────
+  async function crmRequest(endpoint, params = {}) {
+    const token = ZohoAuth.getToken();
+    if (!token) throw new Error('NO_TOKEN');
+
+    const url = new URL(`${PROXY}/crm/v2/${endpoint}`);
+    Object.entries(params).forEach(([k, v]) => url.searchParams.set(k, v));
+
+    const resp = await fetch(url.toString(), {
+      headers: { 'Authorization': `Zoho-oauthtoken ${token}` }
+    });
+
+    if (resp.status === 401) { ZohoAuth.clearToken(); throw new Error('TOKEN_EXPIRED'); }
+    if (!resp.ok) throw new Error(`CRM_API_ERROR_${resp.status}`);
+    return resp.json();
+  }
+
+  // ── Fetch all from Zoho Recruit ───────────────────────────
+  async function getRecruitParticipants() {
     const module = CONFIG.J1_MODULE;
     const F = CONFIG.FIELDS;
     const fields = Object.values(F).join(',');
@@ -38,19 +55,20 @@ const Zoho = (() => {
       page++;
     }
 
-    // Normalize using verified API names
     return all.map(r => ({
+      _source:            'recruit',
       id:                 r.id,
       name:               r[F.name] || [r[F.firstName], r[F.lastName]].filter(Boolean).join(' ') || '—',
       country:            r[F.country]            || '—',
       gender:             r[F.gender]             || '—',
       email:              r[F.email]              || '—',
       programType:        r[F.programType]        || '—',
+      programSource:      r[F.programSources]     || '—',
       eligiblePrograms:   Array.isArray(r[F.eligiblePrograms])
                             ? r[F.eligiblePrograms].join(', ')
                             : r[F.eligiblePrograms] || '—',
       placementStatus:    r[F.appStatus]          || '—',
-      hostCompany:        r[F.hostCompany]        || '—',  // Hosting_Company_2 (Pick List)
+      hostCompany:        r[F.hostCompany]        || '—',
       programStart:       r[F.programStart]       || null,
       programEnd:         r[F.programEnd]         || null,
       sponsorStatus:      r[F.sponsorStatus]      || '—',
@@ -62,16 +80,16 @@ const Zoho = (() => {
       visaAppointment:    r[F.visaAppointment]    || null,
       refLetterStatus:    r[F.refLetterStatus]    || '—',
       // Outbound travel
-      flightBooked:       r[F.flightBooked],               // Flight_Ticket_Status
+      flightBooked:       r[F.flightBooked],
       ticketPayStatus:    r[F.ticketPayStatus]    || '—',
       ticketPricing:      r[F.ticketPricing]      || null,
-      airline:            r[F.airline]            || '—',  // Pick List
-      pnrNumber:          r[F.pnrNumber]          || '—',  // PNR_Number
+      airline:            r[F.airline]            || '—',
+      pnrNumber:          r[F.pnrNumber]          || '—',
       tripFrom:           r[F.tripFrom]           || '—',
       tripTo:             r[F.tripTo]             || '—',
       departureDate:      r[F.departureDate]      || null,
       arrivalDate:        r[F.arrivalDate]        || null,
-      airportGateway:     r[F.airportGateway]     || '—',  // Pick List
+      airportGateway:     r[F.airportGateway]     || '—',
       airportPickup:      r[F.airportPickup]      || '—',
       // Return travel
       returnFlightStatus: r[F.returnFlightStatus] || '—',
@@ -83,6 +101,98 @@ const Zoho = (() => {
       returnTripTo:       r[F.returnTripTo]       || '—',
       returnGateway:      r[F.returnGateway]      || '—',
     }));
+  }
+
+  // ── Fetch all from Zoho CRM ───────────────────────────────
+  async function getCRMParticipants() {
+    const module = CONFIG.CRM_MODULE;
+    const CF = CONFIG.CRM_FIELDS;
+    const fields = Object.values(CF).join(',');
+    let all = [], page = 1, more = true;
+
+    while (more) {
+      const data = await crmRequest(module, { fields, page, per_page: 200 });
+      const records = data.data || [];
+      all = all.concat(records);
+      more = data.info?.more_records === true;
+      page++;
+    }
+
+    return all.map(r => ({
+      _source:            'crm',
+      id:                 'crm_' + r.id,
+      name:               [r[CF.firstName], r[CF.lastName]].filter(Boolean).join(' ') || '—',
+      country:            r[CF.country]       || '—',
+      gender:             r[CF.gender]        || '—',
+      email:              r[CF.email]         || '—',
+      programType:        r[CF.programType]   || '—',
+      programSource:      r[CF.programSource] || '—',
+      eligiblePrograms:   '—',
+      placementStatus:    r[CF.appStatus]     || '—',
+      hostCompany:        r[CF.hostCompany]   || '—',
+      programStart:       null,
+      programEnd:         null,
+      sponsorStatus:      '—',
+      hcInterviewStatus:  '—',
+      // Visa / travel — not applicable at this stage
+      ds2019End:          null,
+      visaStatus:         '—',
+      visaNumber:         '—',
+      visaAppointment:    null,
+      refLetterStatus:    '—',
+      flightBooked:       false,
+      ticketPayStatus:    '—',
+      ticketPricing:      null,
+      airline:            '—',
+      pnrNumber:          '—',
+      tripFrom:           '—',
+      tripTo:             '—',
+      departureDate:      null,
+      arrivalDate:        null,
+      airportGateway:     '—',
+      airportPickup:      '—',
+      returnFlightStatus: '—',
+      returnDeparture:    null,
+      returnArrival:      null,
+      returnAirline:      '—',
+      returnPNR:          '—',
+      returnTripFrom:     '—',
+      returnTripTo:       '—',
+      returnGateway:      '—',
+    }));
+  }
+
+  // ── Fetch from both and merge ─────────────────────────────
+  async function getAllParticipants() {
+    const [recruitData, crmData] = await Promise.allSettled([
+      getRecruitParticipants(),
+      getCRMParticipants(),
+    ]);
+
+    const fromRecruit = recruitData.status === 'fulfilled' ? recruitData.value : [];
+    const fromCRM     = crmData.status     === 'fulfilled' ? crmData.value     : [];
+
+    if (recruitData.status === 'rejected')
+      console.warn('Recruit fetch failed:', recruitData.reason);
+    if (crmData.status === 'rejected')
+      console.warn('CRM fetch failed:', crmData.reason);
+
+    // Merge: Recruit records take priority (they are at later stages)
+    // CRM records are only included if NOT already in Recruit (match by email)
+    const recruitEmails = new Set(
+      fromRecruit.map(p => (p.email || '').toLowerCase()).filter(e => e && e !== '—')
+    );
+
+    const crmOnly = fromCRM.filter(p => {
+      const e = (p.email || '').toLowerCase();
+      return !e || e === '—' || !recruitEmails.has(e);
+    });
+
+    return [...fromCRM.filter(p => {
+      // All CRM records not in Recruit
+      const e = (p.email || '').toLowerCase();
+      return !e || e === '—' || !recruitEmails.has(e);
+    }), ...fromRecruit];
   }
 
   // ── Derived stats ─────────────────────────────────────────

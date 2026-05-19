@@ -521,6 +521,19 @@ tbody tr:hover { background: var(--bg); }
   text-align: center;
 }
 
+/* Source badge (CRM vs Recruit) */
+.source-badge {
+  display: inline-block;
+  padding: 2px 7px;
+  border-radius: 4px;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.source-crm    { background: #dbeafe; color: #1d4ed8; }
+.source-recruit { background: #dcfce7; color: #15803d; }
+
 /* Sortable column headers */
 th.sortable {
   cursor: pointer;

@@ -267,6 +267,7 @@ const App = (() => {
   // Column definitions: label, field key, value getter
   const P_COLS = [
     { label: '#',           key: null,              get: null },
+    { label: 'Source',      key: '_source',         get: p => (p._source || '').toLowerCase() },
     { label: 'Name',        key: 'name',            get: p => (p.name || '').toLowerCase() },
     { label: 'Country',     key: 'country',         get: p => (p.country || '').toLowerCase() },
     { label: 'Program',     key: 'programType',     get: p => (p.programType || '').toLowerCase() },
@@ -314,6 +315,7 @@ const App = (() => {
               ${list.map((p, i) => `
                 <tr>
                   <td class="row-num">${i + 1}</td>
+                  <td><span class="source-badge source-${p._source || 'recruit'}">${p._source === 'crm' ? 'CRM' : 'Recruit'}</span></td>
                   <td><strong>${p.name}</strong></td>
                   <td>${p.country}</td>
                   <td>${badge(p.programType)}</td>
