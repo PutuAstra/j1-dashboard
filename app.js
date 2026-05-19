@@ -798,7 +798,7 @@ const App = (() => {
     if (!ZohoAuth.isConnected()) { mc.innerHTML = connectPromptHTML(); return; }
 
     try {
-      if (!_jobCache) _jobCache = await Zoho.getJobOpenings();
+      _jobCache = await Zoho.getJobOpenings();
     } catch (e) {
       mc.innerHTML = `<div class="empty-state"><p>Failed to load Job Openings: ${e.message}</p></div>`;
       return;
@@ -806,10 +806,10 @@ const App = (() => {
 
     // Filter: Placement Category = J1 Program AND Requisition Status = Active
     const active = _jobCache.filter(j =>
-      /j1 program/i.test(j.placementCategory) &&
-      /^active$/i.test(j.status)
+      /^j1 program$/i.test((j.placementCategory || '').trim()) &&
+      /^active$/i.test((j.status || '').trim())
     );
-    const allJ1  = _jobCache.filter(j => /j1 program/i.test(j.placementCategory));
+    const allJ1  = _jobCache.filter(j => /^j1 program$/i.test((j.placementCategory || '').trim()));
     const filled = allJ1.filter(j => /filled|closed/i.test(j.status));
 
     const REQ_COLS = [
