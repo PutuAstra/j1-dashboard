@@ -815,7 +815,6 @@ const App = (() => {
     const REQ_COLS = [
       { label: '#',                  key: null },
       { label: 'Hosting Company',    key: 'hostingCompany',   get: j => (j.hostingCompany || '').toLowerCase() },
-      { label: 'Position Name',      key: 'positionName',     get: j => (j.positionName || '').toLowerCase() },
       { label: 'City',               key: 'city',             get: j => (j.city || '').toLowerCase() },
       { label: 'Department',         key: 'department',       get: j => (j.department || '').toLowerCase() },
       { label: 'Requisition',        key: 'numPositions',     get: j => j.numPositions || 0 },
@@ -867,7 +866,6 @@ const App = (() => {
                 <tr>
                   <td class="row-num" style="position:sticky;left:0;z-index:1;background:var(--card)">${i + 1}</td>
                   <td style="position:sticky;left:40px;z-index:1;background:var(--card)"><strong>${j.hostingCompany}</strong></td>
-                  <td>${j.positionName}</td>
                   <td>${[j.city, j.state].filter(v => v && v !== '—').join(', ') || '—'}</td>
                   <td>${j.department}</td>
                   <td style="text-align:center;font-weight:600">${j.numPositions || '—'}</td>
