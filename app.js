@@ -566,7 +566,7 @@ const App = (() => {
   function updateLastRefresh() {
     const el = document.getElementById('lastRefresh');
     if (el) {
-      el.textContent = '🔄 ' + new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+      el.textContent = '🔄 ' + new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
       el.style.display = 'block';
     }
   }
