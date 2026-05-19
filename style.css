@@ -478,7 +478,7 @@ tbody tr:hover { background: var(--bg); }
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 4px;
+  gap: 5px;
   flex: 0 0 auto;
   padding: 4px 8px;
   border-radius: 20px;
@@ -511,18 +511,20 @@ tbody tr:hover { background: var(--bg); }
   justify-content: center;
   min-width: 16px;
   height: 15px;
-  padding: 0 4px;
+  padding: 0 5px;
   border-radius: 10px;
-  font-size: 0.62rem;
-  font-weight: 600;
-  background: rgba(0,0,0,0.12);
-  color: inherit;
+  font-size: 0.6rem;
+  font-weight: 700;
+  background: #6b7280;
+  color: #fff;
   flex-shrink: 0;
+  letter-spacing: 0;
+  line-height: 1;
 }
 
 .tab-btn.active .tab-count-badge {
-  background: rgba(255,255,255,0.25);
-  color: #fff;
+  background: rgba(255,255,255,0.9);
+  color: var(--accent);
 }
 
 .row-num {
