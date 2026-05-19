@@ -59,7 +59,7 @@ const App = (() => {
     } else {
       el.className = 'zoho-status disconnected';
       el.innerHTML = `<span class="dot"></span> Connect Zoho`;
-      el.title = 'Click to connect your Zoho Recruit account';
+      el.title = 'Click to connect your Zoho account';
       el.onclick = () => ZohoAuth.startOAuth();
     }
   }
@@ -133,7 +133,7 @@ const App = (() => {
     mc.innerHTML = `
       <div class="page-header">
         <h1>Overview</h1>
-        <p>Live summary from Zoho Recruit — ${s.total} participants total</p>
+        <p>Live summary from Zoho CRM & Recruit — ${s.total} participants total</p>
       </div>
 
       <div class="stat-grid">
