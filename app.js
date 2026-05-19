@@ -188,38 +188,38 @@ const App = (() => {
         <!-- Top Countries -->
         <div class="card ov-card">
           <div class="ov-card-title">Top Countries</div>
-          <canvas id="chartCountry" height="108"></canvas>
+          <div class="ov-chart-wrap"><canvas id="chartCountry"></canvas></div>
         </div>
         <!-- Stage Progress -->
         <div class="card ov-card">
           <div class="ov-card-title">Stage Progress</div>
-          <canvas id="chartStage" height="108"></canvas>
+          <div class="ov-chart-wrap"><canvas id="chartStage"></canvas></div>
         </div>
         <!-- Sponsor -->
         <div class="card ov-card">
           <div class="ov-card-title">Placement by Sponsor <span class="ov-sub">${placed.length} placed</span></div>
-          <canvas id="chartSponsor" height="108"></canvas>
+          <div class="ov-chart-wrap"><canvas id="chartSponsor"></canvas></div>
         </div>
         <!-- Housing -->
         <div class="card ov-card">
           <div class="ov-card-title">Housing <span class="ov-sub">${housingRateOv}% rate</span></div>
-          <canvas id="chartHousing" height="108"></canvas>
+          <div class="ov-chart-wrap ov-chart-donut"><canvas id="chartHousing"></canvas></div>
         </div>
         <!-- Joining Flights -->
         <div class="card ov-card">
           <div class="ov-card-title">✈️ Joining Flights <span class="ov-sub">${joiningOv.length} visa approved</span></div>
-          <canvas id="chartJoining" height="108"></canvas>
+          <div class="ov-chart-wrap ov-chart-donut"><canvas id="chartJoining"></canvas></div>
         </div>
         <!-- Return Flights -->
         <div class="card ov-card">
           <div class="ov-card-title">🏠 Return Flights <span class="ov-sub">${returningOv.length} onboard/completed</span></div>
-          <canvas id="chartReturning" height="108"></canvas>
+          <div class="ov-chart-wrap ov-chart-donut"><canvas id="chartReturning"></canvas></div>
         </div>
         <!-- Requisition full width -->
         ${reqActive.length ? `
         <div class="card ov-card ov-full">
           <div class="ov-card-title">Requisition <span class="ov-sub">${reqActive.length} hosting companies · ${reqTotalOpenings} openings</span></div>
-          <canvas id="chartReq" height="60"></canvas>
+          <div class="ov-chart-wrap ov-chart-req"><canvas id="chartReq"></canvas></div>
         </div>` : ''}
       </div>
     `;
@@ -231,14 +231,14 @@ const App = (() => {
     const donutOpts = (labels, data, colors) => ({
       type: 'doughnut',
       data: { labels, datasets: [{ data, backgroundColor: colors || COLORS, borderWidth: 2, borderColor: cardBg() }] },
-      options: { responsive: true, maintainAspectRatio: true,
+      options: { responsive: true, maintainAspectRatio: false,
         plugins: { legend: { position: 'bottom', labels: { font: { size: 9, family: 'Inter' }, padding: 5, boxWidth: 9 } }, datalabels: { display: false } } }
     });
 
     const hBarOpts = (labels, data, color) => ({
       type: 'bar',
       data: { labels, datasets: [{ data, backgroundColor: color || '#1B3A6B', borderRadius: 3 }] },
-      options: { responsive: true, maintainAspectRatio: true, indexAxis: 'y',
+      options: { responsive: true, maintainAspectRatio: false, indexAxis: 'y',
         plugins: { legend: { display: false }, datalabels: { display: false } },
         scales: {
           x: { beginAtZero: true, ticks: { font: { size: 8 } }, grid: { display: false } },

@@ -320,6 +320,17 @@ a { color: inherit; text-decoration: none; }
 .ov-full {
   grid-column: 1 / -1;
 }
+/* Chart wrappers — height controls the actual rendered size */
+.ov-chart-wrap {
+  position: relative;
+  height: 130px;
+}
+.ov-chart-donut {
+  height: 140px;
+}
+.ov-chart-req {
+  height: 65px;
+}
 
 /* ─────────────────────────────────────────────────────────────
    TABLE
