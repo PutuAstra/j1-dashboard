@@ -832,7 +832,7 @@ const App = (() => {
   let _jobCache         = null;
   let _reqFilterDept    = '';
   let _reqFilterHousing = '';
-  let _reqFilterProgram = []; // "has any" multi-select
+  let _reqFilterProgram = '';
 
   async function renderRequisition() {
     const mc = document.getElementById('main-content');
@@ -940,12 +940,12 @@ const App = (() => {
       let out = list;
       if (_reqFilterDept)    out = out.filter(j => (j.department  || '').toLowerCase() === _reqFilterDept);
       if (_reqFilterHousing) out = out.filter(j => (j.housingAvail || '').toLowerCase() === _reqFilterHousing);
-      if (_reqFilterProgram.length > 0) {
+      if (_reqFilterProgram) {
         out = out.filter(j => {
           const types = (j.j1ProgramType && j.j1ProgramType !== '—')
             ? j.j1ProgramType.split(/[;,]\s*/).map(v => v.trim().toLowerCase())
             : [];
-          return _reqFilterProgram.some(sel => types.includes(sel));
+          return types.includes(_reqFilterProgram);
         });
       }
       return out;
@@ -995,18 +995,12 @@ const App = (() => {
             ${housingOptions.map(h => `<option value="${h.toLowerCase()}" ${_reqFilterHousing === h.toLowerCase() ? 'selected' : ''}>${h}</option>`).join('')}
           </select>
         </div>
-        <div class="stat-card req-filter-card" style="flex:1;position:relative">
+        <div class="stat-card req-filter-card" style="flex:1">
           <div class="req-filter-label">J1 Program Type</div>
-          <button class="multi-sel-btn" id="programDropdownBtn">
-            ${_reqFilterProgram.length ? _reqFilterProgram.length + ' selected' : 'All Types'} <span style="float:right">▾</span>
-          </button>
-          <div class="multi-sel-panel" id="programDropdownPanel">
-            ${programOptions.map(p => `
-              <label class="multi-sel-option">
-                <input type="checkbox" value="${p.toLowerCase()}" ${_reqFilterProgram.includes(p.toLowerCase()) ? 'checked' : ''}> ${p}
-              </label>`).join('')}
-            ${_reqFilterProgram.length ? `<div class="multi-sel-clear" id="clearProgram">✕ Clear all</div>` : ''}
-          </div>
+          <select class="filter-select" id="reqFilterProgram" style="width:100%;margin:0">
+            <option value="">All Types</option>
+            ${programOptions.map(p => `<option value="${p.toLowerCase()}" ${_reqFilterProgram === p.toLowerCase() ? 'selected' : ''}>${p}</option>`).join('')}
+          </select>
         </div>
       `;
 
@@ -1021,45 +1015,21 @@ const App = (() => {
       return `<div class="card">${reqTable(filtered)}</div>`;
     }
 
-    function wireDropdown() {
-      const btn   = document.getElementById('programDropdownBtn');
-      const panel = document.getElementById('programDropdownPanel');
-      if (!btn || !panel) return;
-
-      btn.addEventListener('click', e => {
-        e.stopPropagation();
-        panel.classList.toggle('open');
-      });
-      document.addEventListener('click', function closePanel(e) {
-        if (!panel.contains(e.target) && e.target !== btn) {
-          panel.classList.remove('open');
-          document.removeEventListener('click', closePanel);
-        }
-      });
-      panel.querySelectorAll('input[type=checkbox]').forEach(cb => {
-        cb.addEventListener('change', () => {
-          _reqFilterProgram = [...panel.querySelectorAll('input:checked')].map(c => c.value);
-          refreshReq();
-        });
-      });
-      document.getElementById('clearProgram')?.addEventListener('click', () => {
-        _reqFilterProgram = []; refreshReq();
-      });
-    }
-
     function refreshReq() {
       const filtered = applyReqFilters(active);
       document.getElementById('reqStats').innerHTML   = renderReqStats(filtered);
       document.getElementById('reqContent').innerHTML = renderReqContent();
       document.getElementById('reqFilterDept').value    = _reqFilterDept;
       document.getElementById('reqFilterHousing').value = _reqFilterHousing;
+      document.getElementById('reqFilterProgram').value = _reqFilterProgram;
       document.getElementById('reqFilterDept').addEventListener('change', onDeptChange);
       document.getElementById('reqFilterHousing').addEventListener('change', onHousingChange);
-      wireDropdown();
+      document.getElementById('reqFilterProgram').addEventListener('change', onProgramChange);
     }
 
     function onDeptChange(e)    { _reqFilterDept    = e.target.value; refreshReq(); }
     function onHousingChange(e) { _reqFilterHousing = e.target.value; refreshReq(); }
+    function onProgramChange(e) { _reqFilterProgram = e.target.value; refreshReq(); }
 
     mc.innerHTML = `
       <div class="page-header">
@@ -1091,7 +1061,7 @@ const App = (() => {
     // Filter changes (initial wire-up)
     document.getElementById('reqFilterDept').addEventListener('change', onDeptChange);
     document.getElementById('reqFilterHousing').addEventListener('change', onHousingChange);
-    wireDropdown();
+    document.getElementById('reqFilterProgram').addEventListener('change', onProgramChange);
   }
 
   // ═══════════════════════════════════════════════════════════
