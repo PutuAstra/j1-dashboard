@@ -554,7 +554,9 @@ const App = (() => {
   // ═══════════════════════════════════════════════════════════
   //  PAGE: TRAVEL
   // ═══════════════════════════════════════════════════════════
-  let _activeTravelTab = 'joining';
+  let _activeTravelTab  = 'joining';
+  let _travelSortCol    = null;
+  let _travelSortDir    = null;
 
   async function renderTravel() {
     const mc = document.getElementById('main-content');
@@ -573,21 +575,70 @@ const App = (() => {
     const returnBooked    = returningAll.filter(p => /yes|booked|confirmed/i.test(String(p.returnFlightStatus)));
     const returnNotBooked = returningAll.filter(p => !/yes|booked|confirmed/i.test(String(p.returnFlightStatus)));
 
+    // Column defs for each tab
+    const JOINING_COLS = [
+      { label: '#',             key: null },
+      { label: 'Name',          key: 'name',           get: p => (p.name || '').toLowerCase() },
+      { label: 'Country',       key: 'country',        get: p => (p.country || '').toLowerCase() },
+      { label: 'Route',         key: 'tripFrom',       get: p => (p.tripFrom || '').toLowerCase() },
+      { label: 'Departure',     key: 'departureDate',  get: p => p.departureDate || '' },
+      { label: 'Arrival',       key: 'arrivalDate',    get: p => p.arrivalDate || '' },
+      { label: 'Airline',       key: 'airline',        get: p => (p.airline || '').toLowerCase() },
+      { label: 'PNR',           key: 'pnrNumber',      get: p => (p.pnrNumber || '').toLowerCase() },
+      { label: 'Gateway',       key: 'airportGateway', get: p => (p.airportGateway || '').toLowerCase() },
+      { label: 'Pick-Up',       key: 'airportPickup',  get: p => (p.airportPickup || '').toLowerCase() },
+      { label: 'Flight Status', key: 'flightBooked',   get: p => String(p.flightBooked) },
+      { label: 'Ticket Payment',key: 'ticketPayStatus',get: p => (p.ticketPayStatus || '').toLowerCase() },
+      { label: 'Pricing',       key: 'ticketPricing',  get: p => p.ticketPricing || 0 },
+    ];
+
+    const RETURNING_COLS = [
+      { label: '#',             key: null },
+      { label: 'Name',          key: 'name',              get: p => (p.name || '').toLowerCase() },
+      { label: 'Country',       key: 'country',           get: p => (p.country || '').toLowerCase() },
+      { label: 'Route',         key: 'returnTripFrom',    get: p => (p.returnTripFrom || '').toLowerCase() },
+      { label: 'Departure',     key: 'returnDeparture',   get: p => p.returnDeparture || '' },
+      { label: 'Arrival',       key: 'returnArrival',     get: p => p.returnArrival || '' },
+      { label: 'Airline',       key: 'returnAirline',     get: p => (p.returnAirline || '').toLowerCase() },
+      { label: 'PNR',           key: 'returnPNR',         get: p => (p.returnPNR || '').toLowerCase() },
+      { label: 'Gateway',       key: 'returnGateway',     get: p => (p.returnGateway || '').toLowerCase() },
+      { label: 'Flight Status', key: 'returnFlightStatus',get: p => (p.returnFlightStatus || '').toLowerCase() },
+    ];
+
+    function tSortIcon(key) {
+      if (_travelSortCol !== key) return `<span class="sort-icon">⇅</span>`;
+      if (_travelSortDir === 'asc')  return `<span class="sort-icon active">↑</span>`;
+      if (_travelSortDir === 'desc') return `<span class="sort-icon active">↓</span>`;
+      return `<span class="sort-icon">⇅</span>`;
+    }
+
+    function applySortTravel(list, cols) {
+      if (!_travelSortCol || !_travelSortDir) return list;
+      const col = cols.find(c => c.key === _travelSortCol);
+      if (!col) return list;
+      return [...list].sort((a, b) => {
+        const av = col.get(a), bv = col.get(b);
+        const cmp = av < bv ? -1 : av > bv ? 1 : 0;
+        return _travelSortDir === 'asc' ? cmp : -cmp;
+      });
+    }
+
     function joiningTable(list) {
       if (!list.length) return `<div class="empty-state"><p>No participants in this category.</p></div>`;
+      const sorted = applySortTravel(list, JOINING_COLS);
       return `
         <div class="table-wrap">
           <table>
             <thead>
               <tr>
-                <th>#</th><th>Name</th><th>Country</th><th>Route</th>
-                <th>Departure</th><th>Arrival</th>
-                <th>Airline</th><th>PNR</th><th>Gateway</th><th>Pick-Up</th>
-                <th>Flight Status</th><th>Ticket Payment</th><th>Pricing</th>
+                ${JOINING_COLS.map(c => c.key
+                  ? `<th class="sortable ${_travelSortCol === c.key ? 'sorted' : ''}" data-tcol="${c.key}">${c.label} ${tSortIcon(c.key)}</th>`
+                  : `<th>#</th>`
+                ).join('')}
               </tr>
             </thead>
             <tbody>
-              ${list.map((p, i) => `
+              ${sorted.map((p, i) => `
                 <tr>
                   <td class="row-num">${i + 1}</td>
                   <td><strong>${p.name}</strong></td>
@@ -612,19 +663,20 @@ const App = (() => {
 
     function returningTable(list) {
       if (!list.length) return `<div class="empty-state"><p>No participants in this category.</p></div>`;
+      const sorted = applySortTravel(list, RETURNING_COLS);
       return `
         <div class="table-wrap">
           <table>
             <thead>
               <tr>
-                <th>#</th><th>Name</th><th>Country</th><th>Route</th>
-                <th>Departure</th><th>Arrival</th>
-                <th>Airline</th><th>PNR</th><th>Gateway</th>
-                <th>Flight Status</th>
+                ${RETURNING_COLS.map(c => c.key
+                  ? `<th class="sortable ${_travelSortCol === c.key ? 'sorted' : ''}" data-tcol="${c.key}">${c.label} ${tSortIcon(c.key)}</th>`
+                  : `<th>#</th>`
+                ).join('')}
               </tr>
             </thead>
             <tbody>
-              ${list.map((p, i) => `
+              ${sorted.map((p, i) => `
                 <tr>
                   <td class="row-num">${i + 1}</td>
                   <td><strong>${p.name}</strong></td>
@@ -707,7 +759,22 @@ const App = (() => {
         const btn = e.target.closest('[data-ttab]');
         if (!btn) return;
         _activeTravelTab = btn.dataset.ttab;
+        _travelSortCol = null; _travelSortDir = null;
         renderTravelPage();
+      });
+
+      // Sort column clicks — delegate from mc so it survives content re-renders
+      mc.addEventListener('click', function onTravelSort(e) {
+        const th = e.target.closest('[data-tcol]');
+        if (!th) return;
+        const col = th.dataset.tcol;
+        if (_travelSortCol === col) {
+          _travelSortDir = _travelSortDir === 'asc' ? 'desc' : _travelSortDir === 'desc' ? null : 'asc';
+          if (!_travelSortDir) _travelSortCol = null;
+        } else {
+          _travelSortCol = col; _travelSortDir = 'asc';
+        }
+        document.getElementById('travelContent').innerHTML = renderTravelContent();
       });
     }
 
