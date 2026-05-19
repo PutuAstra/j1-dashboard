@@ -827,9 +827,11 @@ const App = (() => {
   // ═══════════════════════════════════════════════════════════
   //  REQUISITION PAGE
   // ═══════════════════════════════════════════════════════════
-  let _reqSortCol = null;
-  let _reqSortDir = null;
-  let _jobCache   = null;
+  let _reqSortCol     = null;
+  let _reqSortDir     = null;
+  let _jobCache       = null;
+  let _reqFilterDept  = '';
+  let _reqFilterHousing = '';
 
   async function renderRequisition() {
     const mc = document.getElementById('main-content');
@@ -924,10 +926,22 @@ const App = (() => {
       `;
     }
 
+    // Unique filter options
+    const deptOptions    = [...new Set(active.map(j => j.department).filter(d => d && d !== '—'))].sort();
+    const housingOptions = [...new Set(active.map(j => j.housingAvail).filter(h => h && h !== '—'))].sort();
+
+    function applyReqFilters(list) {
+      let out = list;
+      if (_reqFilterDept)    out = out.filter(j => (j.department  || '').toLowerCase() === _reqFilterDept);
+      if (_reqFilterHousing) out = out.filter(j => (j.housingAvail || '').toLowerCase() === _reqFilterHousing);
+      return out;
+    }
+
     function renderReqContent() {
+      const filtered = applyReqFilters(active);
       return `
         <div class="card">
-          ${reqTable(active)}
+          ${reqTable(filtered)}
         </div>
       `;
     }
@@ -967,11 +981,24 @@ const App = (() => {
         })()}
       </div>
 
+      <!-- Filters -->
+      <div class="filter-bar" style="margin-bottom:10px">
+        <select class="filter-select" id="reqFilterDept">
+          <option value="">All Departments</option>
+          ${deptOptions.map(d => `<option value="${d.toLowerCase()}" ${_reqFilterDept === d.toLowerCase() ? 'selected' : ''}>${d}</option>`).join('')}
+        </select>
+        <select class="filter-select" id="reqFilterHousing">
+          <option value="">All Housing</option>
+          ${housingOptions.map(h => `<option value="${h.toLowerCase()}" ${_reqFilterHousing === h.toLowerCase() ? 'selected' : ''}>${h}</option>`).join('')}
+        </select>
+      </div>
+
       <div id="reqContent">
         ${renderReqContent()}
       </div>
     `;
 
+    // Sort clicks
     mc.addEventListener('click', function onReqSort(e) {
       const th = e.target.closest('[data-rcol]');
       if (!th) return;
@@ -982,6 +1009,16 @@ const App = (() => {
       } else {
         _reqSortCol = col; _reqSortDir = 'asc';
       }
+      document.getElementById('reqContent').innerHTML = renderReqContent();
+    });
+
+    // Filter changes
+    document.getElementById('reqFilterDept').addEventListener('change', e => {
+      _reqFilterDept = e.target.value;
+      document.getElementById('reqContent').innerHTML = renderReqContent();
+    });
+    document.getElementById('reqFilterHousing').addEventListener('change', e => {
+      _reqFilterHousing = e.target.value;
       document.getElementById('reqContent').innerHTML = renderReqContent();
     });
   }
