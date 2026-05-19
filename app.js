@@ -70,10 +70,10 @@ const App = (() => {
     return `
       <div class="connect-prompt">
         <div class="connect-icon">🔗</div>
-        <h2>Connect your Zoho Recruit account</h2>
+        <h2>Connect your Zoho account</h2>
         <p>To load live J1 participant data, connect your Zoho account. You'll be redirected to Zoho to log in, then brought back here.</p>
         <button class="btn-connect" onclick="ZohoAuth.startOAuth()">
-          Connect Zoho Recruit
+          Connect Zoho
         </button>
       </div>
     `;
