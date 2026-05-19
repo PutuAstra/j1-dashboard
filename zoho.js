@@ -107,11 +107,11 @@ const Zoho = (() => {
   async function getCRMParticipants() {
     const module = CONFIG.CRM_MODULE;
     const CF = CONFIG.CRM_FIELDS;
-    const fields = Object.values(CF).join(',');
     let all = [], page = 1, more = true;
 
     while (more) {
-      const data = await crmRequest(module, { fields, page, per_page: 200 });
+      // Note: no 'fields' param — fetch all fields so we can identify correct API names
+      const data = await crmRequest(module, { page, per_page: 200 });
       const records = data.data || [];
       all = all.concat(records);
       more = data.info?.more_records === true;
@@ -184,6 +184,7 @@ const Zoho = (() => {
     }
 
     console.log(`✅ Loaded: ${fromRecruit.length} from Recruit, ${fromCRM.length} from CRM`);
+    if (fromCRM.length > 0) console.log('CRM sample record keys:', Object.keys(fromCRM[0]));
 
     // Merge: exclude CRM records that already exist in Recruit (matched by email)
     const recruitEmails = new Set(
