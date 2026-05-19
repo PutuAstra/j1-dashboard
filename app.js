@@ -909,7 +909,7 @@ const App = (() => {
                   <td>${[j.city, j.state].filter(v => v && v !== '—').join(', ') || '—'}</td>
                   <td>${j.department}</td>
                   <td style="text-align:center;font-weight:600">${j.numPositions || '—'}</td>
-                  <td>${j.salary !== '—' ? '$' + j.salary : '—'}</td>
+                  <td>${j.salary !== '—' ? (String(j.salary).startsWith('$') ? j.salary : '$' + j.salary) : '—'}</td>
                   <td>${j.paymentFrequency}</td>
                   <td>${j.housingAvail}</td>
                   <td>${formatDate(j.targetDate)}</td>
