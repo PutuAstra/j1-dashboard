@@ -184,134 +184,49 @@ const App = (() => {
         <p>Live summary from Zoho CRM & Recruit — ${s.total} participants total</p>
       </div>
 
-      <div class="stat-grid">
-        <div class="stat-card">
-          <div class="stat-icon"><svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></div>
-          <div class="stat-value">${s.total}</div>
-          <div class="stat-label">Total Participants</div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-icon"><svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="7" r="4"/><path d="M5.5 21a8.38 8.38 0 0 1 13 0"/></svg></div>
-          <div class="stat-value">${s.interns}</div>
-          <div class="stat-label">Interns</div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-icon"><svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c3 3 9 3 12 0v-5"/></svg></div>
-          <div class="stat-value">${s.trainees}</div>
-          <div class="stat-label">Trainees</div>
-        </div>
-        <div class="stat-card good">
-          <div class="stat-icon"><svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg></div>
-          <div class="stat-value">${s.placed}</div>
-          <div class="stat-label">Placed</div>
-        </div>
-        <div class="stat-card good">
-          <div class="stat-icon"><svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12 19.79 19.79 0 0 1 1.62 3.38 2 2 0 0 1 3.6 1.22h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L7.59 8.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 21.73 16l.19.92z"/></svg></div>
-          <div class="stat-value">${s.flightDone}</div>
-          <div class="stat-label">Flights Booked</div>
-        </div>
-        <div class="stat-card ${s.expiringDS > 0 ? 'warn' : ''}">
-          <div class="stat-icon"><svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/></svg></div>
-          <div class="stat-value">${s.expiringDS}</div>
-          <div class="stat-label">DS-2019 Expiring (30d)</div>
-        </div>
-      </div>
-
-      <div class="chart-grid">
+      <!-- Row 1: Top Countries + Stage Progress -->
+      <div class="chart-grid" style="grid-template-columns: 1fr 1fr; align-items:start">
         <div class="card">
-          <div class="card-header">
-            <div><div class="card-title">Program Type</div><div class="card-sub">Intern vs Trainee</div></div>
-          </div>
-          <canvas id="chartProgram" height="200"></canvas>
+          <div class="card-header"><div><div class="card-title">Top Countries</div><div class="card-sub">Participants by nationality</div></div></div>
+          <canvas id="chartCountry" height="220"></canvas>
         </div>
         <div class="card">
-          <div class="card-header">
-            <div><div class="card-title">Flight Booking</div><div class="card-sub">Travel status</div></div>
-          </div>
-          <canvas id="chartFlight" height="200"></canvas>
+          <div class="card-header"><div><div class="card-title">Stage Progress</div><div class="card-sub">Participants in active stages</div></div></div>
+          <canvas id="chartStage" height="220"></canvas>
+        </div>
+      </div>
+
+      <!-- Row 2: Housing + Travel -->
+      <div class="chart-grid" style="grid-template-columns: 1fr 1fr 1fr; align-items:start">
+        <div class="card">
+          <div class="card-header"><div><div class="card-title">Housing</div><div class="card-sub">${housingRateOv}% housing rate</div></div></div>
+          <canvas id="chartHousing" height="200"></canvas>
         </div>
         <div class="card">
-          <div class="card-header">
-            <div><div class="card-title">Placement Status</div><div class="card-sub">Current stage breakdown</div></div>
-          </div>
-          <canvas id="chartStatus" height="200"></canvas>
+          <div class="card-header"><div><div class="card-title">✈️ Joining Flights</div><div class="card-sub">Visa approved — ${joiningOv.length} participants</div></div></div>
+          <canvas id="chartJoining" height="200"></canvas>
         </div>
         <div class="card">
-          <div class="card-header">
-            <div><div class="card-title">Top Countries</div><div class="card-sub">Participants by nationality</div></div>
-          </div>
-          <canvas id="chartCountry" height="200"></canvas>
+          <div class="card-header"><div><div class="card-title">🏠 Return Flights</div><div class="card-sub">USA Onboard + Completed — ${returningOv.length}</div></div></div>
+          <canvas id="chartReturning" height="200"></canvas>
         </div>
       </div>
 
-      <!-- ── Stage Progress ───────────────────────────────── -->
-      <div class="card">
-        <div class="card-header"><div class="card-title">Stage Progress</div></div>
-        <div class="stat-grid" style="margin-bottom:0">
-          <div class="stat-card"><div class="stat-value">${stage3Count}</div><div class="stat-label">Stage 3</div></div>
-          <div class="stat-card"><div class="stat-value">${stage4Count}</div><div class="stat-label">Stage 4</div></div>
-        </div>
-      </div>
-
-      <!-- ── Housing ──────────────────────────────────────── -->
-      <div class="card">
-        <div class="card-header"><div class="card-title">Housing</div></div>
-        <div class="stat-grid" style="margin-bottom:0">
-          <div class="stat-card good"><div class="stat-value">${housedOv.length}</div><div class="stat-label">Housing Available</div></div>
-          <div class="stat-card accent"><div class="stat-value">${noHousingOv.length}</div><div class="stat-label">No Housing Info</div></div>
-          <div class="stat-card"><div class="stat-value">${housingRateOv}%</div><div class="stat-label">Housing Rate</div></div>
-        </div>
-      </div>
-
-      <!-- ── Travel ───────────────────────────────────────── -->
-      <div class="card">
-        <div class="card-header"><div class="card-title">Travel</div></div>
-        <div style="margin-bottom:10px">
-          <div style="font-size:0.78rem;font-weight:600;color:var(--muted);margin-bottom:6px">✈️ JOINING (Visa Approved — ${joiningOv.length})</div>
-          <div class="stat-grid" style="margin-bottom:0">
-            <div class="stat-card good"><div class="stat-value">${joiningBookedOv.length}</div><div class="stat-label">Flights Booked</div></div>
-            <div class="stat-card accent"><div class="stat-value">${joiningNotBookedOv.length}</div><div class="stat-label">Not Yet Booked</div></div>
-            <div class="stat-card"><div class="stat-value">${joiningRateOv}%</div><div class="stat-label">Booking Rate</div></div>
-          </div>
-        </div>
-        <div>
-          <div style="font-size:0.78rem;font-weight:600;color:var(--muted);margin-bottom:6px">🏠 RETURNING (USA Onboard + Program Completed — ${returningOv.length})</div>
-          <div class="stat-grid" style="margin-bottom:0">
-            <div class="stat-card good"><div class="stat-value">${returnBookedOv.length}</div><div class="stat-label">Flights Booked</div></div>
-            <div class="stat-card accent"><div class="stat-value">${returnNotBookedOv.length}</div><div class="stat-label">Not Yet Booked</div></div>
-            <div class="stat-card"><div class="stat-value">${returnRateOv}%</div><div class="stat-label">Booking Rate</div></div>
-          </div>
-        </div>
-      </div>
-
-      <!-- ── Requisition ──────────────────────────────────── -->
+      <!-- Row 3: Requisition by client -->
       ${reqActive.length ? `
       <div class="card">
-        <div class="card-header"><div class="card-title">Requisition</div><div class="card-sub">Active J1 Program job openings</div></div>
-        <div class="stat-grid" style="margin-bottom:0">
-          <div class="stat-card accent"><div class="stat-value">${reqActive.length}</div><div class="stat-label">Hosting Company</div></div>
-          <div class="stat-card"><div class="stat-value">${reqTotalOpenings}</div><div class="stat-label">Total Openings</div></div>
-          ${Object.entries(reqByClient).sort((a,b) => b[1].openings - a[1].openings).map(([client, data]) => `
-            <div class="stat-card">
-              <div class="stat-value">${data.openings}</div>
-              <div class="stat-label">${client}<br><span style="font-weight:400;font-size:0.68rem;color:var(--muted-lt)">${data.reqs} hosting company</span></div>
-            </div>
-          `).join('')}
+        <div class="card-header">
+          <div><div class="card-title">Requisition</div><div class="card-sub">Active J1 openings — ${reqActive.length} hosting companies · ${reqTotalOpenings} total openings</div></div>
         </div>
+        <canvas id="chartReq" height="120"></canvas>
       </div>` : ''}
 
-      <!-- ── Successful Placement by Sponsor ─────────────── -->
+      <!-- Row 4: Successful Placement by Sponsor -->
       <div class="card">
-        <div class="card-header"><div class="card-title">Successful Placement by Sponsor</div><div class="card-sub">USA Onboard + Program Completed</div></div>
-        <div class="stat-grid" style="margin-bottom:0">
-          <div class="stat-card good"><div class="stat-value">${placed.length}</div><div class="stat-label">Total Placements</div></div>
-          ${sponsorEntries.map(([sponsor, count]) => `
-            <div class="stat-card">
-              <div class="stat-value">${count}</div>
-              <div class="stat-label">${sponsor}</div>
-            </div>
-          `).join('')}
+        <div class="card-header">
+          <div><div class="card-title">Successful Placement by Sponsor</div><div class="card-sub">USA Onboard + Program Completed — ${placed.length} total</div></div>
         </div>
+        <canvas id="chartSponsor" height="120"></canvas>
       </div>
     `;
 
@@ -334,29 +249,55 @@ const App = (() => {
       }
     });
 
-    new Chart(document.getElementById('chartProgram').getContext('2d'),
-      chartOpts(Object.keys(byProgram), Object.values(byProgram)));
+    const COLORS = ['#B01A18','#1B3A6B','#16a34a','#d97706','#2563eb','#7c3aed','#db2777','#0891b2','#059669','#dc2626'];
+    const cardBg = () => getComputedStyle(document.documentElement).getPropertyValue('--card').trim() || '#fff';
 
-    new Chart(document.getElementById('chartFlight').getContext('2d'),
-      chartOpts(Object.keys(byFlight), Object.values(byFlight)));
-
-    new Chart(document.getElementById('chartStatus').getContext('2d'),
-      chartOpts(Object.keys(byStatus), Object.values(byStatus)));
-
-    // Top 7 countries bar chart
-    const sortedCountries = Object.entries(byCountry).sort((a,b) => b[1]-a[1]).slice(0, 7);
-    new Chart(document.getElementById('chartCountry').getContext('2d'), {
-      type: 'bar',
-      data: {
-        labels: sortedCountries.map(e => e[0]),
-        datasets: [{ data: sortedCountries.map(e => e[1]), backgroundColor: '#1B3A6B', borderRadius: 6 }]
-      },
-      options: {
-        responsive: true, maintainAspectRatio: true, indexAxis: 'y',
-        plugins: { legend: { display: false }, datalabels: { display: false } },
-        scales: { x: { beginAtZero: true, ticks: { font: { size: 11 } } }, y: { ticks: { font: { size: 11 } } } }
-      }
+    const donutOpts = (labels, data, colors) => ({
+      type: 'doughnut',
+      data: { labels, datasets: [{ data, backgroundColor: colors || COLORS, borderWidth: 2, borderColor: cardBg() }] },
+      options: { responsive: true, maintainAspectRatio: true,
+        plugins: { legend: { position: 'bottom', labels: { font: { size: 11, family: 'Inter' }, padding: 10, boxWidth: 12 } }, datalabels: { display: false } } }
     });
+
+    const hBarOpts = (labels, data, color) => ({
+      type: 'bar',
+      data: { labels, datasets: [{ data, backgroundColor: color || '#1B3A6B', borderRadius: 6 }] },
+      options: { responsive: true, maintainAspectRatio: true, indexAxis: 'y',
+        plugins: { legend: { display: false }, datalabels: { display: false } },
+        scales: { x: { beginAtZero: true, ticks: { font: { size: 11 } } }, y: { ticks: { font: { size: 11 } } } } }
+    });
+
+    // Top Countries — horizontal bar
+    const sortedCountries = Object.entries(byCountry).sort((a,b) => b[1]-a[1]).slice(0, 10);
+    new Chart(document.getElementById('chartCountry').getContext('2d'), hBarOpts(sortedCountries.map(e=>e[0]), sortedCountries.map(e=>e[1]), '#1B3A6B'));
+
+    // Stage Progress — horizontal bar
+    const stageLabels = ['New Submission','Consultation Call','Sales Call','Stage 1','Stage 2','Stage 3','Stage 4','USA Onboard','Program Completed'];
+    const stageData   = stageLabels.map(l => participants.filter(p => p.placementStatus?.toLowerCase() === l.toLowerCase()).length);
+    new Chart(document.getElementById('chartStage').getContext('2d'), hBarOpts(stageLabels, stageData, COLORS));
+
+    // Housing — donut
+    new Chart(document.getElementById('chartHousing').getContext('2d'),
+      donutOpts(['Available','No Info'], [housedOv.length, noHousingOv.length], ['#16a34a','#B01A18']));
+
+    // Joining flights — donut
+    new Chart(document.getElementById('chartJoining').getContext('2d'),
+      donutOpts(['Booked','Not Booked'], [joiningBookedOv.length, joiningNotBookedOv.length], ['#16a34a','#B01A18']));
+
+    // Returning flights — donut
+    new Chart(document.getElementById('chartReturning').getContext('2d'),
+      donutOpts(['Booked','Not Booked'], [returnBookedOv.length, returnNotBookedOv.length], ['#16a34a','#B01A18']));
+
+    // Requisition by client — horizontal bar
+    if (reqActive.length && document.getElementById('chartReq')) {
+      const reqClients = Object.entries(reqByClient).sort((a,b) => b[1].openings - a[1].openings);
+      new Chart(document.getElementById('chartReq').getContext('2d'), hBarOpts(reqClients.map(e=>e[0]), reqClients.map(e=>e[1].openings), '#2563eb'));
+    }
+
+    // Successful Placement by Sponsor — horizontal bar
+    if (sponsorEntries.length && document.getElementById('chartSponsor')) {
+      new Chart(document.getElementById('chartSponsor').getContext('2d'), hBarOpts(sponsorEntries.map(e=>e[0]), sponsorEntries.map(e=>e[1]), '#16a34a'));
+    }
   }
 
   // ═══════════════════════════════════════════════════════════
