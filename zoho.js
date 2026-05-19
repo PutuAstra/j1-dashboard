@@ -184,19 +184,9 @@ const Zoho = (() => {
     }
 
     console.log(`✅ Loaded: ${fromRecruit.length} from Recruit, ${fromCRM.length} from CRM`);
-    if (fromCRM.length > 0) console.log('CRM sample record keys:', Object.keys(fromCRM[0]));
 
-    // Merge: exclude CRM records that already exist in Recruit (matched by email)
-    const recruitEmails = new Set(
-      fromRecruit.map(p => (p.email || '').toLowerCase()).filter(e => e && e !== '—')
-    );
-
-    const crmOnly = fromCRM.filter(p => {
-      const e = (p.email || '').toLowerCase();
-      return !e || e === '—' || !recruitEmails.has(e);
-    });
-
-    return [...crmOnly, ...fromRecruit];
+    // Combine all records — CRM (early stages) first, then Recruit (later stages)
+    return [...fromCRM, ...fromRecruit];
   }
 
   // ── Derived stats ─────────────────────────────────────────
