@@ -902,7 +902,7 @@ const App = (() => {
       <div class="stat-grid">
         <div class="stat-card accent">
           <div class="stat-value">${active.length}</div>
-          <div class="stat-label">Active Hosting Company</div>
+          <div class="stat-label">Hosting Company</div>
         </div>
         <div class="stat-card">
           <div class="stat-value">${active.reduce((s, j) => s + (Number(j.numPositions) || 0), 0)}</div>
