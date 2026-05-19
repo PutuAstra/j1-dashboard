@@ -261,6 +261,21 @@ const App = (() => {
   ];
 
   let _activeParticipantTab = 'all';
+  let _sortCol = null;   // field key e.g. 'name'
+  let _sortDir = null;   // 'asc' | 'desc' | null
+
+  // Column definitions: label, field key, value getter
+  const P_COLS = [
+    { label: '#',           key: null,              get: null },
+    { label: 'Name',        key: 'name',            get: p => (p.name || '').toLowerCase() },
+    { label: 'Country',     key: 'country',         get: p => (p.country || '').toLowerCase() },
+    { label: 'Program',     key: 'programType',     get: p => (p.programType || '').toLowerCase() },
+    { label: 'Host Company',key: 'hostCompany',     get: p => (p.hostCompany || '').toLowerCase() },
+    { label: 'App Status',  key: 'placementStatus', get: p => (p.placementStatus || '').toLowerCase() },
+    { label: 'Visa Status', key: 'visaStatus',      get: p => (p.visaStatus || '').toLowerCase() },
+    { label: 'Arrival',     key: 'arrivalDate',     get: p => p.arrivalDate || '' },
+    { label: 'Flight',      key: 'flightBooked',    get: p => String(p.flightBooked) },
+  ];
 
   async function renderParticipants() {
     const mc = document.getElementById('main-content');
@@ -275,6 +290,13 @@ const App = (() => {
       return participants.filter(p => tab.match.test(p.placementStatus)).length;
     }
 
+    function sortIcon(key) {
+      if (_sortCol !== key) return `<span class="sort-icon">⇅</span>`;
+      if (_sortDir === 'asc')  return `<span class="sort-icon active">↑</span>`;
+      if (_sortDir === 'desc') return `<span class="sort-icon active">↓</span>`;
+      return `<span class="sort-icon">⇅</span>`;
+    }
+
     function buildTable(list) {
       if (!list.length) return `<div class="empty-state"><p>No participants in this category.</p></div>`;
       return `
@@ -282,9 +304,10 @@ const App = (() => {
           <table>
             <thead>
               <tr>
-                <th>#</th><th>Name</th><th>Country</th><th>Program</th>
-                <th>Host Company</th><th>App Status</th>
-                <th>Visa Status</th><th>Arrival</th><th>Flight</th>
+                ${P_COLS.map(c => c.key
+                  ? `<th class="sortable ${_sortCol === c.key ? 'sorted' : ''}" data-col="${c.key}">${c.label} ${sortIcon(c.key)}</th>`
+                  : `<th>#</th>`
+                ).join('')}
               </tr>
             </thead>
             <tbody>
@@ -332,11 +355,39 @@ const App = (() => {
       return list;
     }
 
+    function applySort(list) {
+      if (!_sortCol || !_sortDir) return list;
+      const col = P_COLS.find(c => c.key === _sortCol);
+      if (!col) return list;
+      return [...list].sort((a, b) => {
+        const av = col.get(a), bv = col.get(b);
+        if (av < bv) return _sortDir === 'asc' ? -1 : 1;
+        if (av > bv) return _sortDir === 'asc' ? 1 : -1;
+        return 0;
+      });
+    }
+
     function refreshTable() {
-      const base    = getTabData(_activeParticipantTab);
+      const base     = getTabData(_activeParticipantTab);
       const filtered = applyFilters(base);
-      document.getElementById('participantTable').innerHTML = buildTable(filtered);
-      document.getElementById('tabCount').textContent = `${filtered.length} participant${filtered.length !== 1 ? 's' : ''}`;
+      const sorted   = applySort(filtered);
+      document.getElementById('participantTable').innerHTML = buildTable(sorted);
+      document.getElementById('tabCount').textContent = `${sorted.length} participant${sorted.length !== 1 ? 's' : ''}`;
+
+      // Wire sort clicks on freshly rendered headers
+      document.querySelectorAll('th.sortable').forEach(th => {
+        th.addEventListener('click', () => {
+          const col = th.dataset.col;
+          if (_sortCol !== col) {
+            _sortCol = col; _sortDir = 'asc';
+          } else if (_sortDir === 'asc') {
+            _sortDir = 'desc';
+          } else if (_sortDir === 'desc') {
+            _sortCol = null; _sortDir = null;
+          }
+          refreshTable();
+        });
+      });
     }
 
     mc.innerHTML = `
