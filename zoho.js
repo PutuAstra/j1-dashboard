@@ -3,11 +3,15 @@
 // ─────────────────────────────────────────────────────────────
 const Zoho = (() => {
 
+  // Cloudflare CORS proxy — routes requests through zoho-proxy worker
+  const PROXY = 'https://zoho-proxy.putuastrawijaya.workers.dev';
+
   async function request(endpoint, params = {}) {
     const token = ZohoAuth.getToken();
     if (!token) throw new Error('NO_TOKEN');
 
-    const url = new URL(`${CONFIG.RECRUIT_API}/${endpoint}`);
+    // Use proxy URL instead of calling Zoho directly (avoids CORS)
+    const url = new URL(`${PROXY}/recruit/v2/${endpoint}`);
     Object.entries(params).forEach(([k, v]) => url.searchParams.set(k, v));
 
     const resp = await fetch(url.toString(), {
