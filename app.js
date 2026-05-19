@@ -179,47 +179,47 @@ const App = (() => {
     } catch(e) { /* job openings optional */ }
 
     mc.innerHTML = `
-      <div class="page-header" style="padding-bottom:8px">
-        <h1 style="font-size:1.15rem;margin-bottom:2px">Overview</h1>
-        <p style="margin:0;font-size:0.78rem">Live summary · ${s.total} participants total</p>
+      <div class="page-header" style="margin-bottom:6px">
+        <h1 style="font-size:1rem;margin-bottom:1px">Overview</h1>
+        <p style="margin:0;font-size:0.73rem">Live summary · ${s.total} participants total</p>
       </div>
 
       <div class="ov-grid">
         <!-- Top Countries -->
         <div class="card ov-card">
           <div class="ov-card-title">Top Countries</div>
-          <canvas id="chartCountry" height="130"></canvas>
+          <canvas id="chartCountry" height="108"></canvas>
         </div>
         <!-- Stage Progress -->
         <div class="card ov-card">
           <div class="ov-card-title">Stage Progress</div>
-          <canvas id="chartStage" height="130"></canvas>
+          <canvas id="chartStage" height="108"></canvas>
         </div>
         <!-- Sponsor -->
         <div class="card ov-card">
           <div class="ov-card-title">Placement by Sponsor <span class="ov-sub">${placed.length} placed</span></div>
-          <canvas id="chartSponsor" height="130"></canvas>
+          <canvas id="chartSponsor" height="108"></canvas>
         </div>
         <!-- Housing -->
         <div class="card ov-card">
           <div class="ov-card-title">Housing <span class="ov-sub">${housingRateOv}% rate</span></div>
-          <canvas id="chartHousing" height="130"></canvas>
+          <canvas id="chartHousing" height="108"></canvas>
         </div>
         <!-- Joining Flights -->
         <div class="card ov-card">
           <div class="ov-card-title">✈️ Joining Flights <span class="ov-sub">${joiningOv.length} visa approved</span></div>
-          <canvas id="chartJoining" height="130"></canvas>
+          <canvas id="chartJoining" height="108"></canvas>
         </div>
         <!-- Return Flights -->
         <div class="card ov-card">
           <div class="ov-card-title">🏠 Return Flights <span class="ov-sub">${returningOv.length} onboard/completed</span></div>
-          <canvas id="chartReturning" height="130"></canvas>
+          <canvas id="chartReturning" height="108"></canvas>
         </div>
         <!-- Requisition full width -->
         ${reqActive.length ? `
         <div class="card ov-card ov-full">
           <div class="ov-card-title">Requisition <span class="ov-sub">${reqActive.length} hosting companies · ${reqTotalOpenings} openings</span></div>
-          <canvas id="chartReq" height="75"></canvas>
+          <canvas id="chartReq" height="60"></canvas>
         </div>` : ''}
       </div>
     `;
@@ -232,17 +232,17 @@ const App = (() => {
       type: 'doughnut',
       data: { labels, datasets: [{ data, backgroundColor: colors || COLORS, borderWidth: 2, borderColor: cardBg() }] },
       options: { responsive: true, maintainAspectRatio: true,
-        plugins: { legend: { position: 'bottom', labels: { font: { size: 10, family: 'Inter' }, padding: 6, boxWidth: 10 } }, datalabels: { display: false } } }
+        plugins: { legend: { position: 'bottom', labels: { font: { size: 9, family: 'Inter' }, padding: 5, boxWidth: 9 } }, datalabels: { display: false } } }
     });
 
     const hBarOpts = (labels, data, color) => ({
       type: 'bar',
-      data: { labels, datasets: [{ data, backgroundColor: color || '#1B3A6B', borderRadius: 4 }] },
+      data: { labels, datasets: [{ data, backgroundColor: color || '#1B3A6B', borderRadius: 3 }] },
       options: { responsive: true, maintainAspectRatio: true, indexAxis: 'y',
         plugins: { legend: { display: false }, datalabels: { display: false } },
         scales: {
-          x: { beginAtZero: true, ticks: { font: { size: 9 } }, grid: { display: false } },
-          y: { ticks: { font: { size: 9 } } }
+          x: { beginAtZero: true, ticks: { font: { size: 8 } }, grid: { display: false } },
+          y: { ticks: { font: { size: 8 } } }
         }
       }
     });
