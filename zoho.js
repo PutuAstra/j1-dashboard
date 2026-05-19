@@ -172,13 +172,20 @@ const Zoho = (() => {
     const fromRecruit = recruitData.status === 'fulfilled' ? recruitData.value : [];
     const fromCRM     = crmData.status     === 'fulfilled' ? crmData.value     : [];
 
-    if (recruitData.status === 'rejected')
-      console.warn('Recruit fetch failed:', recruitData.reason);
-    if (crmData.status === 'rejected')
-      console.warn('CRM fetch failed:', crmData.reason);
+    if (recruitData.status === 'rejected') {
+      console.error('❌ Recruit fetch failed:', recruitData.reason?.message);
+    }
+    if (crmData.status === 'rejected') {
+      console.error('❌ CRM fetch failed:', crmData.reason?.message);
+      // Show visible toast if App is available
+      if (typeof App !== 'undefined' && App._toast) {
+        App._toast(`CRM data failed: ${crmData.reason?.message}`, 'error');
+      }
+    }
 
-    // Merge: Recruit records take priority (they are at later stages)
-    // CRM records are only included if NOT already in Recruit (match by email)
+    console.log(`✅ Loaded: ${fromRecruit.length} from Recruit, ${fromCRM.length} from CRM`);
+
+    // Merge: exclude CRM records that already exist in Recruit (matched by email)
     const recruitEmails = new Set(
       fromRecruit.map(p => (p.email || '').toLowerCase()).filter(e => e && e !== '—')
     );
@@ -188,11 +195,7 @@ const Zoho = (() => {
       return !e || e === '—' || !recruitEmails.has(e);
     });
 
-    return [...fromCRM.filter(p => {
-      // All CRM records not in Recruit
-      const e = (p.email || '').toLowerCase();
-      return !e || e === '—' || !recruitEmails.has(e);
-    }), ...fromRecruit];
+    return [...crmOnly, ...fromRecruit];
   }
 
   // ── Derived stats ─────────────────────────────────────────
