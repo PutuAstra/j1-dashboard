@@ -257,6 +257,7 @@ const App = (() => {
     { key: 'stage_4',            label: 'Stage 4',            match: /^stage 4$/i },
     { key: 'usa_onboard',        label: 'USA Onboard',        match: /^usa onboard$/i },
     { key: 'program_completed',  label: 'Program Completed',  match: /^program completed$/i },
+    { key: 'total_placement',    label: 'Total J1 Placement', match: /^(usa onboard|program completed)$/i },
   ];
 
   let _activeParticipantTab = 'all';
