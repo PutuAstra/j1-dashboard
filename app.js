@@ -902,29 +902,20 @@ const App = (() => {
       <div class="stat-grid">
         <div class="stat-card accent">
           <div class="stat-value">${active.length}</div>
-          <div class="stat-label">Active Requisitions</div>
+          <div class="stat-label">Active Hosting Company</div>
         </div>
         <div class="stat-card">
-          <div class="stat-value">${new Set(active.map(j => j.hostingCompany).filter(h => h && h !== '—')).size}</div>
-          <div class="stat-label">Total Hosting Companies</div>
+          <div class="stat-value">${active.reduce((s, j) => s + (Number(j.numPositions) || 0), 0)}</div>
+          <div class="stat-label">Total Openings</div>
         </div>
-        ${(() => {
-          // Group active requisitions by hosting company, count requisitions
-          const byHost = {};
-          active.forEach(j => {
-            const host = j.hostingCompany || 'Unknown';
-            if (!byHost[host]) byHost[host] = 0;
-            byHost[host]++;
-          });
-          return Object.entries(byHost)
-            .sort((a, b) => b[1] - a[1])
-            .map(([host, count]) => `
-              <div class="stat-card">
-                <div class="stat-value">${count}</div>
-                <div class="stat-label">${host}</div>
-              </div>
-            `).join('');
-        })()}
+        <div class="stat-card good">
+          <div class="stat-value">${filled.length}</div>
+          <div class="stat-label">Filled / Closed</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value">${allJ1.length}</div>
+          <div class="stat-label">All J1 Hosting Company</div>
+        </div>
       </div>
 
       <div id="reqContent">
