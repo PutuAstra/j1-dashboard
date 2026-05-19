@@ -563,13 +563,15 @@ const App = (() => {
     const participants = await loadData();
     if (!participants) { mc.innerHTML = connectPromptHTML(); return; }
 
-    // ── Joining (outbound) helpers ───────────────────────────
-    const joiningBooked    = participants.filter(p =>  p.flightBooked === true || /yes|booked|confirmed/i.test(String(p.flightBooked)));
-    const joiningNotBooked = participants.filter(p => !(p.flightBooked === true || /yes|booked|confirmed/i.test(String(p.flightBooked))));
+    // ── Joining = Stage 3 & Stage 4 only ────────────────────
+    const joiningAll       = participants.filter(p => /^stage (3|4)$/i.test(p.placementStatus));
+    const joiningBooked    = joiningAll.filter(p =>  p.flightBooked === true || /yes|booked|confirmed/i.test(String(p.flightBooked)));
+    const joiningNotBooked = joiningAll.filter(p => !(p.flightBooked === true || /yes|booked|confirmed/i.test(String(p.flightBooked))));
 
-    // ── Returning helpers ────────────────────────────────────
-    const returnBooked    = participants.filter(p => /yes|booked|confirmed/i.test(String(p.returnFlightStatus)));
-    const returnNotBooked = participants.filter(p => !/yes|booked|confirmed/i.test(String(p.returnFlightStatus)));
+    // ── Returning = USA Onboard & Program Completed only ────
+    const returningAll    = participants.filter(p => /^(usa onboard|program completed)$/i.test(p.placementStatus));
+    const returnBooked    = returningAll.filter(p => /yes|booked|confirmed/i.test(String(p.returnFlightStatus)));
+    const returnNotBooked = returningAll.filter(p => !/yes|booked|confirmed/i.test(String(p.returnFlightStatus)));
 
     function joiningTable(list) {
       if (!list.length) return `<div class="empty-state"><p>No participants in this category.</p></div>`;
@@ -646,7 +648,7 @@ const App = (() => {
       const isJoining = _activeTravelTab === 'joining';
       const booked    = isJoining ? joiningBooked    : returnBooked;
       const notBooked = isJoining ? joiningNotBooked : returnNotBooked;
-      const total     = participants.length;
+      const total     = isJoining ? joiningAll.length : returningAll.length;
 
       return `
         <div class="stat-grid">
@@ -687,11 +689,11 @@ const App = (() => {
           <div class="tab-bar" id="travelTabBar">
             <button class="tab-btn ${_activeTravelTab === 'joining'   ? 'active' : ''}" data-ttab="joining">
               ✈️ Joining
-              <span class="tab-count-badge">${joiningBooked.length + joiningNotBooked.length}</span>
+              <span class="tab-count-badge">${joiningAll.length}</span>
             </button>
             <button class="tab-btn ${_activeTravelTab === 'returning' ? 'active' : ''}" data-ttab="returning">
               🏠 Returning
-              <span class="tab-count-badge">${returnBooked.length + returnNotBooked.length}</span>
+              <span class="tab-count-badge">${returningAll.length}</span>
             </button>
           </div>
         </div>
