@@ -242,8 +242,25 @@ const App = (() => {
   }
 
   // ═══════════════════════════════════════════════════════════
-  //  PAGE: PARTICIPANTS
+  //  PAGE: PARTICIPANTS  (tabbed by J1 Application Status)
   // ═══════════════════════════════════════════════════════════
+
+  // Tab definitions — label shown in UI, filter matches against placementStatus
+  const PARTICIPANT_TABS = [
+    { key: 'all',                label: 'All',                match: null },
+    { key: 'new_submission',     label: 'New Submission',     match: /^new submission$/i },
+    { key: 'consultation_call',  label: 'Consultation Call',  match: /^consultation call$/i },
+    { key: 'sales_call',         label: 'Sales Call',         match: /^sales call$/i },
+    { key: 'stage_1',            label: 'Stage 1',            match: /^stage 1$/i },
+    { key: 'stage_2',            label: 'Stage 2',            match: /^stage 2$/i },
+    { key: 'stage_3',            label: 'Stage 3',            match: /^stage 3$/i },
+    { key: 'stage_4',            label: 'Stage 4',            match: /^stage 4$/i },
+    { key: 'usa_onboard',        label: 'USA Onboard',        match: /^usa onboard$/i },
+    { key: 'program_completed',  label: 'Program Completed',  match: /^program completed$/i },
+  ];
+
+  let _activeParticipantTab = 'all';
+
   async function renderParticipants() {
     const mc = document.getElementById('main-content');
     mc.innerHTML = skeletonHTML();
@@ -251,21 +268,28 @@ const App = (() => {
     const participants = await loadData();
     if (!participants) { mc.innerHTML = connectPromptHTML(); return; }
 
+    // Count per tab for the badges
+    function countForTab(tab) {
+      if (!tab.match) return participants.length;
+      return participants.filter(p => tab.match.test(p.placementStatus)).length;
+    }
+
     function buildTable(list) {
-      if (!list.length) return `<div class="empty-state"><p>No participants match your filter.</p></div>`;
+      if (!list.length) return `<div class="empty-state"><p>No participants in this category.</p></div>`;
       return `
         <div class="table-wrap">
           <table>
             <thead>
               <tr>
-                <th>Name</th><th>Country</th><th>Program</th>
-                <th>Host Company</th><th>Status</th>
+                <th>#</th><th>Name</th><th>Country</th><th>Program</th>
+                <th>Host Company</th><th>App Status</th>
                 <th>Visa Status</th><th>Arrival</th><th>Flight</th>
               </tr>
             </thead>
             <tbody>
-              ${list.map(p => `
+              ${list.map((p, i) => `
                 <tr>
+                  <td class="row-num">${i + 1}</td>
                   <td><strong>${p.name}</strong></td>
                   <td>${p.country}</td>
                   <td>${badge(p.programType)}</td>
@@ -282,11 +306,54 @@ const App = (() => {
       `;
     }
 
+    function getTabData(key) {
+      const tab = PARTICIPANT_TABS.find(t => t.key === key);
+      if (!tab || !tab.match) return participants;
+      return participants.filter(p => tab.match.test(p.placementStatus));
+    }
+
+    function applyFilters(list) {
+      const q      = (document.getElementById('searchInput')?.value || '').toLowerCase();
+      const prog   = (document.getElementById('filterProgram')?.value || '').toLowerCase();
+      const flight = document.getElementById('filterFlight')?.value || '';
+
+      if (q)      list = list.filter(p =>
+        p.name.toLowerCase().includes(q) ||
+        p.country.toLowerCase().includes(q) ||
+        p.hostCompany.toLowerCase().includes(q)
+      );
+      if (prog)   list = list.filter(p => p.programType.toLowerCase().includes(prog));
+      if (flight === 'booked')
+        list = list.filter(p => p.flightBooked === true || /yes|booked/i.test(String(p.flightBooked)));
+      if (flight === 'not')
+        list = list.filter(p => !(p.flightBooked === true || /yes|booked/i.test(String(p.flightBooked))));
+
+      return list;
+    }
+
+    function refreshTable() {
+      const base    = getTabData(_activeParticipantTab);
+      const filtered = applyFilters(base);
+      document.getElementById('participantTable').innerHTML = buildTable(filtered);
+      document.getElementById('tabCount').textContent = `${filtered.length} participant${filtered.length !== 1 ? 's' : ''}`;
+    }
+
     mc.innerHTML = `
       <div class="page-header">
         <h1>Participants</h1>
         <p>${participants.length} participants loaded from Zoho Recruit</p>
       </div>
+
+      <!-- Tab bar -->
+      <div class="tab-bar">
+        ${PARTICIPANT_TABS.map(t => `
+          <button class="tab-btn ${t.key === _activeParticipantTab ? 'active' : ''}" data-tab="${t.key}">
+            ${t.label}
+            <span class="tab-count-badge">${countForTab(t)}</span>
+          </button>
+        `).join('')}
+      </div>
+
       <div class="card">
         <div class="filter-bar">
           <input class="search-input" id="searchInput" placeholder="Search by name, country, company…">
@@ -300,34 +367,28 @@ const App = (() => {
             <option value="booked">Booked</option>
             <option value="not">Not Booked</option>
           </select>
+          <span id="tabCount" style="margin-left:auto;font-size:0.82rem;color:var(--muted)"></span>
         </div>
-        <div id="participantTable">${buildTable(participants)}</div>
+        <div id="participantTable"></div>
       </div>
     `;
 
-    function applyFilters() {
-      const q       = document.getElementById('searchInput').value.toLowerCase();
-      const prog    = document.getElementById('filterProgram').value.toLowerCase();
-      const flight  = document.getElementById('filterFlight').value;
+    // Wire up tabs
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        _activeParticipantTab = btn.dataset.tab;
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        refreshTable();
+      });
+    });
 
-      let list = participants;
-      if (q)      list = list.filter(p =>
-        p.name.toLowerCase().includes(q) ||
-        p.country.toLowerCase().includes(q) ||
-        p.hostCompany.toLowerCase().includes(q)
-      );
-      if (prog)   list = list.filter(p => p.programType.toLowerCase().includes(prog));
-      if (flight === 'booked')
-        list = list.filter(p => p.flightBooked === true || /yes|booked/i.test(String(p.flightBooked)));
-      if (flight === 'not')
-        list = list.filter(p => !(p.flightBooked === true || /yes|booked/i.test(String(p.flightBooked))));
+    // Wire up filters
+    document.getElementById('searchInput').addEventListener('input', refreshTable);
+    document.getElementById('filterProgram').addEventListener('change', refreshTable);
+    document.getElementById('filterFlight').addEventListener('change', refreshTable);
 
-      document.getElementById('participantTable').innerHTML = buildTable(list);
-    }
-
-    document.getElementById('searchInput').addEventListener('input', applyFilters);
-    document.getElementById('filterProgram').addEventListener('change', applyFilters);
-    document.getElementById('filterFlight').addEventListener('change', applyFilters);
+    refreshTable(); // initial render
   }
 
   // ═══════════════════════════════════════════════════════════
