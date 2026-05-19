@@ -479,9 +479,8 @@ tbody tr:hover { background: var(--bg); }
   align-items: center;
   justify-content: center;
   gap: 4px;
-  flex: 1 1 0;
-  min-width: 0;
-  padding: 4px 6px;
+  flex: 0 0 auto;
+  padding: 4px 8px;
   border-radius: 20px;
   border: 1px solid var(--border);
   background: var(--card);
