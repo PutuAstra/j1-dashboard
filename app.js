@@ -392,7 +392,7 @@ const App = (() => {
     mc.innerHTML = `
       <div class="page-header">
         <h1>Participants</h1>
-        <p>${participants.length} participants loaded from Zoho Recruit</p>
+        <p>${participants.length} participants loaded from Zoho CRM &amp; Recruit</p>
       </div>
 
       <!-- Sticky header: tabs + filters -->
