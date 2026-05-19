@@ -298,80 +298,34 @@ const App = (() => {
       return `<span class="sort-icon">⇅</span>`;
     }
 
-    // Column sets per tab
-    const NEW_SUBMISSION_COLS = [
-      { label: '#',                       key: null,                    get: null },
-      { label: 'First Name',              key: 'firstName',             get: p => (p.firstName||'').toLowerCase() },
-      { label: 'Last Name',               key: 'lastName',              get: p => (p.lastName||'').toLowerCase() },
-      { label: 'Gender',                  key: 'gender',                get: p => (p.gender||'').toLowerCase() },
-      { label: 'Email',                   key: 'email',                 get: p => (p.email||'').toLowerCase() },
-      { label: 'Phone Number',            key: 'phone',                 get: p => (p.phone||'').toLowerCase() },
-      { label: 'Age',                     key: 'age',                   get: p => (p.age||'').toLowerCase() },
-      { label: 'Position Applied',        key: 'positionApplied',       get: p => (p.positionApplied||'').toLowerCase() },
-      { label: 'Country',                 key: 'country',               get: p => (p.country||'').toLowerCase() },
-      { label: 'Permanent Address',       key: 'permanentAddress',      get: p => (p.permanentAddress||'').toLowerCase() },
-      { label: "CTI USA's Review",        key: 'ctiUsaReview',          get: p => (p.ctiUsaReview||'').toLowerCase() },
-      { label: 'Eligible Programs',       key: 'eligiblePrograms',      get: p => (p.eligiblePrograms||'').toLowerCase() },
-      { label: 'Consultation Call Status',key: 'consultationCallStatus',get: p => (p.consultationCallStatus||'').toLowerCase() },
-      { label: 'Consultation Call Notes', key: 'consultationCallNotes', get: p => (p.consultationCallNotes||'').toLowerCase() },
-      { label: 'J1 Program Sources',      key: 'programSource',         get: p => (p.programSource||'').toLowerCase() },
-    ];
-
-    function getActiveCols() {
-      return _activeParticipantTab === 'new_submission' ? NEW_SUBMISSION_COLS : P_COLS;
-    }
-
     function buildTable(list) {
       if (!list.length) return `<div class="empty-state"><p>No participants in this category.</p></div>`;
-      const cols = getActiveCols();
-
-      function renderRow(p, i) {
-        if (_activeParticipantTab === 'new_submission') {
-          return `<tr>
-            <td class="row-num">${i + 1}</td>
-            <td>${p.firstName}</td>
-            <td>${p.lastName}</td>
-            <td>${p.gender}</td>
-            <td style="font-size:0.8rem">${p.email}</td>
-            <td>${p.phone}</td>
-            <td>${p.age}</td>
-            <td>${p.positionApplied}</td>
-            <td>${p.country}</td>
-            <td style="font-size:0.8rem">${p.permanentAddress}</td>
-            <td>${badge(p.ctiUsaReview)}</td>
-            <td style="font-size:0.8rem">${p.eligiblePrograms}</td>
-            <td>${badge(p.consultationCallStatus)}</td>
-            <td style="font-size:0.8rem;max-width:200px;white-space:normal">${p.consultationCallNotes}</td>
-            <td>${p.programSource}</td>
-          </tr>`;
-        }
-        return `<tr>
-          <td class="row-num">${i + 1}</td>
-          <td><span class="source-badge source-${p._source || 'recruit'}">${p._source === 'crm' ? 'CRM' : 'Recruit'}</span></td>
-          <td><strong>${p.name}</strong></td>
-          <td>${p.country}</td>
-          <td>${badge(p.programType)}</td>
-          <td>${p.hostCompany}</td>
-          <td>${badge(p.placementStatus)}</td>
-          <td>${badge(p.visaStatus)}</td>
-          <td>${formatDate(p.arrivalDate)}</td>
-          <td>${flightBadge(p.flightBooked)}</td>
-        </tr>`;
-      }
-
       return `
         <div class="table-wrap">
           <table>
             <thead>
               <tr>
-                ${cols.map(c => c.key
+                ${P_COLS.map(c => c.key
                   ? `<th class="sortable ${_sortCol === c.key ? 'sorted' : ''}" data-col="${c.key}">${c.label} ${sortIcon(c.key)}</th>`
                   : `<th>#</th>`
                 ).join('')}
               </tr>
             </thead>
             <tbody>
-              ${list.map((p, i) => renderRow(p, i)).join('')}
+              ${list.map((p, i) => `
+                <tr>
+                  <td class="row-num">${i + 1}</td>
+                  <td><span class="source-badge source-${p._source || 'recruit'}">${p._source === 'crm' ? 'CRM' : 'Recruit'}</span></td>
+                  <td><strong>${p.name}</strong></td>
+                  <td>${p.country}</td>
+                  <td>${badge(p.programType)}</td>
+                  <td>${p.hostCompany}</td>
+                  <td>${badge(p.placementStatus)}</td>
+                  <td>${badge(p.visaStatus)}</td>
+                  <td>${formatDate(p.arrivalDate)}</td>
+                  <td>${flightBadge(p.flightBooked)}</td>
+                </tr>
+              `).join('')}
             </tbody>
           </table>
         </div>
@@ -402,8 +356,7 @@ const App = (() => {
 
     function applySort(list) {
       if (!_sortCol || !_sortDir) return list;
-      const allCols = [...P_COLS, ...NEW_SUBMISSION_COLS];
-      const col = allCols.find(c => c.key === _sortCol);
+      const col = P_COLS.find(c => c.key === _sortCol);
       if (!col) return list;
       return [...list].sort((a, b) => {
         const av = col.get(a), bv = col.get(b);
