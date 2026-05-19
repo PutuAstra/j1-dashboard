@@ -784,11 +784,150 @@ const App = (() => {
   // ═══════════════════════════════════════════════════════════
   //  ROUTER
   // ═══════════════════════════════════════════════════════════
+  // ═══════════════════════════════════════════════════════════
+  //  HOUSING PAGE
+  // ═══════════════════════════════════════════════════════════
+  let _housingSortCol = null;
+  let _housingSortDir = null;
+
+  async function renderHousing() {
+    const mc = document.getElementById('main-content');
+    mc.innerHTML = skeletonHTML();
+
+    const participants = await loadData();
+    if (!participants) { mc.innerHTML = connectPromptHTML(); return; }
+
+    // Only Recruit records have housing data
+    const housed    = participants.filter(p => p._source === 'recruit' && p.housingAvailability && p.housingAvailability !== '—');
+    const noHousing = participants.filter(p => p._source === 'recruit' && (!p.housingAvailability || p.housingAvailability === '—'));
+
+    const HOUSING_COLS = [
+      { label: '#',                              key: null },
+      { label: 'Name',                           key: 'name',              get: p => (p.name || '').toLowerCase() },
+      { label: 'Country',                        key: 'country',           get: p => (p.country || '').toLowerCase() },
+      { label: 'Host Company',                   key: 'hostCompany',       get: p => (p.hostCompany || '').toLowerCase() },
+      { label: 'Housing Availability',           key: 'housingAvailability', get: p => (p.housingAvailability || '').toLowerCase() },
+      { label: 'Housing Landlord',               key: 'housingLandlord',   get: p => (p.housingLandlord || '').toLowerCase() },
+      { label: 'Initial Payment Before Departure', key: 'housingPaymentInit', get: p => p.housingPaymentInit || 0 },
+      { label: 'Monthly Payment',                key: 'housingPaymentMo',  get: p => p.housingPaymentMo || 0 },
+      { label: 'Housing Address',                key: 'housingAddress',    get: p => (p.housingAddress || '').toLowerCase() },
+    ];
+
+    function hSortIcon(key) {
+      if (_housingSortCol !== key) return `<span class="sort-icon">⇅</span>`;
+      if (_housingSortDir === 'asc')  return `<span class="sort-icon active">↑</span>`;
+      if (_housingSortDir === 'desc') return `<span class="sort-icon active">↓</span>`;
+      return `<span class="sort-icon">⇅</span>`;
+    }
+
+    function applyHousingSort(list) {
+      if (!_housingSortCol || !_housingSortDir) return list;
+      const col = HOUSING_COLS.find(c => c.key === _housingSortCol);
+      if (!col) return list;
+      return [...list].sort((a, b) => {
+        const av = col.get(a), bv = col.get(b);
+        const cmp = av < bv ? -1 : av > bv ? 1 : 0;
+        return _housingSortDir === 'asc' ? cmp : -cmp;
+      });
+    }
+
+    function housingTable(list) {
+      if (!list.length) return `<div class="empty-state"><p>No participants in this category.</p></div>`;
+      const sorted = applyHousingSort(list);
+      return `
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                ${HOUSING_COLS.map(c => c.key
+                  ? `<th class="sortable ${_housingSortCol === c.key ? 'sorted' : ''}" data-hcol="${c.key}">${c.label} ${hSortIcon(c.key)}</th>`
+                  : `<th>#</th>`
+                ).join('')}
+              </tr>
+            </thead>
+            <tbody>
+              ${sorted.map((p, i) => `
+                <tr>
+                  <td class="row-num">${i + 1}</td>
+                  <td><strong>${p.name}</strong></td>
+                  <td>${p.country}</td>
+                  <td>${p.hostCompany}</td>
+                  <td>${badge(p.housingAvailability)}</td>
+                  <td>${p.housingLandlord}</td>
+                  <td>${p.housingPaymentInit ? '$' + p.housingPaymentInit : '—'}</td>
+                  <td>${p.housingPaymentMo ? '$' + p.housingPaymentMo : '—'}</td>
+                  <td>${p.housingAddress}</td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        </div>
+      `;
+    }
+
+    function renderHousingContent() {
+      return `
+        <div class="card">
+          <div class="card-header"><div class="card-title" style="color:#166534">✓ Housing Available (${housed.length})</div></div>
+          ${housingTable(housed)}
+        </div>
+        <div class="card">
+          <div class="card-header"><div class="card-title" style="color:var(--accent)">No Housing Info (${noHousing.length})</div></div>
+          ${housingTable(noHousing)}
+        </div>
+      `;
+    }
+
+    mc.innerHTML = `
+      <div class="page-header">
+        <h1>Housing</h1>
+        <p>Participant housing assignments and payment details</p>
+      </div>
+
+      <div class="stat-grid">
+        <div class="stat-card good">
+          <div class="stat-value">${housed.length}</div>
+          <div class="stat-label">Housing Available</div>
+        </div>
+        <div class="stat-card accent">
+          <div class="stat-value">${noHousing.length}</div>
+          <div class="stat-label">No Housing Info</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value">${participants.filter(p => p._source === 'recruit').length ? Math.round(housed.length / participants.filter(p => p._source === 'recruit').length * 100) : 0}%</div>
+          <div class="stat-label">Housing Rate</div>
+        </div>
+      </div>
+
+      <div id="housingContent">
+        ${renderHousingContent()}
+      </div>
+    `;
+
+    // Sort column click handler
+    mc.addEventListener('click', function onHousingSort(e) {
+      const th = e.target.closest('[data-hcol]');
+      if (!th) return;
+      const col = th.dataset.hcol;
+      if (_housingSortCol === col) {
+        _housingSortDir = _housingSortDir === 'asc' ? 'desc' : _housingSortDir === 'desc' ? null : 'asc';
+        if (!_housingSortDir) _housingSortCol = null;
+      } else {
+        _housingSortCol = col; _housingSortDir = 'asc';
+      }
+      document.getElementById('housingContent').innerHTML = renderHousingContent();
+    });
+  }
+
+  // ═══════════════════════════════════════════════════════════
+  //  ROUTER
+  // ═══════════════════════════════════════════════════════════
   const PAGES = {
     overview:     { render: renderOverview,     title: 'Overview' },
     participants: { render: renderParticipants, title: 'Participants' },
     visa:         { render: renderVisa,         title: 'Visa / DS-2019' },
     travel:       { render: renderTravel,       title: 'Travel' },
+    housing:      { render: renderHousing,      title: 'Housing' },
   };
 
   let _currentPage = 'overview';

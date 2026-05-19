@@ -90,6 +90,10 @@ const CONFIG = {
     hcInterviewStatus: 'Hosting_Company_Interview_Status',
     hcSubmissionDate:  'Submission_Date_Hosting_Company',
     housingAvailability:'Housing_Availability',
+    housingLandlord:    'Housing_Landlord',
+    housingPaymentInit: 'Initial_Housing_Payment_Before_Departure',
+    housingPaymentMo:   'Monthly_Housing_Payment',
+    housingAddress:     'Housing_Address',
 
     // Stage 3 — Visa
     visaStatus:        'J1_Visa_Status',

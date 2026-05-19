@@ -100,6 +100,12 @@ const Zoho = (() => {
       returnTripFrom:     r[F.returnTripFrom]     || '—',
       returnTripTo:       r[F.returnTripTo]       || '—',
       returnGateway:      r[F.returnGateway]      || '—',
+      // Housing
+      housingAvailability: r[F.housingAvailability] || '—',
+      housingLandlord:     r[F.housingLandlord]     || '—',
+      housingPaymentInit:  r[F.housingPaymentInit]  || null,
+      housingPaymentMo:    r[F.housingPaymentMo]    || null,
+      housingAddress:      r[F.housingAddress]      || '—',
     }));
   }
 
@@ -170,6 +176,12 @@ const Zoho = (() => {
       returnTripFrom:     '—',
       returnTripTo:       '—',
       returnGateway:      '—',
+      // Housing
+      housingAvailability: '—',
+      housingLandlord:     '—',
+      housingPaymentInit:  null,
+      housingPaymentMo:    null,
+      housingAddress:      '—',
     }));
   }
 
