@@ -1034,7 +1034,7 @@ const App = (() => {
     mc.innerHTML = `
       <div class="page-header">
         <h1>Requisition</h1>
-        <p>Active J1 Program job openings from Zoho Recruit</p>
+        <p>Active J1 Program openings from Zoho Recruit</p>
       </div>
       <div id="reqStats" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px;align-items:stretch">
         ${renderReqStats(applyReqFilters(active))}
