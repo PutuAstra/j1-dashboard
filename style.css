@@ -297,9 +297,10 @@ a { color: inherit; text-decoration: none; }
 /* ── Overview compact grid ──────────────────────────────── */
 .ov-grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
   gap: 6px;
 }
+.ov-grid-3 { grid-template-columns: repeat(3, 1fr); }
+.ov-grid-4 { grid-template-columns: repeat(4, 1fr); }
 .ov-card {
   padding: 8px 10px 6px !important;
 }
@@ -657,8 +658,8 @@ th.sorted {
   .stat-grid { grid-template-columns: repeat(2, 1fr); gap: 8px; }
   .stat-value { font-size: 1.3rem; }
   .chart-grid { grid-template-columns: 1fr; gap: 10px; }
-  .ov-grid { grid-template-columns: 1fr 1fr; gap: 6px; }
-  .ov-full { grid-column: 1 / -1; }
+  .ov-grid-3 { grid-template-columns: 1fr 1fr; }
+  .ov-grid-4 { grid-template-columns: 1fr 1fr; }
 
   .card { padding: 12px; }
 

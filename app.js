@@ -184,42 +184,40 @@ const App = (() => {
         <p style="margin:0;font-size:0.73rem">Live summary · ${s.total} participants total</p>
       </div>
 
-      <div class="ov-grid">
-        <!-- Top Countries -->
+      <!-- Row 1: 3 bar charts -->
+      <div class="ov-grid ov-grid-3" style="margin-bottom:6px">
         <div class="card ov-card">
           <div class="ov-card-title">Top Countries</div>
           <div class="ov-chart-wrap"><canvas id="chartCountry"></canvas></div>
         </div>
-        <!-- Stage Progress -->
         <div class="card ov-card">
           <div class="ov-card-title">Stage Progress</div>
           <div class="ov-chart-wrap"><canvas id="chartStage"></canvas></div>
         </div>
-        <!-- Sponsor -->
         <div class="card ov-card">
           <div class="ov-card-title">Placement by Sponsor <span class="ov-sub">${placed.length} placed</span></div>
           <div class="ov-chart-wrap"><canvas id="chartSponsor"></canvas></div>
         </div>
-        <!-- Housing -->
+      </div>
+
+      <!-- Row 2: 3 donuts + Requisition bar -->
+      <div class="ov-grid ov-grid-4">
         <div class="card ov-card">
           <div class="ov-card-title">Housing <span class="ov-sub">${housingRateOv}% rate</span></div>
           <div class="ov-chart-wrap ov-chart-donut"><canvas id="chartHousing"></canvas></div>
         </div>
-        <!-- Joining Flights -->
         <div class="card ov-card">
           <div class="ov-card-title">✈️ Joining Flights <span class="ov-sub">${joiningOv.length} visa approved</span></div>
           <div class="ov-chart-wrap ov-chart-donut"><canvas id="chartJoining"></canvas></div>
         </div>
-        <!-- Return Flights -->
         <div class="card ov-card">
           <div class="ov-card-title">🏠 Return Flights <span class="ov-sub">${returningOv.length} onboard/completed</span></div>
           <div class="ov-chart-wrap ov-chart-donut"><canvas id="chartReturning"></canvas></div>
         </div>
-        <!-- Requisition full width -->
         ${reqActive.length ? `
-        <div class="card ov-card ov-full">
-          <div class="ov-card-title">Requisition <span class="ov-sub">${reqActive.length} hosting companies · ${reqTotalOpenings} openings</span></div>
-          <div class="ov-chart-wrap ov-chart-req"><canvas id="chartReq"></canvas></div>
+        <div class="card ov-card">
+          <div class="ov-card-title">Requisition <span class="ov-sub">${reqActive.length} companies · ${reqTotalOpenings} openings</span></div>
+          <div class="ov-chart-wrap ov-chart-donut"><canvas id="chartReq"></canvas></div>
         </div>` : ''}
       </div>
     `;
