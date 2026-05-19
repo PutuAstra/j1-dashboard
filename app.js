@@ -959,7 +959,8 @@ const App = (() => {
         byClient[client].reqs++;
         byClient[client].openings += Number(j.numPositions) || 0;
       });
-      return `
+
+      const metricCards = `
         <div class="stat-card accent">
           <div class="stat-value">${list.length}</div>
           <div class="stat-label">Hosting Company</div>
@@ -977,23 +978,25 @@ const App = (() => {
               <div style="font-size:0.63rem;color:var(--muted-lt);margin-top:2px">${data.reqs} hosting company</div>
             </div>
           `).join('')}
-        <!-- Filters inline with stat cards -->
-        <div class="stat-card req-filter-card">
+      `;
+
+      const filterCards = `
+        <div class="stat-card req-filter-card" style="flex:1">
           <div class="req-filter-label">Department</div>
           <select class="filter-select" id="reqFilterDept" style="width:100%;margin:0">
             <option value="">All Departments</option>
             ${deptOptions.map(d => `<option value="${d.toLowerCase()}" ${_reqFilterDept === d.toLowerCase() ? 'selected' : ''}>${d}</option>`).join('')}
           </select>
         </div>
-        <div class="stat-card req-filter-card">
+        <div class="stat-card req-filter-card" style="flex:1">
           <div class="req-filter-label">Housing</div>
           <select class="filter-select" id="reqFilterHousing" style="width:100%;margin:0">
             <option value="">All Housing</option>
             ${housingOptions.map(h => `<option value="${h.toLowerCase()}" ${_reqFilterHousing === h.toLowerCase() ? 'selected' : ''}>${h}</option>`).join('')}
           </select>
         </div>
-        <div class="stat-card req-filter-card" style="position:relative">
-          <div class="req-filter-label">J1 Program Type <span style="font-weight:400;font-size:0.62rem">(has any)</span></div>
+        <div class="stat-card req-filter-card" style="flex:1;position:relative">
+          <div class="req-filter-label">J1 Program Type</div>
           <button class="multi-sel-btn" id="programDropdownBtn">
             ${_reqFilterProgram.length ? _reqFilterProgram.length + ' selected' : 'All Types'} <span style="float:right">▾</span>
           </button>
@@ -1005,6 +1008,11 @@ const App = (() => {
             ${_reqFilterProgram.length ? `<div class="multi-sel-clear" id="clearProgram">✕ Clear all</div>` : ''}
           </div>
         </div>
+      `;
+
+      return `
+        <div style="display:flex;gap:8px;flex-shrink:0">${metricCards}</div>
+        <div style="display:flex;gap:8px;flex:1;min-width:0">${filterCards}</div>
       `;
     }
 
@@ -1058,7 +1066,7 @@ const App = (() => {
         <h1>Requisition</h1>
         <p>Active J1 Program job openings from Zoho Recruit</p>
       </div>
-      <div class="stat-grid" id="reqStats">
+      <div id="reqStats" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px;align-items:stretch">
         ${renderReqStats(applyReqFilters(active))}
       </div>
       <div id="reqContent">
