@@ -130,6 +130,54 @@ const App = (() => {
       'Not Booked': participants.filter(p => !(p.flightBooked === true || /yes|booked/i.test(String(p.flightBooked)))).length,
     };
 
+    // ── Housing stats ─────────────────────────────────────────
+    const withCompanyOv  = participants.filter(p => p._source === 'recruit' && p.hostCompany && p.hostCompany !== '—');
+    const housedOv       = withCompanyOv.filter(p => p.housingAvailability && p.housingAvailability !== '—');
+    const noHousingOv    = withCompanyOv.filter(p => !p.housingAvailability || p.housingAvailability === '—');
+    const housingRateOv  = withCompanyOv.length ? Math.round(housedOv.length / withCompanyOv.length * 100) : 0;
+
+    // ── Travel — Joining (Visa Approved) ──────────────────────
+    const joiningOv      = participants.filter(p => /^approved$/i.test(p.visaStatus));
+    const joiningBookedOv    = joiningOv.filter(p =>  p.flightBooked === true || /yes|booked|confirmed/i.test(String(p.flightBooked)));
+    const joiningNotBookedOv = joiningOv.filter(p => !(p.flightBooked === true || /yes|booked|confirmed/i.test(String(p.flightBooked))));
+    const joiningRateOv  = joiningOv.length ? Math.round(joiningBookedOv.length / joiningOv.length * 100) : 0;
+
+    // ── Travel — Returning (USA Onboard + Program Completed) ──
+    const returningOv    = participants.filter(p => /^(usa onboard|program completed)$/i.test(p.placementStatus));
+    const returnBookedOv    = returningOv.filter(p => /yes|booked|confirmed/i.test(String(p.returnFlightStatus)));
+    const returnNotBookedOv = returningOv.filter(p => !/yes|booked|confirmed/i.test(String(p.returnFlightStatus)));
+    const returnRateOv   = returningOv.length ? Math.round(returnBookedOv.length / returningOv.length * 100) : 0;
+
+    // ── Stage 3 / Stage 4 counts ──────────────────────────────
+    const stage3Count = participants.filter(p => /^stage 3$/i.test(p.placementStatus)).length;
+    const stage4Count = participants.filter(p => /^stage 4$/i.test(p.placementStatus)).length;
+
+    // ── Successful Placement by Sponsor ───────────────────────
+    const placed = participants.filter(p => /^(usa onboard|program completed)$/i.test(p.placementStatus));
+    const bySponsor = {};
+    placed.forEach(p => {
+      const sponsor = p.programSource || 'Unknown';
+      bySponsor[sponsor] = (bySponsor[sponsor] || 0) + 1;
+    });
+    const sponsorEntries = Object.entries(bySponsor).sort((a, b) => b[1] - a[1]);
+
+    // ── Requisition stats (from job cache if available) ───────
+    let reqActive = [], reqTotalOpenings = 0, reqByClient = {};
+    try {
+      const jobs = await Zoho.getJobOpenings();
+      reqActive = jobs.filter(j =>
+        /^j1 program$/i.test((j.placementCategory || '').trim()) &&
+        /^active$/i.test((j.status || '').trim())
+      );
+      reqTotalOpenings = reqActive.reduce((s, j) => s + (Number(j.numPositions) || 0), 0);
+      reqActive.forEach(j => {
+        const client = j.clientName || 'Unknown';
+        if (!reqByClient[client]) reqByClient[client] = { reqs: 0, openings: 0 };
+        reqByClient[client].reqs++;
+        reqByClient[client].openings += Number(j.numPositions) || 0;
+      });
+    } catch(e) { /* job openings optional */ }
+
     mc.innerHTML = `
       <div class="page-header">
         <h1>Overview</h1>
@@ -193,6 +241,76 @@ const App = (() => {
             <div><div class="card-title">Top Countries</div><div class="card-sub">Participants by nationality</div></div>
           </div>
           <canvas id="chartCountry" height="200"></canvas>
+        </div>
+      </div>
+
+      <!-- ── Stage Progress ───────────────────────────────── -->
+      <div class="card">
+        <div class="card-header"><div class="card-title">Stage Progress</div></div>
+        <div class="stat-grid" style="margin-bottom:0">
+          <div class="stat-card"><div class="stat-value">${stage3Count}</div><div class="stat-label">Stage 3</div></div>
+          <div class="stat-card"><div class="stat-value">${stage4Count}</div><div class="stat-label">Stage 4</div></div>
+        </div>
+      </div>
+
+      <!-- ── Housing ──────────────────────────────────────── -->
+      <div class="card">
+        <div class="card-header"><div class="card-title">Housing</div></div>
+        <div class="stat-grid" style="margin-bottom:0">
+          <div class="stat-card good"><div class="stat-value">${housedOv.length}</div><div class="stat-label">Housing Available</div></div>
+          <div class="stat-card accent"><div class="stat-value">${noHousingOv.length}</div><div class="stat-label">No Housing Info</div></div>
+          <div class="stat-card"><div class="stat-value">${housingRateOv}%</div><div class="stat-label">Housing Rate</div></div>
+        </div>
+      </div>
+
+      <!-- ── Travel ───────────────────────────────────────── -->
+      <div class="card">
+        <div class="card-header"><div class="card-title">Travel</div></div>
+        <div style="margin-bottom:10px">
+          <div style="font-size:0.78rem;font-weight:600;color:var(--muted);margin-bottom:6px">✈️ JOINING (Visa Approved — ${joiningOv.length})</div>
+          <div class="stat-grid" style="margin-bottom:0">
+            <div class="stat-card good"><div class="stat-value">${joiningBookedOv.length}</div><div class="stat-label">Flights Booked</div></div>
+            <div class="stat-card accent"><div class="stat-value">${joiningNotBookedOv.length}</div><div class="stat-label">Not Yet Booked</div></div>
+            <div class="stat-card"><div class="stat-value">${joiningRateOv}%</div><div class="stat-label">Booking Rate</div></div>
+          </div>
+        </div>
+        <div>
+          <div style="font-size:0.78rem;font-weight:600;color:var(--muted);margin-bottom:6px">🏠 RETURNING (USA Onboard + Program Completed — ${returningOv.length})</div>
+          <div class="stat-grid" style="margin-bottom:0">
+            <div class="stat-card good"><div class="stat-value">${returnBookedOv.length}</div><div class="stat-label">Flights Booked</div></div>
+            <div class="stat-card accent"><div class="stat-value">${returnNotBookedOv.length}</div><div class="stat-label">Not Yet Booked</div></div>
+            <div class="stat-card"><div class="stat-value">${returnRateOv}%</div><div class="stat-label">Booking Rate</div></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── Requisition ──────────────────────────────────── -->
+      ${reqActive.length ? `
+      <div class="card">
+        <div class="card-header"><div class="card-title">Requisition</div><div class="card-sub">Active J1 Program job openings</div></div>
+        <div class="stat-grid" style="margin-bottom:0">
+          <div class="stat-card accent"><div class="stat-value">${reqActive.length}</div><div class="stat-label">Hosting Company</div></div>
+          <div class="stat-card"><div class="stat-value">${reqTotalOpenings}</div><div class="stat-label">Total Openings</div></div>
+          ${Object.entries(reqByClient).sort((a,b) => b[1].openings - a[1].openings).map(([client, data]) => `
+            <div class="stat-card">
+              <div class="stat-value">${data.openings}</div>
+              <div class="stat-label">${client}<br><span style="font-weight:400;font-size:0.68rem;color:var(--muted-lt)">${data.reqs} hosting company</span></div>
+            </div>
+          `).join('')}
+        </div>
+      </div>` : ''}
+
+      <!-- ── Successful Placement by Sponsor ─────────────── -->
+      <div class="card">
+        <div class="card-header"><div class="card-title">Successful Placement by Sponsor</div><div class="card-sub">USA Onboard + Program Completed</div></div>
+        <div class="stat-grid" style="margin-bottom:0">
+          <div class="stat-card good"><div class="stat-value">${placed.length}</div><div class="stat-label">Total Placements</div></div>
+          ${sponsorEntries.map(([sponsor, count]) => `
+            <div class="stat-card">
+              <div class="stat-value">${count}</div>
+              <div class="stat-label">${sponsor}</div>
+            </div>
+          `).join('')}
         </div>
       </div>
     `;
