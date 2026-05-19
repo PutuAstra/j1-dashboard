@@ -960,7 +960,8 @@ const App = (() => {
             .map(([client, data]) => `
               <div class="stat-card">
                 <div class="stat-value">${data.openings}</div>
-                <div class="stat-label">${client}<br><span style="font-weight:400;font-size:0.68rem;color:var(--muted-lt)">${data.reqs} hosting company</span></div>
+                <div class="stat-label" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:0.68rem" title="${client}">${client}</div>
+                <div style="font-size:0.63rem;color:var(--muted-lt);margin-top:2px">${data.reqs} hosting company</div>
               </div>
             `).join('');
         })()}
