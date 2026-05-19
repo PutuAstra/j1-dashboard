@@ -345,17 +345,16 @@ const App = (() => {
         <p>${participants.length} participants loaded from Zoho Recruit</p>
       </div>
 
-      <!-- Tab bar -->
-      <div class="tab-bar">
-        ${PARTICIPANT_TABS.map(t => `
-          <button class="tab-btn ${t.key === _activeParticipantTab ? 'active' : ''}" data-tab="${t.key}">
-            ${t.label}
-            <span class="tab-count-badge">${countForTab(t)}</span>
-          </button>
-        `).join('')}
-      </div>
-
-      <div class="card">
+      <!-- Sticky header: tabs + filters -->
+      <div class="participants-sticky-header">
+        <div class="tab-bar">
+          ${PARTICIPANT_TABS.map(t => `
+            <button class="tab-btn ${t.key === _activeParticipantTab ? 'active' : ''}" data-tab="${t.key}">
+              ${t.label}
+              <span class="tab-count-badge">${countForTab(t)}</span>
+            </button>
+          `).join('')}
+        </div>
         <div class="filter-bar">
           <input class="search-input" id="searchInput" placeholder="Search by name, country, company…">
           <select class="filter-select" id="filterProgram">
@@ -370,6 +369,9 @@ const App = (() => {
           </select>
           <span id="tabCount" style="margin-left:auto;font-size:0.82rem;color:var(--muted)"></span>
         </div>
+      </div>
+
+      <div class="card" style="margin-top:0;border-top-left-radius:0;border-top-right-radius:0;">
         <div id="participantTable"></div>
       </div>
     `;

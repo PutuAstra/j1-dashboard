@@ -505,6 +505,28 @@ tbody tr:hover { background: var(--bg); }
   text-align: center;
 }
 
+/* Sticky participants header (tabs + filters) */
+.participants-sticky-header {
+  position: sticky;
+  top: var(--topbar-h);
+  z-index: 50;
+  background: var(--bg);
+  padding-bottom: 0;
+  border-bottom: 1px solid var(--border);
+  border-radius: 10px 10px 0 0;
+  padding: 14px 16px 0 16px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+}
+
+.participants-sticky-header .tab-bar {
+  margin-bottom: 10px;
+}
+
+.participants-sticky-header .filter-bar {
+  padding-bottom: 12px;
+  margin-bottom: 0;
+}
+
 /* ─────────────────────────────────────────────────────────────
    MOBILE
 ───────────────────────────────────────────────────────── */
