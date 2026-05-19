@@ -486,14 +486,13 @@ tbody tr:hover { background: var(--bg); }
   border: 1px solid var(--border);
   background: var(--card);
   color: var(--muted);
-  font-size: 0.68rem;
+  font-size: 0.6rem;
   font-weight: 500;
   font-family: inherit;
   cursor: pointer;
   transition: all 0.15s;
   white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  overflow: visible;
 }
 
 .tab-btn:hover {
