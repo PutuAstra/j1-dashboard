@@ -563,8 +563,8 @@ const App = (() => {
     const participants = await loadData();
     if (!participants) { mc.innerHTML = connectPromptHTML(); return; }
 
-    // ── Joining = Stage 3 & Stage 4 only ────────────────────
-    const joiningAll       = participants.filter(p => /^stage (3|4)$/i.test(p.placementStatus));
+    // ── Joining = J1 Visa Status is Approved only ───────────
+    const joiningAll       = participants.filter(p => /^approved$/i.test(p.visaStatus));
     const joiningBooked    = joiningAll.filter(p =>  p.flightBooked === true || /yes|booked|confirmed/i.test(String(p.flightBooked)));
     const joiningNotBooked = joiningAll.filter(p => !(p.flightBooked === true || /yes|booked|confirmed/i.test(String(p.flightBooked))));
 
