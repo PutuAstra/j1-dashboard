@@ -827,11 +827,12 @@ const App = (() => {
   // ═══════════════════════════════════════════════════════════
   //  REQUISITION PAGE
   // ═══════════════════════════════════════════════════════════
-  let _reqSortCol     = null;
-  let _reqSortDir     = null;
-  let _jobCache       = null;
-  let _reqFilterDept  = '';
+  let _reqSortCol       = null;
+  let _reqSortDir       = null;
+  let _jobCache         = null;
+  let _reqFilterDept    = '';
   let _reqFilterHousing = '';
+  let _reqFilterProgram = []; // "has any" multi-select
 
   async function renderRequisition() {
     const mc = document.getElementById('main-content');
@@ -929,11 +930,24 @@ const App = (() => {
     // Unique filter options
     const deptOptions    = [...new Set(active.map(j => j.department).filter(d => d && d !== '—'))].sort();
     const housingOptions = [...new Set(active.map(j => j.housingAvail).filter(h => h && h !== '—'))].sort();
+    const programOptions = [...new Set(
+      active.flatMap(j => j.j1ProgramType && j.j1ProgramType !== '—'
+        ? j.j1ProgramType.split(/[;,]\s*/).map(v => v.trim()).filter(Boolean)
+        : [])
+    )].sort();
 
     function applyReqFilters(list) {
       let out = list;
       if (_reqFilterDept)    out = out.filter(j => (j.department  || '').toLowerCase() === _reqFilterDept);
       if (_reqFilterHousing) out = out.filter(j => (j.housingAvail || '').toLowerCase() === _reqFilterHousing);
+      if (_reqFilterProgram.length > 0) {
+        out = out.filter(j => {
+          const types = (j.j1ProgramType && j.j1ProgramType !== '—')
+            ? j.j1ProgramType.split(/[;,]\s*/).map(v => v.trim().toLowerCase())
+            : [];
+          return _reqFilterProgram.some(sel => types.includes(sel));
+        });
+      }
       return out;
     }
 
@@ -978,6 +992,13 @@ const App = (() => {
             ${housingOptions.map(h => `<option value="${h.toLowerCase()}" ${_reqFilterHousing === h.toLowerCase() ? 'selected' : ''}>${h}</option>`).join('')}
           </select>
         </div>
+        <div class="stat-card" style="grid-column:span 2;justify-content:center">
+          <div style="font-size:0.7rem;color:var(--muted);margin-bottom:5px;font-weight:600">J1 Program Type <span style="font-weight:400;font-size:0.65rem">(has any)</span></div>
+          <select class="filter-select" id="reqFilterProgram" multiple size="${Math.min(programOptions.length || 3, 5)}" style="width:100%;margin:0;height:auto">
+            ${programOptions.map(p => `<option value="${p.toLowerCase()}" ${_reqFilterProgram.includes(p.toLowerCase()) ? 'selected' : ''}>${p}</option>`).join('')}
+          </select>
+          ${_reqFilterProgram.length ? `<div style="font-size:0.65rem;color:var(--muted);margin-top:4px;cursor:pointer" id="clearProgram">✕ Clear</div>` : ''}
+        </div>
       `;
     }
 
@@ -993,12 +1014,23 @@ const App = (() => {
       // Re-attach filter listeners after stats re-render
       document.getElementById('reqFilterDept').value    = _reqFilterDept;
       document.getElementById('reqFilterHousing').value = _reqFilterHousing;
+      // Restore multi-select selections
+      const progSel = document.getElementById('reqFilterProgram');
+      if (progSel) {
+        [...progSel.options].forEach(o => { o.selected = _reqFilterProgram.includes(o.value); });
+        progSel.addEventListener('change', onProgramChange);
+      }
       document.getElementById('reqFilterDept').addEventListener('change', onDeptChange);
       document.getElementById('reqFilterHousing').addEventListener('change', onHousingChange);
+      document.getElementById('clearProgram')?.addEventListener('click', () => { _reqFilterProgram = []; refreshReq(); });
     }
 
     function onDeptChange(e)    { _reqFilterDept    = e.target.value; refreshReq(); }
     function onHousingChange(e) { _reqFilterHousing = e.target.value; refreshReq(); }
+    function onProgramChange(e) {
+      _reqFilterProgram = [...e.target.selectedOptions].map(o => o.value);
+      refreshReq();
+    }
 
     mc.innerHTML = `
       <div class="page-header">
@@ -1027,9 +1059,11 @@ const App = (() => {
       document.getElementById('reqContent').innerHTML = renderReqContent();
     });
 
-    // Filter changes
+    // Filter changes (initial wire-up)
     document.getElementById('reqFilterDept').addEventListener('change', onDeptChange);
     document.getElementById('reqFilterHousing').addEventListener('change', onHousingChange);
+    document.getElementById('reqFilterProgram').addEventListener('change', onProgramChange);
+    document.getElementById('clearProgram')?.addEventListener('click', () => { _reqFilterProgram = []; refreshReq(); });
   }
 
   // ═══════════════════════════════════════════════════════════
