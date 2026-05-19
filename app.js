@@ -798,8 +798,9 @@ const App = (() => {
     if (!participants) { mc.innerHTML = connectPromptHTML(); return; }
 
     // Only Recruit records have housing data
-    const housed    = participants.filter(p => p._source === 'recruit' && p.housingAvailability && p.housingAvailability !== '—');
-    const noHousing = participants.filter(p => p._source === 'recruit' && (!p.housingAvailability || p.housingAvailability === '—'));
+    const withCompany = participants.filter(p => p._source === 'recruit' && p.hostCompany && p.hostCompany !== '—');
+    const housed    = withCompany.filter(p => p.housingAvailability && p.housingAvailability !== '—');
+    const noHousing = withCompany.filter(p => !p.housingAvailability || p.housingAvailability === '—');
 
     const HOUSING_COLS = [
       { label: '#',                              key: null },
@@ -894,7 +895,7 @@ const App = (() => {
           <div class="stat-label">No Housing Info</div>
         </div>
         <div class="stat-card">
-          <div class="stat-value">${participants.filter(p => p._source === 'recruit').length ? Math.round(housed.length / participants.filter(p => p._source === 'recruit').length * 100) : 0}%</div>
+          <div class="stat-value">${withCompany.length ? Math.round(housed.length / withCompany.length * 100) : 0}%</div>
           <div class="stat-label">Housing Rate</div>
         </div>
       </div>
