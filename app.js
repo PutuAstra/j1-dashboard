@@ -258,7 +258,11 @@ const App = (() => {
     { key: 'usa_onboard',        label: 'USA Onboard',        match: /^usa onboard$/i },
     { key: 'program_completed',  label: 'Program Completed',  match: /^program completed$/i },
     { key: 'total_placement',    label: 'Total J1 Placement', match: /^(usa onboard|program completed)$/i },
+    { key: 'archived',           label: 'Archived Participants', match: null, archived: true },
   ];
+
+  // All statuses covered by the named tabs — anything else goes to Archived
+  const KNOWN_STATUSES = /^(new submission|consultation call|sales call|stage 1|stage 2|stage 3|stage 4|usa onboard|program completed)$/i;
 
   let _activeParticipantTab = 'all';
   let _sortCol = null;   // field key e.g. 'name'
@@ -287,7 +291,8 @@ const App = (() => {
 
     // Count per tab for the badges
     function countForTab(tab) {
-      if (!tab.match) return participants.length;
+      if (tab.archived) return participants.filter(p => !KNOWN_STATUSES.test(p.placementStatus)).length;
+      if (!tab.match)   return participants.length;
       return participants.filter(p => tab.match.test(p.placementStatus)).length;
     }
 
@@ -334,7 +339,9 @@ const App = (() => {
 
     function getTabData(key) {
       const tab = PARTICIPANT_TABS.find(t => t.key === key);
-      if (!tab || !tab.match) return participants;
+      if (!tab) return participants;
+      if (tab.archived) return participants.filter(p => !KNOWN_STATUSES.test(p.placementStatus));
+      if (!tab.match)   return participants;
       return participants.filter(p => tab.match.test(p.placementStatus));
     }
 
