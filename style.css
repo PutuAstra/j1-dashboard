@@ -295,13 +295,22 @@ a { color: inherit; text-decoration: none; }
 /* ─────────────────────────────────────────────────────────────
    TABLE
 ───────────────────────────────────────────────────────── */
-.table-wrap { overflow-x: auto; }
+.table-wrap {
+  overflow-x: auto;
+  overflow-y: auto;
+  max-height: calc(100vh - 280px);
+}
 table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
 thead th {
+  position: sticky;
+  top: 0;
+  z-index: 10;
   padding: 10px 14px; text-align: left;
   font-size: 0.72rem; font-weight: 600;
   text-transform: uppercase; letter-spacing: 0.05em;
-  color: var(--muted); border-bottom: 2px solid var(--border);
+  color: var(--muted);
+  background: var(--card);
+  border-bottom: 2px solid var(--border);
   white-space: nowrap;
 }
 tbody td { padding: 11px 14px; border-bottom: 1px solid var(--border); color: var(--text-2); }
