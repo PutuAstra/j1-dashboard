@@ -854,17 +854,19 @@ const App = (() => {
           <table>
             <thead>
               <tr>
-                ${REQ_COLS.map(c => c.key
-                  ? `<th class="sortable ${_reqSortCol === c.key ? 'sorted' : ''}" data-rcol="${c.key}">${c.label} ${rSortIcon(c.key)}</th>`
-                  : `<th>#</th>`
-                ).join('')}
+                ${REQ_COLS.map((c, ci) => {
+                  const sticky = ci === 1 ? 'style="position:sticky;left:40px;z-index:11;background:var(--card)"' : '';
+                  return c.key
+                    ? `<th class="sortable ${_reqSortCol === c.key ? 'sorted' : ''}" data-rcol="${c.key}" ${sticky}>${c.label} ${rSortIcon(c.key)}</th>`
+                    : `<th style="position:sticky;left:0;z-index:11;background:var(--card)">#</th>`;
+                }).join('')}
               </tr>
             </thead>
             <tbody>
               ${sorted.map((j, i) => `
                 <tr>
-                  <td class="row-num">${i + 1}</td>
-                  <td><strong>${j.hostingCompany}</strong></td>
+                  <td class="row-num" style="position:sticky;left:0;z-index:1;background:var(--card)">${i + 1}</td>
+                  <td style="position:sticky;left:40px;z-index:1;background:var(--card)"><strong>${j.hostingCompany}</strong></td>
                   <td>${j.positionName}</td>
                   <td>${[j.city, j.state].filter(v => v && v !== '—').join(', ') || '—'}</td>
                   <td>${j.department}</td>
@@ -887,7 +889,6 @@ const App = (() => {
     function renderReqContent() {
       return `
         <div class="card">
-          <div class="card-header"><div class="card-title" style="color:#166534">✓ Active Requisitions (${active.length})</div></div>
           ${reqTable(active)}
         </div>
       `;
