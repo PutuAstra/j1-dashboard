@@ -905,17 +905,27 @@ const App = (() => {
           <div class="stat-label">Active Requisitions</div>
         </div>
         <div class="stat-card">
-          <div class="stat-value">${active.reduce((s, j) => s + (j.numPositions || 0), 0)}</div>
+          <div class="stat-value">${active.reduce((s, j) => s + (Number(j.numPositions) || 0), 0)}</div>
           <div class="stat-label">Total Openings</div>
         </div>
-        <div class="stat-card good">
-          <div class="stat-value">${filled.length}</div>
-          <div class="stat-label">Filled / Closed</div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-value">${allJ1.length}</div>
-          <div class="stat-label">All J1 Requisitions</div>
-        </div>
+        ${(() => {
+          // Group active requisitions by client name, sum openings
+          const byClient = {};
+          active.forEach(j => {
+            const client = j.clientName || 'Unknown';
+            if (!byClient[client]) byClient[client] = { reqs: 0, openings: 0 };
+            byClient[client].reqs++;
+            byClient[client].openings += Number(j.numPositions) || 0;
+          });
+          return Object.entries(byClient)
+            .sort((a, b) => b[1].openings - a[1].openings)
+            .map(([client, data]) => `
+              <div class="stat-card">
+                <div class="stat-value">${data.openings}</div>
+                <div class="stat-label">${client}<br><span style="font-weight:400;font-size:0.68rem;color:var(--muted-lt)">${data.reqs} requisition${data.reqs !== 1 ? 's' : ''}</span></div>
+              </div>
+            `).join('');
+        })()}
       </div>
 
       <div id="reqContent">
