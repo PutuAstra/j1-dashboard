@@ -78,7 +78,9 @@ a { color: inherit; text-decoration: none; }
   top: 0; left: 0; bottom: 0;
   z-index: 200;
   transition: transform 0.25s ease;
+  transform: translateX(-100%);
 }
+.sidebar.open { transform: none; }
 
 .sidebar-header {
   display: flex;
@@ -160,7 +162,7 @@ a { color: inherit; text-decoration: none; }
    MAIN WRAPPER
 ───────────────────────────────────────────────────────── */
 .main-wrapper {
-  margin-left: var(--sidebar-w);
+  margin-left: 0;
   flex: 1;
   display: flex;
   flex-direction: column;
@@ -198,7 +200,7 @@ a { color: inherit; text-decoration: none; }
 }
 .icon-btn:hover { background: var(--bg); }
 .hamburger {
-  display: none; flex-direction: column; gap: 5px;
+  display: flex; flex-direction: column; gap: 5px;
   background: none; border: none; cursor: pointer; padding: 4px;
 }
 .hamburger span {
@@ -595,23 +597,18 @@ th.sorted {
 ───────────────────────────────────────────────────────── */
 .sidebar-overlay {
   display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.4);
-  z-index: 150;
+  z-index: 150; cursor: pointer;
 }
+.sidebar-overlay.show { display: block; }
 
 /* Tablet (≤ 1024px) — narrow sidebar */
 @media (max-width: 1024px) {
   :root { --sidebar-w: 180px; }
 }
 
-/* Mobile (≤ 768px) — slide-out sidebar */
+/* Mobile (≤ 768px) */
 @media (max-width: 768px) {
   :root { --sidebar-w: 220px; }
-
-  .sidebar { transform: translateX(-100%); }
-  .sidebar.open { transform: none; }
-  .sidebar-overlay.show { display: block; }
-  .main-wrapper { margin-left: 0 !important; }
-  .hamburger { display: flex; }
 
   .topbar { padding: 0 12px; gap: 8px; }
   .topbar-title { font-size: 0.85rem; }
