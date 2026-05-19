@@ -400,6 +400,42 @@ tbody tr:hover { background: var(--bg); }
 }
 .filter-select:focus { border-color: var(--accent); }
 
+/* ── Requisition filter cards ───────────────────────────── */
+.req-filter-card { justify-content: center; }
+.req-filter-label {
+  font-size: 0.7rem; color: var(--muted);
+  margin-bottom: 5px; font-weight: 600;
+}
+
+/* ── Custom multi-select checkbox dropdown ──────────────── */
+.multi-sel-btn {
+  width: 100%; text-align: left; padding: 7px 10px;
+  background: var(--card); color: var(--text);
+  border: 1px solid var(--border); border-radius: var(--radius-sm);
+  font-size: 0.82rem; font-family: inherit; cursor: pointer;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.multi-sel-btn:hover { border-color: var(--accent); }
+.multi-sel-panel {
+  display: none; position: absolute;
+  top: calc(100% + 2px); left: 0; min-width: 200px;
+  background: var(--card); border: 1px solid var(--border);
+  border-radius: var(--radius-sm); box-shadow: var(--shadow-md);
+  z-index: 200; max-height: 220px; overflow-y: auto;
+}
+.multi-sel-panel.open { display: block; }
+.multi-sel-option {
+  display: flex; align-items: center; gap: 8px;
+  padding: 7px 12px; cursor: pointer; font-size: 0.82rem;
+}
+.multi-sel-option:hover { background: var(--bg); }
+.multi-sel-option input { accent-color: var(--accent); cursor: pointer; }
+.multi-sel-clear {
+  padding: 6px 12px; font-size: 0.75rem; color: var(--accent);
+  cursor: pointer; border-top: 1px solid var(--border);
+}
+.multi-sel-clear:hover { background: var(--bg); }
+
 /* ─────────────────────────────────────────────────────────────
    CONNECT ZOHO PROMPT
 ───────────────────────────────────────────────────────── */

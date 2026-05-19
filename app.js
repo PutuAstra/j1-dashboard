@@ -977,27 +977,33 @@ const App = (() => {
               <div style="font-size:0.63rem;color:var(--muted-lt);margin-top:2px">${data.reqs} hosting company</div>
             </div>
           `).join('')}
-        <!-- Filters inline with stat cards — each in its own wider card -->
-        <div class="stat-card" style="grid-column:span 2;justify-content:center">
-          <div style="font-size:0.7rem;color:var(--muted);margin-bottom:5px;font-weight:600">Department</div>
+        <!-- Filters inline with stat cards -->
+        <div class="stat-card req-filter-card">
+          <div class="req-filter-label">Department</div>
           <select class="filter-select" id="reqFilterDept" style="width:100%;margin:0">
             <option value="">All Departments</option>
             ${deptOptions.map(d => `<option value="${d.toLowerCase()}" ${_reqFilterDept === d.toLowerCase() ? 'selected' : ''}>${d}</option>`).join('')}
           </select>
         </div>
-        <div class="stat-card" style="grid-column:span 2;justify-content:center">
-          <div style="font-size:0.7rem;color:var(--muted);margin-bottom:5px;font-weight:600">Housing Availability</div>
+        <div class="stat-card req-filter-card">
+          <div class="req-filter-label">Housing</div>
           <select class="filter-select" id="reqFilterHousing" style="width:100%;margin:0">
             <option value="">All Housing</option>
             ${housingOptions.map(h => `<option value="${h.toLowerCase()}" ${_reqFilterHousing === h.toLowerCase() ? 'selected' : ''}>${h}</option>`).join('')}
           </select>
         </div>
-        <div class="stat-card" style="grid-column:span 2;justify-content:center">
-          <div style="font-size:0.7rem;color:var(--muted);margin-bottom:5px;font-weight:600">J1 Program Type <span style="font-weight:400;font-size:0.65rem">(has any)</span></div>
-          <select class="filter-select" id="reqFilterProgram" multiple size="${Math.min(programOptions.length || 3, 5)}" style="width:100%;margin:0;height:auto">
-            ${programOptions.map(p => `<option value="${p.toLowerCase()}" ${_reqFilterProgram.includes(p.toLowerCase()) ? 'selected' : ''}>${p}</option>`).join('')}
-          </select>
-          ${_reqFilterProgram.length ? `<div style="font-size:0.65rem;color:var(--muted);margin-top:4px;cursor:pointer" id="clearProgram">✕ Clear</div>` : ''}
+        <div class="stat-card req-filter-card" style="position:relative">
+          <div class="req-filter-label">J1 Program Type <span style="font-weight:400;font-size:0.62rem">(has any)</span></div>
+          <button class="multi-sel-btn" id="programDropdownBtn">
+            ${_reqFilterProgram.length ? _reqFilterProgram.length + ' selected' : 'All Types'} <span style="float:right">▾</span>
+          </button>
+          <div class="multi-sel-panel" id="programDropdownPanel">
+            ${programOptions.map(p => `
+              <label class="multi-sel-option">
+                <input type="checkbox" value="${p.toLowerCase()}" ${_reqFilterProgram.includes(p.toLowerCase()) ? 'checked' : ''}> ${p}
+              </label>`).join('')}
+            ${_reqFilterProgram.length ? `<div class="multi-sel-clear" id="clearProgram">✕ Clear all</div>` : ''}
+          </div>
         </div>
       `;
     }
@@ -1007,30 +1013,45 @@ const App = (() => {
       return `<div class="card">${reqTable(filtered)}</div>`;
     }
 
+    function wireDropdown() {
+      const btn   = document.getElementById('programDropdownBtn');
+      const panel = document.getElementById('programDropdownPanel');
+      if (!btn || !panel) return;
+
+      btn.addEventListener('click', e => {
+        e.stopPropagation();
+        panel.classList.toggle('open');
+      });
+      document.addEventListener('click', function closePanel(e) {
+        if (!panel.contains(e.target) && e.target !== btn) {
+          panel.classList.remove('open');
+          document.removeEventListener('click', closePanel);
+        }
+      });
+      panel.querySelectorAll('input[type=checkbox]').forEach(cb => {
+        cb.addEventListener('change', () => {
+          _reqFilterProgram = [...panel.querySelectorAll('input:checked')].map(c => c.value);
+          refreshReq();
+        });
+      });
+      document.getElementById('clearProgram')?.addEventListener('click', () => {
+        _reqFilterProgram = []; refreshReq();
+      });
+    }
+
     function refreshReq() {
       const filtered = applyReqFilters(active);
       document.getElementById('reqStats').innerHTML   = renderReqStats(filtered);
       document.getElementById('reqContent').innerHTML = renderReqContent();
-      // Re-attach filter listeners after stats re-render
       document.getElementById('reqFilterDept').value    = _reqFilterDept;
       document.getElementById('reqFilterHousing').value = _reqFilterHousing;
-      // Restore multi-select selections
-      const progSel = document.getElementById('reqFilterProgram');
-      if (progSel) {
-        [...progSel.options].forEach(o => { o.selected = _reqFilterProgram.includes(o.value); });
-        progSel.addEventListener('change', onProgramChange);
-      }
       document.getElementById('reqFilterDept').addEventListener('change', onDeptChange);
       document.getElementById('reqFilterHousing').addEventListener('change', onHousingChange);
-      document.getElementById('clearProgram')?.addEventListener('click', () => { _reqFilterProgram = []; refreshReq(); });
+      wireDropdown();
     }
 
     function onDeptChange(e)    { _reqFilterDept    = e.target.value; refreshReq(); }
     function onHousingChange(e) { _reqFilterHousing = e.target.value; refreshReq(); }
-    function onProgramChange(e) {
-      _reqFilterProgram = [...e.target.selectedOptions].map(o => o.value);
-      refreshReq();
-    }
 
     mc.innerHTML = `
       <div class="page-header">
@@ -1062,8 +1083,7 @@ const App = (() => {
     // Filter changes (initial wire-up)
     document.getElementById('reqFilterDept').addEventListener('change', onDeptChange);
     document.getElementById('reqFilterHousing').addEventListener('change', onHousingChange);
-    document.getElementById('reqFilterProgram').addEventListener('change', onProgramChange);
-    document.getElementById('clearProgram')?.addEventListener('click', () => { _reqFilterProgram = []; refreshReq(); });
+    wireDropdown();
   }
 
   // ═══════════════════════════════════════════════════════════
