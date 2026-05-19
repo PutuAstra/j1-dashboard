@@ -260,7 +260,7 @@ const Zoho = (() => {
       jobId:             r[JF.jobId]             || '—',
       status:            r[JF.status]            || '—',
       placementCategory: r[JF.placementCategory] || '—',
-      hostingCompany:    r[JF.hostingCompany]    || '—',
+      hostingCompany:    (r[JF.hostingCompany]?.name || r[JF.hostingCompany]) || '—',
       positionName:      r[JF.positionName]      || '—',
       city:              r[JF.city]              || '—',
       state:             r[JF.state]             || '—',
@@ -274,7 +274,7 @@ const Zoho = (() => {
       j1ProgramType:     Array.isArray(r[JF.j1ProgramType])
                            ? r[JF.j1ProgramType].join('; ')
                            : r[JF.j1ProgramType] || '—',
-      clientName:        r[JF.clientName]        || '—',
+      clientName:        (r[JF.clientName]?.name || r[JF.clientName]) || '—',
     }));
   }
 
