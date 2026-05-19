@@ -121,7 +121,7 @@ const Zoho = (() => {
     return all.map(r => ({
       _source:                'crm',
       id:                     'crm_' + r.id,
-      name:                   [r[CF.firstName], r[CF.lastName]].filter(Boolean).join(' ') || '—',
+      name:                   r[CF.fullName] || [r[CF.firstName], r[CF.lastName]].filter(Boolean).join(' ') || '—',
       firstName:              r[CF.firstName]              || '—',
       lastName:               r[CF.lastName]               || '—',
       country:                r[CF.country]                || '—',

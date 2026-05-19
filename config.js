@@ -33,6 +33,7 @@ const CONFIG = {
   // 4c. Zoho CRM field API names
   //     → CRM: Settings → Modules → J1 Participants → Fields → API Name column
   CRM_FIELDS: {
+    fullName:               'Full_Name',
     firstName:              'First_Name',
     lastName:               'Last_Name',
     email:                  'Email',
