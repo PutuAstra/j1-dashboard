@@ -937,48 +937,32 @@ const App = (() => {
       return out;
     }
 
-    function renderReqContent() {
-      const filtered = applyReqFilters(active);
+    function renderReqStats(list) {
+      const byClient = {};
+      list.forEach(j => {
+        const client = j.clientName || 'Unknown';
+        if (!byClient[client]) byClient[client] = { reqs: 0, openings: 0 };
+        byClient[client].reqs++;
+        byClient[client].openings += Number(j.numPositions) || 0;
+      });
       return `
-        <div class="card">
-          ${reqTable(filtered)}
-        </div>
-      `;
-    }
-
-    mc.innerHTML = `
-      <div class="page-header">
-        <h1>Requisition</h1>
-        <p>Active J1 Program job openings from Zoho Recruit</p>
-      </div>
-
-      <div class="stat-grid">
         <div class="stat-card accent">
-          <div class="stat-value">${active.length}</div>
+          <div class="stat-value">${list.length}</div>
           <div class="stat-label">Hosting Company</div>
         </div>
         <div class="stat-card">
-          <div class="stat-value">${active.reduce((s, j) => s + (Number(j.numPositions) || 0), 0)}</div>
+          <div class="stat-value">${list.reduce((s, j) => s + (Number(j.numPositions) || 0), 0)}</div>
           <div class="stat-label">Total Openings</div>
         </div>
-        ${(() => {
-          const byClient = {};
-          active.forEach(j => {
-            const client = j.clientName || 'Unknown';
-            if (!byClient[client]) byClient[client] = { reqs: 0, openings: 0 };
-            byClient[client].reqs++;
-            byClient[client].openings += Number(j.numPositions) || 0;
-          });
-          return Object.entries(byClient)
-            .sort((a, b) => b[1].openings - a[1].openings)
-            .map(([client, data]) => `
-              <div class="stat-card">
-                <div class="stat-value">${data.openings}</div>
-                <div class="stat-label" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:0.68rem" title="${client}">${client.split(' ').slice(0,2).join(' ')}</div>
-                <div style="font-size:0.63rem;color:var(--muted-lt);margin-top:2px">${data.reqs} hosting company</div>
-              </div>
-            `).join('');
-        })()}
+        ${Object.entries(byClient)
+          .sort((a, b) => b[1].openings - a[1].openings)
+          .map(([client, data]) => `
+            <div class="stat-card">
+              <div class="stat-value">${data.openings}</div>
+              <div class="stat-label" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:0.68rem" title="${client}">${client.split(' ').slice(0,2).join(' ')}</div>
+              <div style="font-size:0.63rem;color:var(--muted-lt);margin-top:2px">${data.reqs} hosting company</div>
+            </div>
+          `).join('')}
         <!-- Filters inline with stat cards — each in its own wider card -->
         <div class="stat-card" style="grid-column:span 2;justify-content:center">
           <div style="font-size:0.7rem;color:var(--muted);margin-bottom:5px;font-weight:600">Department</div>
@@ -994,8 +978,36 @@ const App = (() => {
             ${housingOptions.map(h => `<option value="${h.toLowerCase()}" ${_reqFilterHousing === h.toLowerCase() ? 'selected' : ''}>${h}</option>`).join('')}
           </select>
         </div>
-      </div>
+      `;
+    }
 
+    function renderReqContent() {
+      const filtered = applyReqFilters(active);
+      return `<div class="card">${reqTable(filtered)}</div>`;
+    }
+
+    function refreshReq() {
+      const filtered = applyReqFilters(active);
+      document.getElementById('reqStats').innerHTML   = renderReqStats(filtered);
+      document.getElementById('reqContent').innerHTML = renderReqContent();
+      // Re-attach filter listeners after stats re-render
+      document.getElementById('reqFilterDept').value    = _reqFilterDept;
+      document.getElementById('reqFilterHousing').value = _reqFilterHousing;
+      document.getElementById('reqFilterDept').addEventListener('change', onDeptChange);
+      document.getElementById('reqFilterHousing').addEventListener('change', onHousingChange);
+    }
+
+    function onDeptChange(e)    { _reqFilterDept    = e.target.value; refreshReq(); }
+    function onHousingChange(e) { _reqFilterHousing = e.target.value; refreshReq(); }
+
+    mc.innerHTML = `
+      <div class="page-header">
+        <h1>Requisition</h1>
+        <p>Active J1 Program job openings from Zoho Recruit</p>
+      </div>
+      <div class="stat-grid" id="reqStats">
+        ${renderReqStats(applyReqFilters(active))}
+      </div>
       <div id="reqContent">
         ${renderReqContent()}
       </div>
@@ -1016,14 +1028,8 @@ const App = (() => {
     });
 
     // Filter changes
-    document.getElementById('reqFilterDept').addEventListener('change', e => {
-      _reqFilterDept = e.target.value;
-      document.getElementById('reqContent').innerHTML = renderReqContent();
-    });
-    document.getElementById('reqFilterHousing').addEventListener('change', e => {
-      _reqFilterHousing = e.target.value;
-      document.getElementById('reqContent').innerHTML = renderReqContent();
-    });
+    document.getElementById('reqFilterDept').addEventListener('change', onDeptChange);
+    document.getElementById('reqFilterHousing').addEventListener('change', onHousingChange);
   }
 
   // ═══════════════════════════════════════════════════════════
