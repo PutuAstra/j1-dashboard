@@ -28,7 +28,7 @@ const CONFIG = {
   // 4b. Zoho CRM — J1 Participants module
   //     → In Zoho CRM: Settings → Modules → J1 Participants → note the API Name
   //     → From your URL it appears to be CustomModule22
-  CRM_MODULE: 'CustomModule22',
+  CRM_MODULE: 'J1_Participants1',
 
   // 4c. Zoho CRM field API names
   //     → CRM: Settings → Modules → J1 Participants → Fields → API Name column
