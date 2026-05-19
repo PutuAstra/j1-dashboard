@@ -94,6 +94,13 @@ a { color: inherit; text-decoration: none; }
   color: #fff; font-weight: 700; font-size: 0.95rem; font-style: italic;
   flex-shrink: 0;
 }
+.sidebar-logo-img {
+  width: 46px; height: 46px; border-radius: 8px;
+  object-fit: contain;
+  background: #fff;
+  padding: 3px;
+  flex-shrink: 0;
+}
 .sidebar-brand-name { color: #fff; font-weight: 700; font-size: 0.9rem; }
 .sidebar-brand-org  { color: var(--sidebar-txt); font-size: 0.75rem; margin-top: 1px; }
 

@@ -106,6 +106,6 @@ const CONFIG = {
 
   // 7. Dashboard branding
   APP_NAME:    'J1 Dashboard',
-  ORG_NAME:    'Your Organization',
+  ORG_NAME:    'CTI Group Worldwide Services, Inc.',
   ACCENT_COLOR: '#B01A18',
 };
