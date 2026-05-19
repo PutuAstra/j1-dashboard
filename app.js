@@ -979,18 +979,17 @@ const App = (() => {
               </div>
             `).join('');
         })()}
-      </div>
-
-      <!-- Filters -->
-      <div class="filter-bar" style="margin-bottom:10px">
-        <select class="filter-select" id="reqFilterDept">
-          <option value="">All Departments</option>
-          ${deptOptions.map(d => `<option value="${d.toLowerCase()}" ${_reqFilterDept === d.toLowerCase() ? 'selected' : ''}>${d}</option>`).join('')}
-        </select>
-        <select class="filter-select" id="reqFilterHousing">
-          <option value="">All Housing</option>
-          ${housingOptions.map(h => `<option value="${h.toLowerCase()}" ${_reqFilterHousing === h.toLowerCase() ? 'selected' : ''}>${h}</option>`).join('')}
-        </select>
+        <!-- Filters inline with stat cards -->
+        <div class="stat-card" style="display:flex;flex-direction:column;gap:8px;justify-content:center">
+          <select class="filter-select" id="reqFilterDept" style="margin:0">
+            <option value="">All Departments</option>
+            ${deptOptions.map(d => `<option value="${d.toLowerCase()}" ${_reqFilterDept === d.toLowerCase() ? 'selected' : ''}>${d}</option>`).join('')}
+          </select>
+          <select class="filter-select" id="reqFilterHousing" style="margin:0">
+            <option value="">All Housing</option>
+            ${housingOptions.map(h => `<option value="${h.toLowerCase()}" ${_reqFilterHousing === h.toLowerCase() ? 'selected' : ''}>${h}</option>`).join('')}
+          </select>
+        </div>
       </div>
 
       <div id="reqContent">
