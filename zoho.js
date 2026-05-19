@@ -109,9 +109,9 @@ const Zoho = (() => {
     const CF = CONFIG.CRM_FIELDS;
     let all = [], page = 1, more = true;
 
+    const fields = Object.values(CF).join(',');
     while (more) {
-      // Note: no 'fields' param — fetch all fields so we can identify correct API names
-      const data = await crmRequest(module, { page, per_page: 200 });
+      const data = await crmRequest(module, { fields, page, per_page: 200 });
       const records = data.data || [];
       all = all.concat(records);
       more = data.info?.more_records === true;
@@ -119,17 +119,28 @@ const Zoho = (() => {
     }
 
     return all.map(r => ({
-      _source:            'crm',
-      id:                 'crm_' + r.id,
-      name:               [r[CF.firstName], r[CF.lastName]].filter(Boolean).join(' ') || '—',
-      country:            r[CF.country]       || '—',
-      gender:             r[CF.gender]        || '—',
-      email:              r[CF.email]         || '—',
-      programType:        r[CF.programType]   || '—',
-      programSource:      r[CF.programSource] || '—',
-      eligiblePrograms:   '—',
-      placementStatus:    r[CF.appStatus]     || '—',
-      hostCompany:        r[CF.hostCompany]   || '—',
+      _source:                'crm',
+      id:                     'crm_' + r.id,
+      name:                   [r[CF.firstName], r[CF.lastName]].filter(Boolean).join(' ') || '—',
+      firstName:              r[CF.firstName]              || '—',
+      lastName:               r[CF.lastName]               || '—',
+      country:                r[CF.country]                || '—',
+      gender:                 r[CF.gender]                 || '—',
+      email:                  r[CF.email]                  || '—',
+      phone:                  r[CF.phone]                  || '—',
+      age:                    r[CF.age]                    || '—',
+      positionApplied:        r[CF.positionApplied]        || '—',
+      permanentAddress:       r[CF.permanentAddress]       || '—',
+      ctiUsaReview:           r[CF.ctiUsaReview]           || '—',
+      consultationCallStatus: r[CF.consultationCallStatus] || '—',
+      consultationCallNotes:  r[CF.consultationCallNotes]  || '—',
+      programType:            r[CF.programType]            || '—',
+      programSource:          r[CF.programSource]          || '—',
+      eligiblePrograms:       Array.isArray(r[CF.eligiblePrograms])
+                                ? r[CF.eligiblePrograms].join(', ')
+                                : r[CF.eligiblePrograms]   || '—',
+      placementStatus:        r[CF.appStatus]              || '—',
+      hostCompany:            r[CF.hostCompany]            || '—',
       programStart:       null,
       programEnd:         null,
       sponsorStatus:      '—',

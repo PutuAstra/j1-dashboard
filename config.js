@@ -33,16 +33,24 @@ const CONFIG = {
   // 4c. Zoho CRM field API names
   //     → CRM: Settings → Modules → J1 Participants → Fields → API Name column
   CRM_FIELDS: {
-    firstName:     'First_Name',
-    lastName:      'Last_Name',
-    email:         'Email',
-    country:       'Country',
-    phone:         'Phone',
-    gender:        'Gender',
-    appStatus:     'J1_Application_Status',
-    programSource: 'J1_Program_Source',
-    programType:   'Program_Option',        // Intern / Trainee (if exists in CRM)
-    hostCompany:   'Hosting_Company',       // adjust if different
+    firstName:              'First_Name',
+    lastName:               'Last_Name',
+    email:                  'Email',
+    country:                'Country',
+    phone:                  'Phone',
+    gender:                 'Gender',
+    appStatus:              'J1_Application_Status',
+    programSource:          'J1_Program_Source',
+    programType:            'Program_Option',
+    hostCompany:            'Hosting_Company',
+    // New Submission columns
+    age:                    'Age',
+    positionApplied:        'Position_Applied',
+    permanentAddress:       'Permanent_Address',
+    ctiUsaReview:           'CTI_USA_s_Review',
+    eligiblePrograms:       'Eligible_Programs',
+    consultationCallStatus: 'Consultation_Call_Status',
+    consultationCallNotes:  'Consultation_Call_Notes',
   },
 
   // 5. Verified field API names from Zoho Recruit → Developer Space → API Names
