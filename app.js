@@ -235,26 +235,29 @@ const App = (() => {
         plugins: { legend: { position: 'bottom', labels: { font: { size: 9, family: 'Inter' }, padding: 5, boxWidth: 9 } }, datalabels: { display: false } } }
     });
 
-    const hBarOpts = (labels, data, color) => ({
+    const hBarOpts = (labels, data, color, yWidth) => ({
       type: 'bar',
       data: { labels, datasets: [{ data, backgroundColor: color || '#1B3A6B', borderRadius: 3 }] },
       options: { responsive: true, maintainAspectRatio: false, indexAxis: 'y',
         plugins: { legend: { display: false }, datalabels: { display: false } },
         scales: {
           x: { beginAtZero: true, ticks: { font: { size: 8 } }, grid: { display: false } },
-          y: { ticks: { font: { size: 8 } } }
+          y: {
+            ticks: { font: { size: 8 } },
+            afterFit: yWidth ? (axis => { axis.width = yWidth; }) : undefined
+          }
         }
       }
     });
 
     // Top Countries — horizontal bar
     const sortedCountries = Object.entries(byCountry).sort((a,b) => b[1]-a[1]).slice(0, 10);
-    new Chart(document.getElementById('chartCountry').getContext('2d'), hBarOpts(sortedCountries.map(e=>e[0]), sortedCountries.map(e=>e[1]), '#1B3A6B'));
+    new Chart(document.getElementById('chartCountry').getContext('2d'), hBarOpts(sortedCountries.map(e=>e[0]), sortedCountries.map(e=>e[1]), '#1B3A6B', 90));
 
     // Stage Progress — horizontal bar
     const stageLabels = ['New Submission','Consultation Call','Sales Call','Stage 1','Stage 2','Stage 3','Stage 4','USA Onboard','Program Completed'];
     const stageData   = stageLabels.map(l => participants.filter(p => p.placementStatus?.toLowerCase() === l.toLowerCase()).length);
-    new Chart(document.getElementById('chartStage').getContext('2d'), hBarOpts(stageLabels, stageData, COLORS));
+    new Chart(document.getElementById('chartStage').getContext('2d'), hBarOpts(stageLabels, stageData, COLORS, 110));
 
     // Housing — donut
     new Chart(document.getElementById('chartHousing').getContext('2d'),
@@ -271,12 +274,12 @@ const App = (() => {
     // Requisition by client — horizontal bar
     if (reqActive.length && document.getElementById('chartReq')) {
       const reqClients = Object.entries(reqByClient).sort((a,b) => b[1].openings - a[1].openings);
-      new Chart(document.getElementById('chartReq').getContext('2d'), hBarOpts(reqClients.map(e=>e[0]), reqClients.map(e=>e[1].openings), '#2563eb'));
+      new Chart(document.getElementById('chartReq').getContext('2d'), hBarOpts(reqClients.map(e=>e[0]), reqClients.map(e=>e[1].openings), '#2563eb', 150));
     }
 
     // Successful Placement by Sponsor — horizontal bar
     if (sponsorEntries.length && document.getElementById('chartSponsor')) {
-      new Chart(document.getElementById('chartSponsor').getContext('2d'), hBarOpts(sponsorEntries.map(e=>e[0]), sponsorEntries.map(e=>e[1]), '#16a34a'));
+      new Chart(document.getElementById('chartSponsor').getContext('2d'), hBarOpts(sponsorEntries.map(e=>e[0]), sponsorEntries.map(e=>e[1]), '#16a34a', 110));
     }
   }
 
