@@ -339,20 +339,17 @@ const App = (() => {
     }
 
     function applyFilters(list) {
-      const q      = (document.getElementById('searchInput')?.value || '').toLowerCase();
-      const prog   = (document.getElementById('filterProgram')?.value || '').toLowerCase();
-      const flight = document.getElementById('filterFlight')?.value || '';
+      const q       = (document.getElementById('searchInput')?.value || '').toLowerCase();
+      const country = (document.getElementById('filterCountry')?.value || '').toLowerCase();
+      const source  = (document.getElementById('filterSource')?.value || '').toLowerCase();
 
-      if (q)      list = list.filter(p =>
+      if (q)       list = list.filter(p =>
         p.name.toLowerCase().includes(q) ||
         p.country.toLowerCase().includes(q) ||
         p.hostCompany.toLowerCase().includes(q)
       );
-      if (prog)   list = list.filter(p => p.programType.toLowerCase().includes(prog));
-      if (flight === 'booked')
-        list = list.filter(p => p.flightBooked === true || /yes|booked/i.test(String(p.flightBooked)));
-      if (flight === 'not')
-        list = list.filter(p => !(p.flightBooked === true || /yes|booked/i.test(String(p.flightBooked))));
+      if (country) list = list.filter(p => p.country.toLowerCase() === country);
+      if (source)  list = list.filter(p => (p.programSource || '').toLowerCase() === source);
 
       return list;
     }
@@ -410,15 +407,15 @@ const App = (() => {
         </div>
         <div class="filter-bar">
           <input class="search-input" id="searchInput" placeholder="Search by name, country, company…">
-          <select class="filter-select" id="filterProgram">
-            <option value="">All Programs</option>
-            <option value="intern">Intern</option>
-            <option value="trainee">Trainee</option>
+          <select class="filter-select" id="filterCountry">
+            <option value="">All Countries</option>
+            ${[...new Set(participants.map(p => p.country).filter(c => c && c !== '—'))].sort()
+              .map(c => `<option value="${c.toLowerCase()}">${c}</option>`).join('')}
           </select>
-          <select class="filter-select" id="filterFlight">
-            <option value="">All Flight Status</option>
-            <option value="booked">Booked</option>
-            <option value="not">Not Booked</option>
+          <select class="filter-select" id="filterSource">
+            <option value="">All Program Sources</option>
+            ${[...new Set(participants.map(p => p.programSource).filter(s => s && s !== '—'))].sort()
+              .map(s => `<option value="${s.toLowerCase()}">${s}</option>`).join('')}
           </select>
           <span id="tabCount" style="margin-left:auto;font-size:0.82rem;color:var(--muted)"></span>
         </div>
@@ -441,8 +438,8 @@ const App = (() => {
 
     // Wire up filters
     document.getElementById('searchInput').addEventListener('input', refreshTable);
-    document.getElementById('filterProgram').addEventListener('change', refreshTable);
-    document.getElementById('filterFlight').addEventListener('change', refreshTable);
+    document.getElementById('filterCountry').addEventListener('change', refreshTable);
+    document.getElementById('filterSource').addEventListener('change', refreshTable);
 
     refreshTable(); // initial render
   }
