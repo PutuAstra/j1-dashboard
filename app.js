@@ -55,7 +55,7 @@ const App = (() => {
       el.className = 'zoho-status connected';
       el.innerHTML = `<span class="dot"></span> Zoho Connected`;
       el.title = 'Click to disconnect';
-      el.onclick = () => { ZohoAuth.clearToken(); _participants = null; renderCurrentPage(); updateZohoStatus(); };
+      el.onclick = () => { ZohoAuth.clearToken(); _participants = null; _jobCache = null; renderCurrentPage(); updateZohoStatus(); };
     } else {
       el.className = 'zoho-status disconnected';
       el.innerHTML = `<span class="dot"></span> Connect Zoho`;
@@ -785,6 +785,155 @@ const App = (() => {
   //  ROUTER
   // ═══════════════════════════════════════════════════════════
   // ═══════════════════════════════════════════════════════════
+  //  REQUISITION PAGE
+  // ═══════════════════════════════════════════════════════════
+  let _reqSortCol = null;
+  let _reqSortDir = null;
+  let _jobCache   = null;
+
+  async function renderRequisition() {
+    const mc = document.getElementById('main-content');
+    mc.innerHTML = skeletonHTML();
+
+    if (!ZohoAuth.isConnected()) { mc.innerHTML = connectPromptHTML(); return; }
+
+    try {
+      if (!_jobCache) _jobCache = await Zoho.getJobOpenings();
+    } catch (e) {
+      mc.innerHTML = `<div class="empty-state"><p>Failed to load Job Openings: ${e.message}</p></div>`;
+      return;
+    }
+
+    // Filter: Placement Category = J1 Program AND Requisition Status = Active
+    const active = _jobCache.filter(j =>
+      /j1 program/i.test(j.placementCategory) &&
+      /^active$/i.test(j.status)
+    );
+    const allJ1  = _jobCache.filter(j => /j1 program/i.test(j.placementCategory));
+    const filled = allJ1.filter(j => /filled|closed/i.test(j.status));
+
+    const REQ_COLS = [
+      { label: '#',              key: null },
+      { label: 'Job ID',         key: 'jobId',        get: j => (j.jobId || '').toLowerCase() },
+      { label: 'Position Title', key: 'title',        get: j => (j.title || '').toLowerCase() },
+      { label: 'Client',         key: 'clientName',   get: j => (j.clientName || '').toLowerCase() },
+      { label: 'Department',     key: 'department',   get: j => (j.department || '').toLowerCase() },
+      { label: 'Openings',       key: 'numPositions', get: j => j.numPositions || 0 },
+      { label: 'Location',       key: 'city',         get: j => (j.city || '').toLowerCase() },
+      { label: 'Date Opened',    key: 'dateOpened',   get: j => j.dateOpened || '' },
+      { label: 'Target Date',    key: 'targetDate',   get: j => j.targetDate || '' },
+      { label: 'Assigned To',    key: 'assignedTo',   get: j => (j.assignedTo || '').toLowerCase() },
+      { label: 'Status',         key: 'status',       get: j => (j.status || '').toLowerCase() },
+    ];
+
+    function rSortIcon(key) {
+      if (_reqSortCol !== key) return `<span class="sort-icon">⇅</span>`;
+      if (_reqSortDir === 'asc')  return `<span class="sort-icon active">↑</span>`;
+      if (_reqSortDir === 'desc') return `<span class="sort-icon active">↓</span>`;
+      return `<span class="sort-icon">⇅</span>`;
+    }
+
+    function applyReqSort(list) {
+      if (!_reqSortCol || !_reqSortDir) return list;
+      const col = REQ_COLS.find(c => c.key === _reqSortCol);
+      if (!col) return list;
+      return [...list].sort((a, b) => {
+        const av = col.get(a), bv = col.get(b);
+        const cmp = av < bv ? -1 : av > bv ? 1 : 0;
+        return _reqSortDir === 'asc' ? cmp : -cmp;
+      });
+    }
+
+    function reqTable(list) {
+      if (!list.length) return `<div class="empty-state"><p>No job openings in this category.</p></div>`;
+      const sorted = applyReqSort(list);
+      return `
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                ${REQ_COLS.map(c => c.key
+                  ? `<th class="sortable ${_reqSortCol === c.key ? 'sorted' : ''}" data-rcol="${c.key}">${c.label} ${rSortIcon(c.key)}</th>`
+                  : `<th>#</th>`
+                ).join('')}
+              </tr>
+            </thead>
+            <tbody>
+              ${sorted.map((j, i) => `
+                <tr>
+                  <td class="row-num">${i + 1}</td>
+                  <td style="font-family:monospace;font-size:0.78rem">${j.jobId}</td>
+                  <td><strong>${j.title}</strong></td>
+                  <td>${j.clientName}</td>
+                  <td>${j.department}</td>
+                  <td style="text-align:center;font-weight:600">${j.numPositions || '—'}</td>
+                  <td>${[j.city, j.state, j.country].filter(v => v && v !== '—').join(', ') || '—'}</td>
+                  <td>${formatDate(j.dateOpened)}</td>
+                  <td>${formatDate(j.targetDate)}</td>
+                  <td>${j.assignedTo}</td>
+                  <td>${badge(j.status)}</td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        </div>
+      `;
+    }
+
+    function renderReqContent() {
+      return `
+        <div class="card">
+          <div class="card-header"><div class="card-title" style="color:#166534">✓ Active Requisitions (${active.length})</div></div>
+          ${reqTable(active)}
+        </div>
+      `;
+    }
+
+    mc.innerHTML = `
+      <div class="page-header">
+        <h1>Requisition</h1>
+        <p>Active J1 Program job openings from Zoho Recruit</p>
+      </div>
+
+      <div class="stat-grid">
+        <div class="stat-card accent">
+          <div class="stat-value">${active.length}</div>
+          <div class="stat-label">Active Requisitions</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value">${active.reduce((s, j) => s + (j.numPositions || 0), 0)}</div>
+          <div class="stat-label">Total Openings</div>
+        </div>
+        <div class="stat-card good">
+          <div class="stat-value">${filled.length}</div>
+          <div class="stat-label">Filled / Closed</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value">${allJ1.length}</div>
+          <div class="stat-label">All J1 Requisitions</div>
+        </div>
+      </div>
+
+      <div id="reqContent">
+        ${renderReqContent()}
+      </div>
+    `;
+
+    mc.addEventListener('click', function onReqSort(e) {
+      const th = e.target.closest('[data-rcol]');
+      if (!th) return;
+      const col = th.dataset.rcol;
+      if (_reqSortCol === col) {
+        _reqSortDir = _reqSortDir === 'asc' ? 'desc' : _reqSortDir === 'desc' ? null : 'asc';
+        if (!_reqSortDir) _reqSortCol = null;
+      } else {
+        _reqSortCol = col; _reqSortDir = 'asc';
+      }
+      document.getElementById('reqContent').innerHTML = renderReqContent();
+    });
+  }
+
+  // ═══════════════════════════════════════════════════════════
   //  HOUSING PAGE
   // ═══════════════════════════════════════════════════════════
   let _housingSortCol = null;
@@ -925,6 +1074,7 @@ const App = (() => {
   // ═══════════════════════════════════════════════════════════
   const PAGES = {
     overview:     { render: renderOverview,     title: 'Overview' },
+    requisition:  { render: renderRequisition,  title: 'Requisition' },
     participants: { render: renderParticipants, title: 'Participants' },
     visa:         { render: renderVisa,         title: 'Visa / DS-2019' },
     travel:       { render: renderTravel,       title: 'Travel' },
@@ -965,7 +1115,7 @@ const App = (() => {
     stopAutoRefresh();
     updateLastRefresh();
     _refreshTimer = setInterval(() => {
-      _participants = null; // clear cache
+      _participants = null; _jobCache = null; // clear cache
       renderCurrentPage();
       updateLastRefresh();
     }, 600_000);

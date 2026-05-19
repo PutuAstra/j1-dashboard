@@ -240,5 +240,40 @@ const Zoho = (() => {
     }, {});
   }
 
-  return { getAllParticipants, computeStats, groupBy };
+  // ── Fetch Job Openings from Zoho Recruit ─────────────────
+  async function getJobOpenings() {
+    const module = CONFIG.JOB_MODULE;
+    const JF     = CONFIG.JOB_FIELDS;
+    const fields = Object.values(JF).join(',');
+    let all = [], page = 1, more = true;
+
+    while (more) {
+      const data = await request(module, { fields, page, per_page: 200 });
+      const records = data.data || [];
+      all = all.concat(records);
+      more = data.info?.more_records === true;
+      page++;
+    }
+
+    return all.map(r => ({
+      id:                r.id,
+      jobId:             r[JF.jobId]             || '—',
+      title:             r[JF.title]             || '—',
+      status:            r[JF.status]            || '—',
+      placementCategory: r[JF.placementCategory] || '—',
+      clientName:        r[JF.clientName]        || '—',
+      department:        r[JF.department]        || '—',
+      numPositions:      r[JF.numPositions]      || 0,
+      targetDate:        r[JF.targetDate]        || null,
+      dateOpened:        r[JF.dateOpened]        || null,
+      city:              r[JF.city]              || '—',
+      state:             r[JF.state]             || '—',
+      country:           r[JF.country]           || '—',
+      assignedTo:        Array.isArray(r[JF.assignedTo])
+                           ? r[JF.assignedTo].map(a => a.name || a).join(', ')
+                           : r[JF.assignedTo] || '—',
+    }));
+  }
+
+  return { getAllParticipants, computeStats, groupBy, getJobOpenings };
 })();

@@ -25,6 +25,24 @@ const CONFIG = {
   // 4. Your J1 Participants module API name (Zoho Recruit)
   J1_MODULE: 'J1_Participants',
 
+  // Job Openings module (Zoho Recruit)
+  JOB_MODULE: 'Job_Openings',
+  JOB_FIELDS: {
+    jobId:             'Job_Opening_ID',
+    title:             'Posting_Title',
+    status:            'Job_Opening_Status',
+    placementCategory: 'Placement_Category',
+    clientName:        'Client_Name',
+    department:        'Department',
+    numPositions:      'No_of_Positions',
+    targetDate:        'Target_Date',
+    dateOpened:        'Date_Opened',
+    city:              'City',
+    state:             'State',
+    country:           'Country',
+    assignedTo:        'Assigned_Recruiters',
+  },
+
   // 4b. Zoho CRM — J1 Participants module
   //     → In Zoho CRM: Settings → Modules → J1 Participants → note the API Name
   //     → From your URL it appears to be CustomModule22
