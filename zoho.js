@@ -64,6 +64,7 @@ const Zoho = (() => {
       email:              r[F.email]              || '—',
       programType:        r[F.programType]        || '—',
       programSource:      r[F.programSources]     || '—',
+      processingSponsor:  r[F.processingSponsor]  || '—',
       eligiblePrograms:   Array.isArray(r[F.eligiblePrograms])
                             ? r[F.eligiblePrograms].join(', ')
                             : r[F.eligiblePrograms] || '—',

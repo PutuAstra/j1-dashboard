@@ -106,6 +106,7 @@ const CONFIG = {
 
     // Stage 2 — Sponsor / Hosting Company
     hostCompany:       'Hosting_Company_2',       // NOTE: API name is Hosting_Company_2
+    processingSponsor: 'Processing_Sponsor',      // Sponsor that processes the participant
     sponsorStatus:     'Sponsor_Interview_Status',
     sponsorSubmission: 'Submission_Date_Sponsor',
     hcInterviewStatus: 'Hosting_Company_Interview_Status',

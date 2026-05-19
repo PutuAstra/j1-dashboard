@@ -156,7 +156,7 @@ const App = (() => {
     const placed = participants.filter(p => /^(usa onboard|program completed)$/i.test(p.placementStatus));
     const bySponsor = {};
     placed.forEach(p => {
-      const sponsor = p.programSource || 'Unknown';
+      const sponsor = (p.processingSponsor && p.processingSponsor !== '—') ? p.processingSponsor : (p.programSource || 'Unknown');
       bySponsor[sponsor] = (bySponsor[sponsor] || 0) + 1;
     });
     const sponsorEntries = Object.entries(bySponsor).sort((a, b) => b[1] - a[1]);
