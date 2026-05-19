@@ -1146,7 +1146,7 @@ const App = (() => {
       l.classList.toggle('active', l.dataset.page === pageName)
     );
     const titleEl = document.getElementById('topbarTitle');
-    if (titleEl) titleEl.textContent = page.title;
+    if (titleEl) titleEl.textContent = CONFIG.APP_NAME || 'J1 Program Dashboard';
 
     page.render();
     updateZohoStatus();
