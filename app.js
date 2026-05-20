@@ -194,85 +194,74 @@ const App = (() => {
         <p style="margin:0;font-size:0.73rem">Live summary · ${s.total} participants total</p>
       </div>
 
-      <!-- Full-height flex column filling viewport -->
-      <div style="display:flex;flex-direction:column;gap:6px;height:calc(100vh - 148px)">
+      <!-- 3-row CSS grid, fills remaining viewport -->
+      <div style="display:grid;grid-template-rows:3fr 2fr 1fr;gap:6px;height:calc(100vh - 152px);overflow:hidden">
 
-        <!-- Row 1: 3 bar charts — flex:3 (tallest) -->
-        <div class="ov-grid ov-grid-3" style="flex:3;min-height:0;margin:0">
-          <div class="card ov-card" style="height:100%;display:flex;flex-direction:column">
+        <!-- Row 1: 3 bar charts -->
+        <div class="ov-grid ov-grid-3" style="min-height:0;overflow:hidden;margin:0">
+          <div class="card ov-card" style="overflow:hidden;display:flex;flex-direction:column;min-height:0">
             <div class="ov-card-title">Top Countries</div>
-            <div style="position:relative;flex:1;min-height:0"><canvas id="chartCountry"></canvas></div>
+            <div style="position:relative;flex:1;overflow:hidden"><canvas id="chartCountry"></canvas></div>
           </div>
-          <div class="card ov-card" style="height:100%;display:flex;flex-direction:column">
+          <div class="card ov-card" style="overflow:hidden;display:flex;flex-direction:column;min-height:0">
             <div class="ov-card-title">Stage Progress</div>
-            <div style="position:relative;flex:1;min-height:0"><canvas id="chartStage"></canvas></div>
+            <div style="position:relative;flex:1;overflow:hidden"><canvas id="chartStage"></canvas></div>
           </div>
-          <div class="card ov-card" style="height:100%;display:flex;flex-direction:column">
+          <div class="card ov-card" style="overflow:hidden;display:flex;flex-direction:column;min-height:0">
             <div class="ov-card-title">Placement by Sponsor <span class="ov-sub">${placed.length} placed</span></div>
-            <div style="position:relative;flex:1;min-height:0"><canvas id="chartSponsor"></canvas></div>
+            <div style="position:relative;flex:1;overflow:hidden"><canvas id="chartSponsor"></canvas></div>
           </div>
         </div>
 
-        <!-- Row 2: 3 donuts + Requisition bar — flex:2 -->
-        <div class="ov-grid ov-grid-4" style="flex:2;min-height:0;margin:0">
-          <div class="card ov-card" style="height:100%;display:flex;flex-direction:column">
+        <!-- Row 2: 4 donuts -->
+        <div class="ov-grid ov-grid-4" style="min-height:0;overflow:hidden;margin:0">
+          <div class="card ov-card" style="overflow:hidden;display:flex;flex-direction:column;min-height:0">
             <div class="ov-card-title">Housing <span class="ov-sub">${housingRateOv}% rate</span></div>
-            <div style="position:relative;flex:1;min-height:0"><canvas id="chartHousing"></canvas></div>
+            <div style="position:relative;flex:1;overflow:hidden"><canvas id="chartHousing"></canvas></div>
           </div>
-          <div class="card ov-card" style="height:100%;display:flex;flex-direction:column">
+          <div class="card ov-card" style="overflow:hidden;display:flex;flex-direction:column;min-height:0">
             <div class="ov-card-title">✈️ Joining Flights <span class="ov-sub">${joiningOv.length} visa approved</span></div>
-            <div style="position:relative;flex:1;min-height:0"><canvas id="chartJoining"></canvas></div>
+            <div style="position:relative;flex:1;overflow:hidden"><canvas id="chartJoining"></canvas></div>
           </div>
-          <div class="card ov-card" style="height:100%;display:flex;flex-direction:column">
+          <div class="card ov-card" style="overflow:hidden;display:flex;flex-direction:column;min-height:0">
             <div class="ov-card-title">🏠 Return Flights <span class="ov-sub">${returningOv.length} onboard/completed</span></div>
-            <div style="position:relative;flex:1;min-height:0"><canvas id="chartReturning"></canvas></div>
+            <div style="position:relative;flex:1;overflow:hidden"><canvas id="chartReturning"></canvas></div>
           </div>
           ${reqActive.length ? `
-          <div class="card ov-card" style="height:100%;display:flex;flex-direction:column">
+          <div class="card ov-card" style="overflow:hidden;display:flex;flex-direction:column;min-height:0">
             <div class="ov-card-title">Requisition <span class="ov-sub">${reqActive.length} companies · ${reqTotalOpenings} openings</span></div>
-            <div style="position:relative;flex:1;min-height:0"><canvas id="chartReq"></canvas></div>
+            <div style="position:relative;flex:1;overflow:hidden"><canvas id="chartReq"></canvas></div>
           </div>` : ''}
         </div>
 
-        <!-- Row 3: Visa Summary — flex:1 (shortest) -->
-        <div class="card ov-card" style="flex:1;min-height:0;display:flex;flex-direction:column;justify-content:center">
-          <div class="ov-card-title" style="margin-bottom:6px">🛂 Visa Summary</div>
-          <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;min-height:0">
-
-            <!-- Stat chips -->
-            <div style="display:flex;gap:8px;flex-wrap:wrap;flex-shrink:0">
+        <!-- Row 3: Visa Summary -->
+        <div class="card ov-card" style="overflow:hidden;display:flex;flex-direction:column;justify-content:center;min-height:0">
+          <div class="ov-card-title" style="margin-bottom:5px">🛂 Visa Summary</div>
+          <div style="display:flex;align-items:center;gap:12px;overflow:hidden">
+            <div style="display:flex;gap:7px;flex-shrink:0">
               ${[
-                { label:'Total Application', val: visaTotal,    color:'var(--text)' },
-                { label:'Approved',          val: visaApproved, color:'#16a34a' },
-                { label:'Rejected',          val: visaRejected, color:'var(--accent)' },
-                { label:'Pending',           val: visaPending,  color:'#d97706' },
-                { label:'Upcoming Appt.',    val: visaUpcoming, color:'#2563eb' },
+                { label:'Total',        val: visaTotal,    color:'var(--text)' },
+                { label:'Approved',     val: visaApproved, color:'#16a34a' },
+                { label:'Rejected',     val: visaRejected, color:'var(--accent)' },
+                { label:'Pending',      val: visaPending,  color:'#d97706' },
+                { label:'Upcoming Appt.', val: visaUpcoming, color:'#2563eb' },
               ].map(c => `
-                <div style="background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:5px 12px;white-space:nowrap">
-                  <div style="font-size:1.05rem;font-weight:700;line-height:1.1;color:${c.color}">${c.val}</div>
-                  <div style="font-size:0.63rem;color:var(--muted);margin-top:1px">${c.label}</div>
+                <div style="background:var(--bg);border:1px solid var(--border);border-radius:7px;padding:4px 11px;white-space:nowrap">
+                  <div style="font-size:1rem;font-weight:700;line-height:1.1;color:${c.color}">${c.val}</div>
+                  <div style="font-size:0.6rem;color:var(--muted);margin-top:1px">${c.label}</div>
                 </div>
               `).join('')}
             </div>
-
-            <!-- Divider -->
             <div style="width:1px;background:var(--border);align-self:stretch;flex-shrink:0"></div>
-
-            <!-- Pie chart -->
             <div style="display:flex;flex-direction:column;align-items:center;flex-shrink:0">
-              <div style="font-size:0.65rem;font-weight:600;color:var(--text-secondary);margin-bottom:2px">Approved vs Rejected</div>
-              <div style="position:relative;height:80px;width:110px"><canvas id="chartVisaOv"></canvas></div>
+              <div style="font-size:0.62rem;font-weight:600;color:var(--text-secondary);margin-bottom:1px">Approved vs Rejected</div>
+              <div style="position:relative;height:70px;width:100px"><canvas id="chartVisaOv"></canvas></div>
             </div>
-
-            <!-- Divider -->
             <div style="width:1px;background:var(--border);align-self:stretch;flex-shrink:0"></div>
-
-            <!-- Pass % -->
-            <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;padding:0 8px">
-              <div style="font-size:2rem;font-weight:800;line-height:1;color:#16a34a">${visaPassPct}%</div>
-              <div style="font-size:0.62rem;font-weight:600;color:var(--muted);margin-top:3px;text-align:center">Visa Passing<br>Percentage</div>
+            <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;padding:0 6px">
+              <div style="font-size:1.8rem;font-weight:800;line-height:1;color:#16a34a">${visaPassPct}%</div>
+              <div style="font-size:0.6rem;font-weight:600;color:var(--muted);margin-top:2px;text-align:center">Visa Passing<br>Percentage</div>
             </div>
-
           </div>
         </div>
 
