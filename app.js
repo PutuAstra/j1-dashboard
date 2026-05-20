@@ -653,11 +653,12 @@ const App = (() => {
   // ═══════════════════════════════════════════════════════════
   //  PAGE: VISA
   // ═══════════════════════════════════════════════════════════
-  let _visaFilterFrom = '';
-  let _visaFilterTo   = '';
-  let _visaSortCol    = null;
-  let _visaSortDir    = null;
-  let _visaChartInst  = null; // track Chart.js instance to destroy on refresh
+  let _visaFilterFrom        = '';
+  let _visaFilterTo          = '';
+  let _visaFilterNationality = '';
+  let _visaSortCol           = null;
+  let _visaSortDir           = null;
+  let _visaChartInst         = null;
 
   async function renderVisa() {
     const mc = document.getElementById('main-content');
@@ -672,6 +673,7 @@ const App = (() => {
     const VISA_COLS = [
       { label: 'Name',                     key: 'name',           get: p => (p.name || '').toLowerCase(),           render: p => `<strong>${p.name || '—'}</strong>` },
       { label: 'Program Start',            key: 'programStart',   get: p => p.programStart || '',                   render: p => formatDate(p.programStart) },
+      { label: 'Nationality',              key: 'country',        get: p => (p.country || '').toLowerCase(),        render: p => p.country || '—' },
       { label: 'J1 Visa Status',           key: 'visaStatus',     get: p => (p.visaStatus || '').toLowerCase(),     render: p => badge(p.visaStatus) },
       { label: 'Supporting Letter Status', key: 'refLetterStatus',get: p => (p.refLetterStatus || '').toLowerCase(),render: p => badge(p.refLetterStatus) },
       { label: 'Visa Payment Date',        key: 'visaPaymentDate',get: p => p.visaPaymentDate || '',                render: p => formatDate(p.visaPaymentDate) },
@@ -690,8 +692,9 @@ const App = (() => {
 
     function applyVisaFilter(list) {
       let out = list;
-      if (_visaFilterFrom) out = out.filter(p => p.visaAppointment && p.visaAppointment >= _visaFilterFrom);
-      if (_visaFilterTo)   out = out.filter(p => p.visaAppointment && p.visaAppointment <= _visaFilterTo);
+      if (_visaFilterFrom)        out = out.filter(p => p.visaAppointment && p.visaAppointment >= _visaFilterFrom);
+      if (_visaFilterTo)          out = out.filter(p => p.visaAppointment && p.visaAppointment <= _visaFilterTo);
+      if (_visaFilterNationality) out = out.filter(p => (p.country || '').toLowerCase() === _visaFilterNationality);
       return out;
     }
 
@@ -712,22 +715,23 @@ const App = (() => {
     }
 
     function renderStatsHTML(s) {
+      const mini = 'background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:8px 12px;box-shadow:var(--shadow-sm)';
       return `
-        <div class="stat-card" style="padding:10px 14px;min-height:0">
-          <div class="stat-value" style="font-size:1.5rem">${s.total}</div>
-          <div class="stat-label">Total Application</div>
+        <div style="${mini}">
+          <div style="font-size:1.15rem;font-weight:700;line-height:1.1">${s.total}</div>
+          <div style="font-size:0.68rem;color:var(--muted);margin-top:2px;font-weight:500">Total Application</div>
         </div>
-        <div class="stat-card good" style="padding:10px 14px;min-height:0">
-          <div class="stat-value" style="font-size:1.5rem">${s.approved}</div>
-          <div class="stat-label">Approved</div>
+        <div style="${mini}">
+          <div style="font-size:1.15rem;font-weight:700;line-height:1.1;color:#16a34a">${s.approved}</div>
+          <div style="font-size:0.68rem;color:var(--muted);margin-top:2px;font-weight:500">Approved</div>
         </div>
-        <div class="stat-card accent" style="padding:10px 14px;min-height:0">
-          <div class="stat-value" style="font-size:1.5rem">${s.rejected}</div>
-          <div class="stat-label">Rejected</div>
+        <div style="${mini}">
+          <div style="font-size:1.15rem;font-weight:700;line-height:1.1;color:var(--accent)">${s.rejected}</div>
+          <div style="font-size:0.68rem;color:var(--muted);margin-top:2px;font-weight:500">Rejected</div>
         </div>
-        <div class="stat-card warn" style="padding:10px 14px;min-height:0">
-          <div class="stat-value" style="font-size:1.5rem">${s.pending}</div>
-          <div class="stat-label">Pending</div>
+        <div style="${mini}">
+          <div style="font-size:1.15rem;font-weight:700;line-height:1.1;color:#d97706">${s.pending}</div>
+          <div style="font-size:0.68rem;color:var(--muted);margin-top:2px;font-weight:500">Pending</div>
         </div>
       `;
     }
@@ -736,6 +740,7 @@ const App = (() => {
       if (_visaChartInst) { _visaChartInst.destroy(); _visaChartInst = null; }
       const canvas = document.getElementById('visaPieChart');
       if (!canvas || !(s.approved || s.rejected || s.pending)) return;
+      const sum = s.approved + s.rejected + s.pending;
       _visaChartInst = new Chart(canvas.getContext('2d'), {
         type: 'pie',
         data: {
@@ -752,14 +757,19 @@ const App = (() => {
           maintainAspectRatio: false,
           plugins: {
             legend: { position: 'bottom', labels: { font: { size: 9, family: 'Inter' }, padding: 6, boxWidth: 10 } },
+            tooltip: {
+              callbacks: {
+                label: ctx => {
+                  const pct = sum ? Math.round(ctx.parsed / sum * 100) : 0;
+                  return ` ${ctx.label}: ${ctx.parsed} (${pct}%)`;
+                }
+              }
+            },
             datalabels: {
               display: ctx => ctx.dataset.data[ctx.dataIndex] > 0,
               color: '#fff',
               font: { size: 11, weight: '700', family: 'Inter' },
-              formatter: (val, ctx) => {
-                const sum = ctx.dataset.data.reduce((a, b) => a + b, 0);
-                return sum ? Math.round(val / sum * 100) + '%' : '';
-              }
+              formatter: (val) => sum ? Math.round(val / sum * 100) + '%' : '',
             }
           }
         }
@@ -801,11 +811,12 @@ const App = (() => {
       const filtered = applyVisaFilter(visaPool);
       const s = computeStats(filtered);
 
-      document.getElementById('visaStatsGrid').innerHTML = renderStatsHTML(s);
+      document.getElementById('visaStatsGrid').innerHTML  = renderStatsHTML(s);
       drawPieChart(s);
-      document.getElementById('visaTableCard').innerHTML = visaTable(filtered);
+      document.getElementById('visaTableCard').innerHTML  = visaTable(filtered);
       const countEl = document.getElementById('visaFilterCount');
       if (countEl) countEl.textContent = `${filtered.length} record${filtered.length !== 1 ? 's' : ''}`;
+      // restore select values after innerHTML replace (stats grid only, selects are outside)
       wireVisaSort();
     }
 
@@ -833,26 +844,31 @@ const App = (() => {
       </div>
 
       <!-- Stats + pie chart -->
-      <div style="display:flex;gap:12px;margin-bottom:14px;align-items:stretch">
-        <div class="stat-grid" id="visaStatsGrid" style="flex:1;margin-bottom:0;align-items:stretch">
+      <div style="display:flex;gap:10px;margin-bottom:12px;align-items:center">
+        <div id="visaStatsGrid" style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;flex:1">
           ${renderStatsHTML(initStats)}
         </div>
-        <div class="card" style="flex:0 0 210px;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:10px 12px">
-          <div style="font-size:0.75rem;font-weight:600;margin-bottom:4px;color:var(--text-secondary)">Approved vs Rejected</div>
-          <div style="position:relative;height:155px;width:100%"><canvas id="visaPieChart"></canvas></div>
+        <div class="card" style="flex:0 0 200px;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:8px 10px;align-self:stretch">
+          <div style="font-size:0.73rem;font-weight:600;margin-bottom:4px;color:var(--text-secondary)">Approved vs Rejected</div>
+          <div style="position:relative;height:145px;width:100%"><canvas id="visaPieChart"></canvas></div>
         </div>
       </div>
 
       <!-- Filter bar -->
       <div class="card" style="margin-bottom:12px;padding:10px 14px">
-        <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
-          <span style="font-size:0.8rem;font-weight:600;color:var(--text-secondary)">Filter by Appointment Date:</span>
-          <label style="font-size:0.78rem;display:flex;align-items:center;gap:6px">
+        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+          <span style="font-size:0.78rem;font-weight:600;color:var(--text-secondary);white-space:nowrap">Appointment Date:</span>
+          <label style="font-size:0.75rem;display:flex;align-items:center;gap:5px">
             From <input type="date" id="visaDateFrom" class="filter-select" style="padding:4px 8px" value="${_visaFilterFrom}">
           </label>
-          <label style="font-size:0.78rem;display:flex;align-items:center;gap:6px">
+          <label style="font-size:0.75rem;display:flex;align-items:center;gap:5px">
             To <input type="date" id="visaDateTo" class="filter-select" style="padding:4px 8px" value="${_visaFilterTo}">
           </label>
+          <select class="filter-select" id="visaFilterNat" style="min-width:140px">
+            <option value="">All Nationalities</option>
+            ${[...new Set(visaPool.map(p => p.country).filter(c => c && c !== '—'))].sort()
+              .map(c => `<option value="${c.toLowerCase()}" ${_visaFilterNationality === c.toLowerCase() ? 'selected' : ''}>${c}</option>`).join('')}
+          </select>
           <button id="visaClearFilter" style="font-size:0.75rem;padding:4px 10px;border-radius:6px;border:1px solid var(--border);background:var(--card);color:var(--text);cursor:pointer">Clear</button>
           <span id="visaFilterCount" style="margin-left:auto;font-size:0.8rem;color:var(--muted)">${initFiltered.length} record${initFiltered.length !== 1 ? 's' : ''}</span>
         </div>
@@ -867,12 +883,14 @@ const App = (() => {
     drawPieChart(initStats);
     wireVisaSort();
 
-    document.getElementById('visaDateFrom').addEventListener('change', e => { _visaFilterFrom = e.target.value; refreshVisa(); });
-    document.getElementById('visaDateTo').addEventListener('change',   e => { _visaFilterTo   = e.target.value; refreshVisa(); });
+    document.getElementById('visaDateFrom').addEventListener('change',  e => { _visaFilterFrom        = e.target.value; refreshVisa(); });
+    document.getElementById('visaDateTo').addEventListener('change',    e => { _visaFilterTo          = e.target.value; refreshVisa(); });
+    document.getElementById('visaFilterNat').addEventListener('change', e => { _visaFilterNationality = e.target.value; refreshVisa(); });
     document.getElementById('visaClearFilter').addEventListener('click', () => {
-      _visaFilterFrom = ''; _visaFilterTo = '';
-      document.getElementById('visaDateFrom').value = '';
-      document.getElementById('visaDateTo').value   = '';
+      _visaFilterFrom = ''; _visaFilterTo = ''; _visaFilterNationality = '';
+      document.getElementById('visaDateFrom').value  = '';
+      document.getElementById('visaDateTo').value    = '';
+      document.getElementById('visaFilterNat').value = '';
       refreshVisa();
     });
   }
