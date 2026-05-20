@@ -939,11 +939,11 @@ const App = (() => {
         <div class="participants-sticky-header">
           <div class="tab-bar" id="travelTabBar">
             <button class="tab-btn ${_activeTravelTab === 'joining'   ? 'active' : ''}" data-ttab="joining">
-              ✈️ Joining
+              ✈️ Joining Participants
               <span class="tab-count-badge">${joiningAll.length}</span>
             </button>
             <button class="tab-btn ${_activeTravelTab === 'returning' ? 'active' : ''}" data-ttab="returning">
-              🏠 Returning
+              🏠 Returning Participants
               <span class="tab-count-badge">${returningAll.length}</span>
             </button>
           </div>
