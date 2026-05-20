@@ -62,6 +62,7 @@ const Zoho = (() => {
       country:            r[F.country]            || '—',
       gender:             r[F.gender]             || '—',
       email:              r[F.email]              || '—',
+      phone:              r[F.phone]              || '—',
       programType:        r[F.programType]        || '—',
       programSource:      r[F.programSources]     || '—',
       processingSponsor:  r[F.processingSponsor]  || '—',
