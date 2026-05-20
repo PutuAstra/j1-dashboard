@@ -864,7 +864,6 @@ const App = (() => {
       { label: 'Salary',             key: 'salary',           get: j => String(j.salary || '') },
       { label: 'Payment Frequency',  key: 'paymentFrequency', get: j => (j.paymentFrequency || '').toLowerCase() },
       { label: 'Housing Availability', key: 'housingAvail',   get: j => (j.housingAvail || '').toLowerCase() },
-      { label: 'Target Date',        key: 'targetDate',       get: j => j.targetDate || '' },
       { label: 'Contract Length',    key: 'contractLength',   get: j => (j.contractLength || '').toLowerCase() },
       { label: 'J1 Program Type',    key: 'j1ProgramType',    get: j => (j.j1ProgramType || '').toLowerCase() },
       { label: 'Client Name',        key: 'clientName',       get: j => (j.clientName || '').toLowerCase() },
@@ -915,7 +914,6 @@ const App = (() => {
                   <td>${j.salary !== '—' ? (String(j.salary).startsWith('$') ? j.salary : '$' + j.salary) : '—'}</td>
                   <td>${j.paymentFrequency}</td>
                   <td>${j.housingAvail}</td>
-                  <td>${formatDate(j.targetDate)}</td>
                   <td>${j.contractLength}</td>
                   <td style="font-size:0.75rem">${j.j1ProgramType}</td>
                   <td>${j.clientName}</td>
