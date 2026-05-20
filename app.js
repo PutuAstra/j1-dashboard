@@ -809,7 +809,7 @@ const App = (() => {
         { key: 'rejected',     val: s.rejected,     label: 'Rejected',                color: 'var(--accent)' },
         { key: 'pending',      val: s.pending,      label: 'Pending',                 color: '#d97706'       },
         { key: 'upcoming',     val: s.upcoming,     label: 'Upcoming Appt.',          color: '#2563eb'       },
-        { key: 'refRequested', val: s.refRequested, label: 'Supp. Letter Requested',  color: '#7c3aed'       },
+        { key: 'refRequested', val: s.refRequested, label: 'SL Requested',            color: '#7c3aed'       },
       ];
       return chips.map(c => {
         const isActive = _visaFilterStatus === c.key && c.key !== 'total';
@@ -826,8 +826,8 @@ const App = (() => {
       if (!el) return;
       const pct = s.total ? Math.round(s.approved / s.total * 100) : 0;
       el.innerHTML = `
-        <div style="font-size:2rem;font-weight:800;line-height:1;color:#16a34a">${pct}%</div>
-        <div style="font-size:0.65rem;font-weight:600;color:var(--muted);margin-top:4px;text-align:center;white-space:nowrap">Visa Approval Rate</div>
+        <div style="font-size:2.8rem;font-weight:800;line-height:1;color:#16a34a">${pct}%</div>
+        <div style="font-size:0.68rem;font-weight:600;color:var(--muted);margin-top:6px;text-align:center;white-space:nowrap">Visa Approval Rate</div>
       `;
     }
 
@@ -969,10 +969,10 @@ const App = (() => {
             <div style="width:1px;background:var(--border);flex-shrink:0"></div>
 
             <!-- Pie + rate -->
-            <div style="display:flex;align-items:center;gap:8px;flex-shrink:0">
+            <div style="display:flex;align-items:center;gap:12px;flex-shrink:0">
               <div style="display:flex;flex-direction:column;align-items:center">
-                <div style="font-size:0.65rem;font-weight:600;color:var(--text-secondary);margin-bottom:2px">Approved vs Rejected</div>
-                <div style="position:relative;height:70px;width:90px"><canvas id="visaPieChart"></canvas></div>
+                <div style="font-size:0.68rem;font-weight:600;color:var(--text-secondary);margin-bottom:2px">Approved vs Rejected</div>
+                <div style="position:relative;height:110px;width:130px"><canvas id="visaPieChart"></canvas></div>
               </div>
               <div id="visaPassRate" style="display:flex;flex-direction:column;align-items:center;justify-content:center"></div>
             </div>
