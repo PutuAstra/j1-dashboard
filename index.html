@@ -16,9 +16,6 @@
 <body>
   <!-- Auth guard -->
   <script>if (!Auth.requireAuth()) document.body.innerHTML = '';</script>
-  <!-- Capture Zoho OAuth token if redirected back from Zoho -->
-  <script>ZohoAuth.handleCallback();</script>
-
   <div class="app-shell">
 
     <!-- Sidebar overlay (mobile) -->

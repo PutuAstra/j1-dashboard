@@ -7,35 +7,20 @@ const Zoho = (() => {
   const PROXY = 'https://zoho-proxy.putuastrawijaya.workers.dev';
 
   // ── Recruit API request ───────────────────────────────────
+  // Auth is handled server-side in the Cloudflare Worker — no token needed here
   async function request(endpoint, params = {}) {
-    const token = ZohoAuth.getToken();
-    if (!token) throw new Error('NO_TOKEN');
-
     const url = new URL(`${PROXY}/recruit/v2/${endpoint}`);
     Object.entries(params).forEach(([k, v]) => url.searchParams.set(k, v));
-
-    const resp = await fetch(url.toString(), {
-      headers: { 'Authorization': `Zoho-oauthtoken ${token}` }
-    });
-
-    if (resp.status === 401) { ZohoAuth.clearToken(); throw new Error('TOKEN_EXPIRED'); }
+    const resp = await fetch(url.toString());
     if (!resp.ok) throw new Error(`API_ERROR_${resp.status}`);
     return resp.json();
   }
 
   // ── CRM API request ───────────────────────────────────────
   async function crmRequest(endpoint, params = {}) {
-    const token = ZohoAuth.getToken();
-    if (!token) throw new Error('NO_TOKEN');
-
     const url = new URL(`${PROXY}/crm/v2/${endpoint}`);
     Object.entries(params).forEach(([k, v]) => url.searchParams.set(k, v));
-
-    const resp = await fetch(url.toString(), {
-      headers: { 'Authorization': `Zoho-oauthtoken ${token}` }
-    });
-
-    if (resp.status === 401) { ZohoAuth.clearToken(); throw new Error('TOKEN_EXPIRED'); }
+    const resp = await fetch(url.toString());
     if (!resp.ok) throw new Error(`CRM_API_ERROR_${resp.status}`);
     return resp.json();
   }

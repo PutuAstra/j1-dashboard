@@ -51,17 +51,10 @@ const App = (() => {
   function updateZohoStatus() {
     const el = document.getElementById('zohoStatus');
     if (!el) return;
-    if (ZohoAuth.isConnected()) {
-      el.className = 'zoho-status connected';
-      el.innerHTML = `<span class="dot"></span> Zoho Connected`;
-      el.title = 'Click to disconnect';
-      el.onclick = () => { ZohoAuth.clearToken(); _participants = null; _jobCache = null; renderCurrentPage(); updateZohoStatus(); };
-    } else {
-      el.className = 'zoho-status disconnected';
-      el.innerHTML = `<span class="dot"></span> Connect Zoho`;
-      el.title = 'Click to connect your Zoho account';
-      el.onclick = () => ZohoAuth.startOAuth();
-    }
+    el.className = 'zoho-status connected';
+    el.innerHTML = `<span class="dot"></span> Live Data`;
+    el.title = 'Click to refresh data';
+    el.onclick = () => { _participants = null; _jobCache = null; renderCurrentPage(); };
   }
 
   // ── Zoho connect prompt (shown when not connected) ────────
@@ -69,11 +62,11 @@ const App = (() => {
   function connectPromptHTML() {
     return `
       <div class="connect-prompt">
-        <div class="connect-icon">🔗</div>
-        <h2>Connect your Zoho account</h2>
-        <p>To load live J1 participant data, connect your Zoho account. You'll be redirected to Zoho to log in, then brought back here.</p>
-        <button class="btn-connect" onclick="ZohoAuth.startOAuth()">
-          Connect Zoho
+        <div class="connect-icon">⚠️</div>
+        <h2>Unable to load data</h2>
+        <p>Could not fetch data from Zoho. Please check your internet connection and try again.</p>
+        <button class="btn-connect" onclick="App.refresh()">
+          Retry
         </button>
       </div>
     `;
@@ -97,15 +90,10 @@ const App = (() => {
 
   async function loadData(force = false) {
     if (_participants && !force) return _participants;
-    if (!ZohoAuth.isConnected()) return null;
     try {
       _participants = await Zoho.getAllParticipants();
       return _participants;
     } catch (err) {
-      if (err.message === 'TOKEN_EXPIRED' || err.message === 'NO_TOKEN') {
-        updateZohoStatus();
-        return null;
-      }
       toast(`Failed to load data: ${err.message}`, 'error');
       return null;
     }
@@ -1274,8 +1262,6 @@ const App = (() => {
     const mc = document.getElementById('main-content');
     mc.innerHTML = skeletonHTML();
 
-    if (!ZohoAuth.isConnected()) { mc.innerHTML = connectPromptHTML(); return; }
-
     try {
       _jobCache = await Zoho.getJobOpenings();
     } catch (e) {
@@ -1701,14 +1687,12 @@ const App = (() => {
     );
     navigate('overview');
 
-    // Start auto-refresh if Zoho is connected
-    if (ZohoAuth.isConnected()) startAutoRefresh();
-
-    // Also start auto-refresh after Zoho connects
-    document.getElementById('zohoStatus').addEventListener('click', () => {
-      setTimeout(() => { if (ZohoAuth.isConnected()) startAutoRefresh(); }, 3000);
-    });
+    // Always start auto-refresh — auth is handled server-side
+    startAutoRefresh();
   }
 
-  return { init, navigate };
+  // Public refresh method used by connectPromptHTML retry button
+  function refresh() { _participants = null; _jobCache = null; renderCurrentPage(); }
+
+  return { init, navigate, refresh };
 })();

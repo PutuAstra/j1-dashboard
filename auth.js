@@ -40,56 +40,14 @@ const Auth = (() => {
 
 
 // ─────────────────────────────────────────────────────────────
-//  ZOHO AUTH — implicit OAuth flow (no backend needed)
+//  ZOHO AUTH — token is managed server-side in the Cloudflare
+//  Worker; no per-user OAuth needed. These are stubs so the
+//  rest of the code compiles without changes.
 // ─────────────────────────────────────────────────────────────
-const ZohoAuth = (() => {
-  const TOKEN_KEY = 'zoho_token';
-  const SCOPE     = 'ZohoRecruit.modules.ALL,ZohoRecruit.settings.ALL,ZohoCRM.modules.ALL,ZohoCRM.settings.ALL';
-
-  function startOAuth() {
-    const params = new URLSearchParams({
-      response_type: 'token',
-      client_id:     CONFIG.ZOHO_CLIENT_ID,
-      scope:         SCOPE,
-      redirect_uri:  CONFIG.REDIRECT_URI,
-      access_type:   'online',
-      prompt:        'consent',
-    });
-    window.location.href = `${CONFIG.ZOHO_DOMAIN}/oauth/v2/auth?${params}`;
-  }
-
-  // Call this on index.html load to capture token from URL hash after Zoho redirect
-  function handleCallback() {
-    const hash = window.location.hash.slice(1);
-    if (!hash) return false;
-    const params = new URLSearchParams(hash);
-    const accessToken = params.get('access_token');
-    const expiresIn   = params.get('expires_in');
-    if (!accessToken) return false;
-
-    sessionStorage.setItem(TOKEN_KEY, JSON.stringify({
-      access_token: accessToken,
-      expires_at:   Date.now() + (parseInt(expiresIn, 10) * 1000),
-    }));
-    // Clean hash from URL
-    window.history.replaceState({}, '', window.location.pathname);
-    return true;
-  }
-
-  function getToken() {
-    try {
-      const t = JSON.parse(sessionStorage.getItem(TOKEN_KEY));
-      if (!t) return null;
-      if (Date.now() > t.expires_at - 60_000) { clearToken(); return null; }
-      return t.access_token;
-    } catch { return null; }
-  }
-
-  function clearToken() {
-    sessionStorage.removeItem(TOKEN_KEY);
-  }
-
-  function isConnected() { return !!getToken(); }
-
-  return { startOAuth, handleCallback, getToken, clearToken, isConnected };
-})();
+const ZohoAuth = {
+  startOAuth:     () => {},
+  handleCallback: () => false,
+  getToken:       () => 'server-managed',
+  clearToken:     () => {},
+  isConnected:    () => true,
+};
