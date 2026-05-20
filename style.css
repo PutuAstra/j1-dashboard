@@ -71,7 +71,9 @@ a { color: inherit; text-decoration: none; }
 ───────────────────────────────────────────────────────── */
 .sidebar {
   width: var(--sidebar-w);
-  background: var(--sidebar-bg);
+  background: rgba(13, 27, 46, 0.75);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
   display: flex;
   flex-direction: column;
   position: fixed;
@@ -675,7 +677,7 @@ th.sorted {
    MOBILE / RESPONSIVE
 ───────────────────────────────────────────────────────── */
 .sidebar-overlay {
-  display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.4);
+  display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.15);
   z-index: 150; cursor: pointer;
 }
 .sidebar-overlay.show { display: block; }
