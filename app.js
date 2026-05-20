@@ -721,6 +721,7 @@ const App = (() => {
   // ═══════════════════════════════════════════════════════════
   let _visaFilterMonth       = '';
   let _visaFilterNationality = '';
+  let _visaFilterStatus      = '';
   let _visaSortCol           = null;
   let _visaSortDir           = null;
   let _visaChartInst         = null;
@@ -773,6 +774,13 @@ const App = (() => {
         return ym === _visaFilterMonth;
       });
       if (_visaFilterNationality) out = out.filter(p => (p.country || '').toLowerCase() === _visaFilterNationality);
+      if (_visaFilterStatus === 'approved') out = out.filter(p => /^approved$/i.test(p.visaStatus));
+      if (_visaFilterStatus === 'pending')  out = out.filter(p => /^pending$/i.test(p.visaStatus));
+      if (_visaFilterStatus === 'rejected') out = out.filter(p => p.visaStatus && p.visaStatus !== '—' && !/^approved$/i.test(p.visaStatus) && !/^pending$/i.test(p.visaStatus));
+      if (_visaFilterStatus === 'upcoming') {
+        const todayD = new Date(); todayD.setHours(0, 0, 0, 0);
+        out = out.filter(p => { const d = new Date(p.visaAppointment); return !isNaN(d) && d >= todayD; });
+      }
       return out;
     }
 
@@ -793,29 +801,21 @@ const App = (() => {
     }
 
     function renderStatsHTML(s) {
-      const mini = 'background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:7px 14px;white-space:nowrap';
-      return `
-        <div style="${mini}">
-          <div style="font-size:1.2rem;font-weight:700;line-height:1.1">${s.total}</div>
-          <div style="font-size:0.67rem;color:var(--muted);margin-top:1px">Total Application</div>
-        </div>
-        <div style="${mini}">
-          <div style="font-size:1.2rem;font-weight:700;line-height:1.1;color:#16a34a">${s.approved}</div>
-          <div style="font-size:0.67rem;color:var(--muted);margin-top:1px">Approved</div>
-        </div>
-        <div style="${mini}">
-          <div style="font-size:1.2rem;font-weight:700;line-height:1.1;color:var(--accent)">${s.rejected}</div>
-          <div style="font-size:0.67rem;color:var(--muted);margin-top:1px">Rejected</div>
-        </div>
-        <div style="${mini}">
-          <div style="font-size:1.2rem;font-weight:700;line-height:1.1;color:#d97706">${s.pending}</div>
-          <div style="font-size:0.67rem;color:var(--muted);margin-top:1px">Pending</div>
-        </div>
-        <div style="${mini}">
-          <div style="font-size:1.2rem;font-weight:700;line-height:1.1;color:#2563eb">${s.upcoming}</div>
-          <div style="font-size:0.67rem;color:var(--muted);margin-top:1px">Upcoming Appt.</div>
-        </div>
-      `;
+      const chips = [
+        { key: 'total',    val: s.total,    label: 'Total Application', color: 'var(--text)'   },
+        { key: 'approved', val: s.approved, label: 'Approved',          color: '#16a34a'       },
+        { key: 'rejected', val: s.rejected, label: 'Rejected',          color: 'var(--accent)' },
+        { key: 'pending',  val: s.pending,  label: 'Pending',           color: '#d97706'       },
+        { key: 'upcoming', val: s.upcoming, label: 'Upcoming Appt.',    color: '#2563eb'       },
+      ];
+      return chips.map(c => {
+        const isActive = _visaFilterStatus === c.key && c.key !== 'total';
+        return `
+          <div class="visa-stat-chip${isActive ? ' active' : ''}" data-vstatus="${c.key}">
+            <div style="font-size:1.2rem;font-weight:700;line-height:1.1;color:${c.color}">${c.val}</div>
+            <div style="font-size:0.67rem;color:var(--muted);margin-top:1px">${c.label}</div>
+          </div>`;
+      }).join('');
     }
 
     function renderPassRate(s) {
@@ -899,6 +899,20 @@ const App = (() => {
       `;
     }
 
+    function wireVisaChips() {
+      document.querySelectorAll('.visa-stat-chip').forEach(chip => {
+        chip.addEventListener('click', () => {
+          const val = chip.dataset.vstatus;
+          if (val === 'total') {
+            _visaFilterStatus = '';
+          } else {
+            _visaFilterStatus = (_visaFilterStatus === val) ? '' : val;
+          }
+          refreshVisa();
+        });
+      });
+    }
+
     function refreshVisa() {
       const filtered = applyVisaFilter(visaPool);
       const s = computeStats(filtered);
@@ -909,8 +923,8 @@ const App = (() => {
       document.getElementById('visaTableCard').innerHTML  = visaTable(filtered);
       const countEl = document.getElementById('visaFilterCount');
       if (countEl) countEl.textContent = `${filtered.length} record${filtered.length !== 1 ? 's' : ''}`;
-      // restore select values after innerHTML replace (stats grid only, selects are outside)
       wireVisaSort();
+      wireVisaChips();
     }
 
     function wireVisaSort() {
@@ -1004,15 +1018,17 @@ const App = (() => {
     drawPieChart(initStats);
     renderPassRate(initStats);
     wireVisaSort();
+    wireVisaChips();
 
     document.getElementById('visaMonthFilter').addEventListener('change', e => { _visaFilterMonth       = e.target.value; refreshVisa(); });
     document.getElementById('visaFilterNat').addEventListener('change',   e => { _visaFilterNationality = e.target.value; refreshVisa(); });
     document.getElementById('visaClearFilter').addEventListener('click', () => {
-      _visaFilterMonth = ''; _visaFilterNationality = '';
+      _visaFilterMonth = ''; _visaFilterNationality = ''; _visaFilterStatus = '';
       document.getElementById('visaMonthFilter').value = '';
       document.getElementById('visaFilterNat').value   = '';
       refreshVisa();
     });
+
   }
 
   // ═══════════════════════════════════════════════════════════
