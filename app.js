@@ -248,7 +248,7 @@ const App = (() => {
             <!-- Pass % — fill height -->
             <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;padding:0 10px">
               <div style="font-size:3rem;font-weight:800;line-height:1;color:#16a34a">${visaPassPct}%</div>
-              <div style="font-size:0.7rem;font-weight:600;color:var(--muted);margin-top:5px;text-align:center">Visa Passing<br>Percentage</div>
+              <div style="font-size:0.7rem;font-weight:600;color:var(--muted);margin-top:5px;text-align:center">Visa Approval Rate</div>
             </div>
 
           </div>
@@ -836,7 +836,7 @@ const App = (() => {
       const pct = s.total ? Math.round(s.approved / s.total * 100) : 0;
       el.innerHTML = `
         <div style="font-size:2.6rem;font-weight:800;line-height:1;color:#16a34a">${pct}%</div>
-        <div style="font-size:0.67rem;font-weight:600;color:var(--muted);margin-top:4px;text-align:center;white-space:nowrap">Visa Passing<br>Percentage</div>
+        <div style="font-size:0.67rem;font-weight:600;color:var(--muted);margin-top:4px;text-align:center;white-space:nowrap">Visa Approval Rate</div>
       `;
     }
 
