@@ -687,7 +687,8 @@ const App = (() => {
       const approved = list.filter(p => /^approved$/i.test(p.visaStatus)).length;
       const pending  = list.filter(p => /^pending$/i.test(p.visaStatus)).length;
       const rejected = list.filter(p => !/^approved$/i.test(p.visaStatus) && !/^pending$/i.test(p.visaStatus)).length;
-      const upcoming = list.filter(p => p.visaAppointment && p.visaAppointment >= today).length;
+      // Upcoming = all participants with a future appointment, regardless of visa status
+      const upcoming = participants.filter(p => p.visaAppointment && p.visaAppointment >= today).length;
       return { total, approved, rejected, pending, upcoming };
     }
 
