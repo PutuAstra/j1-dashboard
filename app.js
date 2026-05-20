@@ -207,10 +207,11 @@ const App = (() => {
             <div class="ov-card-title">Stage Progress</div>
             <div style="position:relative;flex:1;overflow:hidden"><canvas id="chartStage"></canvas></div>
           </div>
+          ${reqActive.length ? `
           <div class="card ov-card" style="overflow:hidden;display:flex;flex-direction:column;min-height:0">
-            <div class="ov-card-title">Placement by Sponsor <span class="ov-sub">${placed.length} placed</span></div>
-            <div style="position:relative;flex:1;overflow:hidden"><canvas id="chartSponsor"></canvas></div>
-          </div>
+            <div class="ov-card-title">Requisition <span class="ov-sub">${reqActive.length} companies · ${reqTotalOpenings} openings</span></div>
+            <div style="position:relative;flex:1;overflow:hidden"><canvas id="chartReq"></canvas></div>
+          </div>` : ''}
         </div>
 
         <!-- Row 2: Visa Summary -->
@@ -258,11 +259,10 @@ const App = (() => {
             <div class="ov-card-title">🏠 Return Flights <span class="ov-sub">${returningOv.length} onboard/completed</span></div>
             <div style="position:relative;flex:1;overflow:hidden"><canvas id="chartReturning"></canvas></div>
           </div>
-          ${reqActive.length ? `
           <div class="card ov-card" style="overflow:hidden;display:flex;flex-direction:column;min-height:0">
-            <div class="ov-card-title">Requisition <span class="ov-sub">${reqActive.length} companies · ${reqTotalOpenings} openings</span></div>
-            <div style="position:relative;flex:1;overflow:hidden"><canvas id="chartReq"></canvas></div>
-          </div>` : ''}
+            <div class="ov-card-title">Placement by Sponsor <span class="ov-sub">${placed.length} placed</span></div>
+            <div style="position:relative;flex:1;overflow:hidden"><canvas id="chartSponsor"></canvas></div>
+          </div>
         </div>
 
       </div>
