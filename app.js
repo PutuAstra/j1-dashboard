@@ -812,8 +812,8 @@ const App = (() => {
         const isActive = _visaFilterStatus === c.key && c.key !== 'total';
         return `
           <div class="visa-stat-chip${isActive ? ' active' : ''}" data-vstatus="${c.key}">
-            <div style="font-size:1.6rem;font-weight:800;line-height:1.1;color:${c.color}">${c.val}</div>
-            <div style="font-size:0.68rem;font-weight:500;color:var(--muted);margin-top:3px;white-space:nowrap">${c.label}</div>
+            <div style="font-size:clamp(2rem,3.5vw,3.5rem);font-weight:800;line-height:1;color:${c.color}">${c.val}</div>
+            <div style="font-size:clamp(0.7rem,1vw,0.85rem);font-weight:500;color:var(--muted);margin-top:6px;white-space:nowrap">${c.label}</div>
           </div>`;
       }).join('');
     }
