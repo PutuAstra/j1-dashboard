@@ -868,7 +868,7 @@ const App = (() => {
           <div style="display:flex;flex-direction:column;gap:6px;flex-shrink:0">
             <!-- Row 1: date range -->
             <div style="display:flex;align-items:center;gap:6px">
-              <span style="font-size:0.73rem;font-weight:600;color:var(--text-secondary);white-space:nowrap">Appt Date:</span>
+              <span style="font-size:0.73rem;font-weight:600;color:var(--text-secondary);white-space:nowrap">Appointment Date:</span>
               <label style="font-size:0.72rem;display:flex;align-items:center;gap:4px;white-space:nowrap">
                 From <input type="date" id="visaDateFrom" class="filter-select" style="padding:3px 6px;font-size:0.72rem" value="${_visaFilterFrom}">
               </label>
