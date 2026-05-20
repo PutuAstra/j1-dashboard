@@ -215,33 +215,42 @@ const App = (() => {
         </div>
 
         <!-- Row 2: Visa Summary -->
-        <div class="card ov-card" style="overflow:hidden;display:flex;flex-direction:column;justify-content:center;min-height:0">
-          <div class="ov-card-title" style="margin-bottom:5px">🛂 Visa Summary</div>
-          <div style="display:flex;align-items:center;gap:12px;overflow:hidden">
-            <div style="display:flex;gap:7px;flex-shrink:0">
+        <div class="card ov-card" style="overflow:hidden;display:flex;flex-direction:column;min-height:0;padding:10px 14px">
+          <div class="ov-card-title" style="margin-bottom:6px;flex-shrink:0">🛂 Visa Summary</div>
+          <div style="display:flex;align-items:stretch;gap:14px;flex:1;min-height:0;overflow:hidden">
+
+            <!-- Stat chips — fill height -->
+            <div style="display:flex;gap:8px;flex-shrink:0;align-items:stretch">
               ${[
-                { label:'Total',        val: visaTotal,    color:'var(--text)' },
-                { label:'Approved',     val: visaApproved, color:'#16a34a' },
-                { label:'Rejected',     val: visaRejected, color:'var(--accent)' },
-                { label:'Pending',      val: visaPending,  color:'#d97706' },
+                { label:'Total',          val: visaTotal,    color:'var(--text)' },
+                { label:'Approved',       val: visaApproved, color:'#16a34a' },
+                { label:'Rejected',       val: visaRejected, color:'var(--accent)' },
+                { label:'Pending',        val: visaPending,  color:'#d97706' },
                 { label:'Upcoming Appt.', val: visaUpcoming, color:'#2563eb' },
               ].map(c => `
-                <div style="background:var(--bg);border:1px solid var(--border);border-radius:7px;padding:4px 11px;white-space:nowrap">
-                  <div style="font-size:1rem;font-weight:700;line-height:1.1;color:${c.color}">${c.val}</div>
-                  <div style="font-size:0.6rem;color:var(--muted);margin-top:1px">${c.label}</div>
+                <div style="background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:8px 18px;white-space:nowrap;display:flex;flex-direction:column;justify-content:center">
+                  <div style="font-size:1.7rem;font-weight:800;line-height:1;color:${c.color}">${c.val}</div>
+                  <div style="font-size:0.68rem;color:var(--muted);margin-top:4px">${c.label}</div>
                 </div>
               `).join('')}
             </div>
-            <div style="width:1px;background:var(--border);align-self:stretch;flex-shrink:0"></div>
-            <div style="display:flex;flex-direction:column;align-items:center;flex-shrink:0">
-              <div style="font-size:0.62rem;font-weight:600;color:var(--text-secondary);margin-bottom:1px">Approved vs Rejected</div>
-              <div style="position:relative;height:70px;width:100px"><canvas id="chartVisaOv"></canvas></div>
+
+            <div style="width:1px;background:var(--border);flex-shrink:0"></div>
+
+            <!-- Pie chart — fill height -->
+            <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;flex-shrink:0;min-width:130px">
+              <div style="font-size:0.68rem;font-weight:600;color:var(--text-secondary);margin-bottom:3px">Approved vs Rejected</div>
+              <div style="position:relative;flex:1;width:130px;min-height:0"><canvas id="chartVisaOv"></canvas></div>
             </div>
-            <div style="width:1px;background:var(--border);align-self:stretch;flex-shrink:0"></div>
-            <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;padding:0 6px">
-              <div style="font-size:1.8rem;font-weight:800;line-height:1;color:#16a34a">${visaPassPct}%</div>
-              <div style="font-size:0.6rem;font-weight:600;color:var(--muted);margin-top:2px;text-align:center">Visa Passing<br>Percentage</div>
+
+            <div style="width:1px;background:var(--border);flex-shrink:0"></div>
+
+            <!-- Pass % — fill height -->
+            <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;padding:0 10px">
+              <div style="font-size:3rem;font-weight:800;line-height:1;color:#16a34a">${visaPassPct}%</div>
+              <div style="font-size:0.7rem;font-weight:600;color:var(--muted);margin-top:5px;text-align:center">Visa Passing<br>Percentage</div>
             </div>
+
           </div>
         </div>
 
