@@ -178,6 +178,16 @@ const App = (() => {
       });
     } catch(e) { /* job openings optional */ }
 
+    // ── Visa stats ────────────────────────────────────────────
+    const visaPool     = participants.filter(p => p.visaStatus && p.visaStatus !== '—');
+    const visaTotal    = visaPool.length;
+    const visaApproved = visaPool.filter(p => /^approved$/i.test(p.visaStatus)).length;
+    const visaPending  = visaPool.filter(p => /^pending$/i.test(p.visaStatus)).length;
+    const visaRejected = visaPool.filter(p => !/^approved$/i.test(p.visaStatus) && !/^pending$/i.test(p.visaStatus)).length;
+    const todayStr     = new Date().toISOString().split('T')[0];
+    const visaUpcoming = participants.filter(p => p.visaAppointment && p.visaAppointment >= todayStr).length;
+    const visaPassPct  = visaTotal ? Math.round(visaApproved / visaTotal * 100) : 0;
+
     mc.innerHTML = `
       <div class="page-header" style="margin-bottom:6px">
         <h1 style="font-size:1rem;margin-bottom:1px">Overview</h1>
@@ -219,6 +229,48 @@ const App = (() => {
           <div class="ov-card-title">Requisition <span class="ov-sub">${reqActive.length} companies · ${reqTotalOpenings} openings</span></div>
           <div class="ov-chart-wrap ov-chart-donut"><canvas id="chartReq"></canvas></div>
         </div>` : ''}
+      </div>
+
+      <!-- Row 3: Visa Summary -->
+      <div class="card ov-card" style="margin-top:6px">
+        <div class="ov-card-title" style="margin-bottom:8px">🛂 Visa Summary</div>
+        <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap">
+
+          <!-- Stat chips -->
+          <div style="display:flex;gap:8px;flex-wrap:wrap;flex-shrink:0">
+            ${[
+              { label:'Total Application', val: visaTotal,    color:'var(--text)' },
+              { label:'Approved',          val: visaApproved, color:'#16a34a' },
+              { label:'Rejected',          val: visaRejected, color:'var(--accent)' },
+              { label:'Pending',           val: visaPending,  color:'#d97706' },
+              { label:'Upcoming Appt.',    val: visaUpcoming, color:'#2563eb' },
+            ].map(c => `
+              <div style="background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:6px 12px;white-space:nowrap">
+                <div style="font-size:1.1rem;font-weight:700;line-height:1.1;color:${c.color}">${c.val}</div>
+                <div style="font-size:0.65rem;color:var(--muted);margin-top:1px">${c.label}</div>
+              </div>
+            `).join('')}
+          </div>
+
+          <!-- Divider -->
+          <div style="width:1px;background:var(--border);align-self:stretch;flex-shrink:0"></div>
+
+          <!-- Pie chart -->
+          <div style="display:flex;flex-direction:column;align-items:center;flex-shrink:0">
+            <div style="font-size:0.68rem;font-weight:600;color:var(--text-secondary);margin-bottom:2px">Approved vs Rejected</div>
+            <div style="position:relative;height:100px;width:130px"><canvas id="chartVisaOv"></canvas></div>
+          </div>
+
+          <!-- Divider -->
+          <div style="width:1px;background:var(--border);align-self:stretch;flex-shrink:0"></div>
+
+          <!-- Pass % -->
+          <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;padding:0 8px">
+            <div style="font-size:2.4rem;font-weight:800;line-height:1;color:#16a34a">${visaPassPct}%</div>
+            <div style="font-size:0.65rem;font-weight:600;color:var(--muted);margin-top:4px;text-align:center">Visa Passing<br>Percentage</div>
+          </div>
+
+        </div>
       </div>
     `;
 
@@ -278,6 +330,29 @@ const App = (() => {
     // Successful Placement by Sponsor — horizontal bar
     if (sponsorEntries.length && document.getElementById('chartSponsor')) {
       new Chart(document.getElementById('chartSponsor').getContext('2d'), hBarOpts(sponsorEntries.map(e=>e[0]), sponsorEntries.map(e=>e[1]), '#16a34a', 110));
+    }
+
+    // Visa summary pie
+    if (document.getElementById('chartVisaOv') && (visaApproved || visaRejected || visaPending)) {
+      const visaSum = visaApproved + visaRejected + visaPending;
+      new Chart(document.getElementById('chartVisaOv').getContext('2d'), {
+        type: 'pie',
+        data: {
+          labels: ['Approved','Rejected','Pending'],
+          datasets: [{ data: [visaApproved, visaRejected, visaPending], backgroundColor: ['#16a34a','#B01A18','#d97706'], borderWidth: 2, borderColor: cardBg() }]
+        },
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          plugins: {
+            legend: { position: 'bottom', labels: { font: { size: 8, family:'Inter' }, padding: 5, boxWidth: 8 } },
+            datalabels: {
+              display: ctx => ctx.dataset.data[ctx.dataIndex] > 0,
+              color: '#fff', font: { size: 10, weight: '700' },
+              formatter: val => visaSum ? Math.round(val / visaSum * 100) + '%' : '',
+            }
+          }
+        }
+      });
     }
   }
 
