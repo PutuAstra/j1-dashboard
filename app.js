@@ -1257,6 +1257,7 @@ const App = (() => {
   let _reqFilterDept    = '';
   let _reqFilterHousing = '';
   let _reqFilterProgram = '';
+  let _reqFilterClient  = '';
 
   async function renderRequisition() {
     const mc = document.getElementById('main-content');
@@ -1358,6 +1359,7 @@ const App = (() => {
 
     function applyReqFilters(list) {
       let out = list;
+      if (_reqFilterClient)  out = out.filter(j => (j.clientName  || '').toLowerCase() === _reqFilterClient);
       if (_reqFilterDept)    out = out.filter(j => (j.department  || '').toLowerCase() === _reqFilterDept);
       if (_reqFilterHousing) out = out.filter(j => (j.housingAvail || '').toLowerCase() === _reqFilterHousing);
       if (_reqFilterProgram) {
@@ -1391,13 +1393,17 @@ const App = (() => {
         </div>
         ${Object.entries(byClient)
           .sort((a, b) => b[1].openings - a[1].openings)
-          .map(([client, data]) => `
-            <div class="stat-card">
+          .map(([client, data]) => {
+            const isActive = _reqFilterClient === client.toLowerCase();
+            return `
+            <div class="stat-card req-client-card${isActive ? ' req-client-active' : ''}"
+                 data-client="${client.toLowerCase()}"
+                 style="cursor:pointer;transition:all 0.15s;${isActive ? 'outline:2px solid var(--accent);' : ''}">
               <div class="stat-value">${data.openings}</div>
               <div class="stat-label" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:0.68rem" title="${client}">${client.split(' ').slice(0,2).join(' ')}</div>
               <div style="font-size:0.63rem;color:var(--muted-lt);margin-top:2px">${data.reqs} hosting company</div>
-            </div>
-          `).join('')}
+            </div>`;
+          }).join('')}
       `;
 
       const filterCards = `
@@ -1445,6 +1451,15 @@ const App = (() => {
       document.getElementById('reqFilterDept').addEventListener('change', onDeptChange);
       document.getElementById('reqFilterHousing').addEventListener('change', onHousingChange);
       document.getElementById('reqFilterProgram').addEventListener('change', onProgramChange);
+      // Wire client card clicks
+      document.querySelectorAll('.req-client-card').forEach(card => {
+        card.addEventListener('click', () => {
+          const val = card.dataset.client;
+          _reqFilterClient = (_reqFilterClient === val) ? '' : val; // toggle
+          refreshReq();
+          document.getElementById('reqContent').scrollIntoView({ behavior: 'smooth', block: 'start' });
+        });
+      });
     }
 
     function onDeptChange(e)    { _reqFilterDept    = e.target.value; refreshReq(); }
