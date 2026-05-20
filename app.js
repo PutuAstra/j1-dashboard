@@ -783,6 +783,7 @@ const App = (() => {
         const todayD = new Date(); todayD.setHours(0, 0, 0, 0);
         out = out.filter(p => { const d = new Date(p.visaAppointment); return !isNaN(d) && d >= todayD; });
       }
+      if (_visaFilterStatus === 'refRequested') out = out.filter(p => /^requested$/i.test(p.refLetterStatus));
       return out;
     }
 
