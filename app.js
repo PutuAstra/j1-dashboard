@@ -742,10 +742,10 @@ const App = (() => {
       { label: 'Nationality',              key: 'country',        get: p => (p.country || '').toLowerCase(),        render: p => p.country || '—' },
       { label: 'J1 Visa Status',           key: 'visaStatus',     get: p => (p.visaStatus || '').toLowerCase(),     render: p => badge(p.visaStatus) },
       { label: 'Supporting Letter Status', key: 'refLetterStatus',get: p => (p.refLetterStatus || '').toLowerCase(),render: p => badge(p.refLetterStatus) },
-      { label: 'Visa Payment Date',        key: 'visaPaymentDate',get: p => p.visaPaymentDate || '',                render: p => formatDate(p.visaPaymentDate) },
       { label: 'Visa Appointment Date',    key: 'visaAppointment',get: p => p.visaAppointment || '',                render: p => formatDate(p.visaAppointment) },
       { label: 'Visa Number',              key: 'visaNumber',     get: p => (p.visaNumber || '').toLowerCase(),     render: p => p.visaNumber || '—' },
       { label: 'Visa Expired Date',        key: 'ds2019End',      get: p => p.ds2019End || '',                      render: p => formatDate(p.ds2019End) },
+      { label: 'J1 Program Source',        key: 'programSource',  get: p => (p.programSource || '').toLowerCase(),  render: p => p.programSource || '—' },
     ];
 
     function computeStats(list) {
