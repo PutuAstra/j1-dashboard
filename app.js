@@ -213,28 +213,7 @@ const App = (() => {
           </div>
         </div>
 
-        <!-- Row 2: 4 donuts -->
-        <div class="ov-grid ov-grid-4" style="min-height:0;overflow:hidden;margin:0">
-          <div class="card ov-card" style="overflow:hidden;display:flex;flex-direction:column;min-height:0">
-            <div class="ov-card-title">Housing <span class="ov-sub">${housingRateOv}% rate</span></div>
-            <div style="position:relative;flex:1;overflow:hidden"><canvas id="chartHousing"></canvas></div>
-          </div>
-          <div class="card ov-card" style="overflow:hidden;display:flex;flex-direction:column;min-height:0">
-            <div class="ov-card-title">✈️ Joining Flights <span class="ov-sub">${joiningOv.length} visa approved</span></div>
-            <div style="position:relative;flex:1;overflow:hidden"><canvas id="chartJoining"></canvas></div>
-          </div>
-          <div class="card ov-card" style="overflow:hidden;display:flex;flex-direction:column;min-height:0">
-            <div class="ov-card-title">🏠 Return Flights <span class="ov-sub">${returningOv.length} onboard/completed</span></div>
-            <div style="position:relative;flex:1;overflow:hidden"><canvas id="chartReturning"></canvas></div>
-          </div>
-          ${reqActive.length ? `
-          <div class="card ov-card" style="overflow:hidden;display:flex;flex-direction:column;min-height:0">
-            <div class="ov-card-title">Requisition <span class="ov-sub">${reqActive.length} companies · ${reqTotalOpenings} openings</span></div>
-            <div style="position:relative;flex:1;overflow:hidden"><canvas id="chartReq"></canvas></div>
-          </div>` : ''}
-        </div>
-
-        <!-- Row 3: Visa Summary -->
+        <!-- Row 2: Visa Summary -->
         <div class="card ov-card" style="overflow:hidden;display:flex;flex-direction:column;justify-content:center;min-height:0">
           <div class="ov-card-title" style="margin-bottom:5px">🛂 Visa Summary</div>
           <div style="display:flex;align-items:center;gap:12px;overflow:hidden">
@@ -263,6 +242,27 @@ const App = (() => {
               <div style="font-size:0.6rem;font-weight:600;color:var(--muted);margin-top:2px;text-align:center">Visa Passing<br>Percentage</div>
             </div>
           </div>
+        </div>
+
+        <!-- Row 3: 4 donuts -->
+        <div class="ov-grid ov-grid-4" style="min-height:0;overflow:hidden;margin:0">
+          <div class="card ov-card" style="overflow:hidden;display:flex;flex-direction:column;min-height:0">
+            <div class="ov-card-title">Housing <span class="ov-sub">${housingRateOv}% rate</span></div>
+            <div style="position:relative;flex:1;overflow:hidden"><canvas id="chartHousing"></canvas></div>
+          </div>
+          <div class="card ov-card" style="overflow:hidden;display:flex;flex-direction:column;min-height:0">
+            <div class="ov-card-title">✈️ Joining Flights <span class="ov-sub">${joiningOv.length} visa approved</span></div>
+            <div style="position:relative;flex:1;overflow:hidden"><canvas id="chartJoining"></canvas></div>
+          </div>
+          <div class="card ov-card" style="overflow:hidden;display:flex;flex-direction:column;min-height:0">
+            <div class="ov-card-title">🏠 Return Flights <span class="ov-sub">${returningOv.length} onboard/completed</span></div>
+            <div style="position:relative;flex:1;overflow:hidden"><canvas id="chartReturning"></canvas></div>
+          </div>
+          ${reqActive.length ? `
+          <div class="card ov-card" style="overflow:hidden;display:flex;flex-direction:column;min-height:0">
+            <div class="ov-card-title">Requisition <span class="ov-sub">${reqActive.length} companies · ${reqTotalOpenings} openings</span></div>
+            <div style="position:relative;flex:1;overflow:hidden"><canvas id="chartReq"></canvas></div>
+          </div>` : ''}
         </div>
 
       </div>
