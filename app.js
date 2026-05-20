@@ -219,8 +219,8 @@ const App = (() => {
           <div class="ov-card-title" style="margin-bottom:6px;flex-shrink:0">🛂 Visa Summary</div>
           <div style="display:flex;align-items:stretch;gap:14px;flex:1;min-height:0;overflow:hidden">
 
-            <!-- Stat chips — fill height -->
-            <div style="display:flex;gap:8px;flex-shrink:0;align-items:stretch">
+            <!-- Stat chips — equal width, fill height -->
+            <div style="display:flex;gap:8px;flex:1;align-items:stretch;min-width:0">
               ${[
                 { label:'Total',          val: visaTotal,    color:'var(--text)' },
                 { label:'Approved',       val: visaApproved, color:'#16a34a' },
@@ -228,9 +228,9 @@ const App = (() => {
                 { label:'Pending',        val: visaPending,  color:'#d97706' },
                 { label:'Upcoming Appt.', val: visaUpcoming, color:'#2563eb' },
               ].map(c => `
-                <div style="background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:8px 18px;white-space:nowrap;display:flex;flex-direction:column;justify-content:center">
-                  <div style="font-size:1.7rem;font-weight:800;line-height:1;color:${c.color}">${c.val}</div>
-                  <div style="font-size:0.68rem;color:var(--muted);margin-top:4px">${c.label}</div>
+                <div style="background:var(--bg);border:1px solid var(--border);border-radius:8px;flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;overflow:hidden">
+                  <div style="font-size:min(3rem,5vh);font-weight:800;line-height:1;color:${c.color}">${c.val}</div>
+                  <div style="font-size:min(0.72rem,1.4vh);color:var(--muted);font-weight:500;text-align:center;white-space:nowrap">${c.label}</div>
                 </div>
               `).join('')}
             </div>
