@@ -653,8 +653,7 @@ const App = (() => {
   // ═══════════════════════════════════════════════════════════
   //  PAGE: VISA
   // ═══════════════════════════════════════════════════════════
-  let _visaFilterFrom        = '';
-  let _visaFilterTo          = '';
+  let _visaFilterMonth       = '';
   let _visaFilterNationality = '';
   let _visaSortCol           = null;
   let _visaSortDir           = null;
@@ -694,8 +693,7 @@ const App = (() => {
 
     function applyVisaFilter(list) {
       let out = list;
-      if (_visaFilterFrom)        out = out.filter(p => p.visaAppointment && p.visaAppointment >= _visaFilterFrom);
-      if (_visaFilterTo)          out = out.filter(p => p.visaAppointment && p.visaAppointment <= _visaFilterTo);
+      if (_visaFilterMonth)       out = out.filter(p => p.visaAppointment && p.visaAppointment.substring(0, 7) === _visaFilterMonth);
       if (_visaFilterNationality) out = out.filter(p => (p.country || '').toLowerCase() === _visaFilterNationality);
       return out;
     }
@@ -886,15 +884,18 @@ const App = (() => {
 
           <!-- Filter controls -->
           <div style="display:flex;flex-direction:column;gap:6px;flex-shrink:0">
-            <!-- Row 1: date range -->
+            <!-- Row 1: month picker -->
             <div style="display:flex;align-items:center;gap:6px">
               <span style="font-size:0.73rem;font-weight:600;color:var(--text-secondary);white-space:nowrap">Appointment Date:</span>
-              <label style="font-size:0.72rem;display:flex;align-items:center;gap:4px;white-space:nowrap">
-                From <input type="date" id="visaDateFrom" class="filter-select" style="padding:3px 6px;font-size:0.72rem" value="${_visaFilterFrom}">
-              </label>
-              <label style="font-size:0.72rem;display:flex;align-items:center;gap:4px;white-space:nowrap">
-                To <input type="date" id="visaDateTo" class="filter-select" style="padding:3px 6px;font-size:0.72rem" value="${_visaFilterTo}">
-              </label>
+              <select class="filter-select" id="visaMonthFilter" style="font-size:0.72rem;min-width:150px">
+                <option value="">All Months</option>
+                ${[...new Set(visaPool.map(p => p.visaAppointment ? p.visaAppointment.substring(0,7) : null).filter(Boolean))].sort()
+                  .map(ym => {
+                    const [yr, mo] = ym.split('-');
+                    const label = new Date(yr, mo - 1).toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+                    return `<option value="${ym}" ${_visaFilterMonth === ym ? 'selected' : ''}>${label}</option>`;
+                  }).join('')}
+              </select>
             </div>
             <!-- Row 2: nationality + clear + count -->
             <div style="display:flex;align-items:center;gap:6px">
@@ -921,14 +922,12 @@ const App = (() => {
     renderPassRate(initStats);
     wireVisaSort();
 
-    document.getElementById('visaDateFrom').addEventListener('change',  e => { _visaFilterFrom        = e.target.value; refreshVisa(); });
-    document.getElementById('visaDateTo').addEventListener('change',    e => { _visaFilterTo          = e.target.value; refreshVisa(); });
-    document.getElementById('visaFilterNat').addEventListener('change', e => { _visaFilterNationality = e.target.value; refreshVisa(); });
+    document.getElementById('visaMonthFilter').addEventListener('change', e => { _visaFilterMonth       = e.target.value; refreshVisa(); });
+    document.getElementById('visaFilterNat').addEventListener('change',   e => { _visaFilterNationality = e.target.value; refreshVisa(); });
     document.getElementById('visaClearFilter').addEventListener('click', () => {
-      _visaFilterFrom = ''; _visaFilterTo = ''; _visaFilterNationality = '';
-      document.getElementById('visaDateFrom').value  = '';
-      document.getElementById('visaDateTo').value    = '';
-      document.getElementById('visaFilterNat').value = '';
+      _visaFilterMonth = ''; _visaFilterNationality = '';
+      document.getElementById('visaMonthFilter').value = '';
+      document.getElementById('visaFilterNat').value   = '';
       refreshVisa();
     });
   }
