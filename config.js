@@ -59,7 +59,7 @@ const CONFIG = {
     lastName:               'Last_Name',
     email:                  'Email',
     country:                'Country',
-    phone:                  'Phone',
+    phone:                  'Phone_Number',
     gender:                 'Gender',
     appStatus:              'J1_Application_Status',
     programSource:          'J1_Program_Source',
