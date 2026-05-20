@@ -715,23 +715,23 @@ const App = (() => {
     }
 
     function renderStatsHTML(s) {
-      const mini = 'background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:8px 12px;box-shadow:var(--shadow-sm)';
+      const mini = 'background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:7px 14px;white-space:nowrap';
       return `
         <div style="${mini}">
-          <div style="font-size:1.15rem;font-weight:700;line-height:1.1">${s.total}</div>
-          <div style="font-size:0.68rem;color:var(--muted);margin-top:2px;font-weight:500">Total Application</div>
+          <div style="font-size:1.2rem;font-weight:700;line-height:1.1">${s.total}</div>
+          <div style="font-size:0.67rem;color:var(--muted);margin-top:1px">Total Application</div>
         </div>
         <div style="${mini}">
-          <div style="font-size:1.15rem;font-weight:700;line-height:1.1;color:#16a34a">${s.approved}</div>
-          <div style="font-size:0.68rem;color:var(--muted);margin-top:2px;font-weight:500">Approved</div>
+          <div style="font-size:1.2rem;font-weight:700;line-height:1.1;color:#16a34a">${s.approved}</div>
+          <div style="font-size:0.67rem;color:var(--muted);margin-top:1px">Approved</div>
         </div>
         <div style="${mini}">
-          <div style="font-size:1.15rem;font-weight:700;line-height:1.1;color:var(--accent)">${s.rejected}</div>
-          <div style="font-size:0.68rem;color:var(--muted);margin-top:2px;font-weight:500">Rejected</div>
+          <div style="font-size:1.2rem;font-weight:700;line-height:1.1;color:var(--accent)">${s.rejected}</div>
+          <div style="font-size:0.67rem;color:var(--muted);margin-top:1px">Rejected</div>
         </div>
         <div style="${mini}">
-          <div style="font-size:1.15rem;font-weight:700;line-height:1.1;color:#d97706">${s.pending}</div>
-          <div style="font-size:0.68rem;color:var(--muted);margin-top:2px;font-weight:500">Pending</div>
+          <div style="font-size:1.2rem;font-weight:700;line-height:1.1;color:#d97706">${s.pending}</div>
+          <div style="font-size:0.67rem;color:var(--muted);margin-top:1px">Pending</div>
         </div>
       `;
     }
@@ -843,34 +843,45 @@ const App = (() => {
         <p>J1 Visa application status and tracking</p>
       </div>
 
-      <!-- Stats + pie chart -->
-      <div style="display:flex;gap:10px;margin-bottom:12px;align-items:center">
-        <div id="visaStatsGrid" style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;flex:1">
-          ${renderStatsHTML(initStats)}
-        </div>
-        <div class="card" style="flex:0 0 200px;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:8px 10px;align-self:stretch">
-          <div style="font-size:0.73rem;font-weight:600;margin-bottom:4px;color:var(--text-secondary)">Approved vs Rejected</div>
-          <div style="position:relative;height:145px;width:100%"><canvas id="visaPieChart"></canvas></div>
-        </div>
-      </div>
-
-      <!-- Filter bar -->
+      <!-- Stats + pie + filters — all in one compact band -->
       <div class="card" style="margin-bottom:12px;padding:10px 14px">
-        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
-          <span style="font-size:0.78rem;font-weight:600;color:var(--text-secondary);white-space:nowrap">Appointment Date:</span>
-          <label style="font-size:0.75rem;display:flex;align-items:center;gap:5px">
-            From <input type="date" id="visaDateFrom" class="filter-select" style="padding:4px 8px" value="${_visaFilterFrom}">
-          </label>
-          <label style="font-size:0.75rem;display:flex;align-items:center;gap:5px">
-            To <input type="date" id="visaDateTo" class="filter-select" style="padding:4px 8px" value="${_visaFilterTo}">
-          </label>
-          <select class="filter-select" id="visaFilterNat" style="min-width:140px">
-            <option value="">All Nationalities</option>
-            ${[...new Set(visaPool.map(p => p.country).filter(c => c && c !== '—'))].sort()
-              .map(c => `<option value="${c.toLowerCase()}" ${_visaFilterNationality === c.toLowerCase() ? 'selected' : ''}>${c}</option>`).join('')}
-          </select>
-          <button id="visaClearFilter" style="font-size:0.75rem;padding:4px 10px;border-radius:6px;border:1px solid var(--border);background:var(--card);color:var(--text);cursor:pointer">Clear</button>
-          <span id="visaFilterCount" style="margin-left:auto;font-size:0.8rem;color:var(--muted)">${initFiltered.length} record${initFiltered.length !== 1 ? 's' : ''}</span>
+        <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+
+          <!-- Stat chips -->
+          <div id="visaStatsGrid" style="display:flex;gap:8px;flex-shrink:0;flex-wrap:wrap">
+            ${renderStatsHTML(initStats)}
+          </div>
+
+          <!-- Divider -->
+          <div style="width:1px;background:var(--border);align-self:stretch;flex-shrink:0"></div>
+
+          <!-- Pie chart -->
+          <div style="flex:0 0 150px;display:flex;flex-direction:column;align-items:center">
+            <div style="font-size:0.7rem;font-weight:600;color:var(--text-secondary);margin-bottom:2px">Approved vs Rejected</div>
+            <div style="position:relative;height:110px;width:150px"><canvas id="visaPieChart"></canvas></div>
+          </div>
+
+          <!-- Divider -->
+          <div style="width:1px;background:var(--border);align-self:stretch;flex-shrink:0"></div>
+
+          <!-- Filter controls -->
+          <div style="display:flex;align-items:center;gap:8px;flex:1;flex-wrap:wrap;min-width:0">
+            <span style="font-size:0.75rem;font-weight:600;color:var(--text-secondary);white-space:nowrap">Appt Date:</span>
+            <label style="font-size:0.73rem;display:flex;align-items:center;gap:4px;white-space:nowrap">
+              From <input type="date" id="visaDateFrom" class="filter-select" style="padding:3px 6px;font-size:0.73rem" value="${_visaFilterFrom}">
+            </label>
+            <label style="font-size:0.73rem;display:flex;align-items:center;gap:4px;white-space:nowrap">
+              To <input type="date" id="visaDateTo" class="filter-select" style="padding:3px 6px;font-size:0.73rem" value="${_visaFilterTo}">
+            </label>
+            <select class="filter-select" id="visaFilterNat" style="min-width:130px;font-size:0.73rem">
+              <option value="">All Nationalities</option>
+              ${[...new Set(visaPool.map(p => p.country).filter(c => c && c !== '—'))].sort()
+                .map(c => `<option value="${c.toLowerCase()}" ${_visaFilterNationality === c.toLowerCase() ? 'selected' : ''}>${c}</option>`).join('')}
+            </select>
+            <button id="visaClearFilter" style="font-size:0.73rem;padding:3px 10px;border-radius:6px;border:1px solid var(--border);background:var(--card);color:var(--text);cursor:pointer;white-space:nowrap">Clear</button>
+            <span id="visaFilterCount" style="margin-left:auto;font-size:0.75rem;color:var(--muted);white-space:nowrap">${initFiltered.length} record${initFiltered.length !== 1 ? 's' : ''}</span>
+          </div>
+
         </div>
       </div>
 
