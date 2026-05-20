@@ -195,7 +195,7 @@ const App = (() => {
       </div>
 
       <!-- 3-row CSS grid, fills remaining viewport -->
-      <div style="display:grid;grid-template-rows:3fr 2fr 1fr;gap:6px;height:calc(100vh - 152px);overflow:hidden">
+      <div style="display:grid;grid-template-rows:2fr 1fr 1fr;gap:6px;height:calc(100vh - 152px);overflow:hidden">
 
         <!-- Row 1: 3 bar charts -->
         <div class="ov-grid ov-grid-3" style="min-height:0;overflow:hidden;margin:0">
