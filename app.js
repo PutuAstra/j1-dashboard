@@ -1451,15 +1451,6 @@ const App = (() => {
       document.getElementById('reqFilterDept').addEventListener('change', onDeptChange);
       document.getElementById('reqFilterHousing').addEventListener('change', onHousingChange);
       document.getElementById('reqFilterProgram').addEventListener('change', onProgramChange);
-      // Wire client card clicks
-      document.querySelectorAll('.req-client-card').forEach(card => {
-        card.addEventListener('click', () => {
-          const val = card.dataset.client;
-          _reqFilterClient = (_reqFilterClient === val) ? '' : val; // toggle
-          refreshReq();
-          document.getElementById('reqContent').scrollIntoView({ behavior: 'smooth', block: 'start' });
-        });
-      });
     }
 
     function onDeptChange(e)    { _reqFilterDept    = e.target.value; refreshReq(); }
@@ -1497,6 +1488,16 @@ const App = (() => {
     document.getElementById('reqFilterDept').addEventListener('change', onDeptChange);
     document.getElementById('reqFilterHousing').addEventListener('change', onHousingChange);
     document.getElementById('reqFilterProgram').addEventListener('change', onProgramChange);
+
+    // Client card clicks — event delegation so it works after refreshes too
+    mc.addEventListener('click', function(e) {
+      const card = e.target.closest('.req-client-card');
+      if (!card) return;
+      const val = card.dataset.client;
+      _reqFilterClient = (_reqFilterClient === val) ? '' : val; // toggle
+      refreshReq();
+      document.getElementById('reqContent').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
   }
 
   // ═══════════════════════════════════════════════════════════
