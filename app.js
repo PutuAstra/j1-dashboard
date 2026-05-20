@@ -1414,7 +1414,7 @@ const App = (() => {
             return `
             <div class="stat-card req-client-card${isActive ? ' req-client-active' : ''}"
                  data-client="${client.toLowerCase()}"
-                 style="cursor:pointer;transition:all 0.15s;${isActive ? 'outline:2px solid var(--accent);' : ''}">
+                 style="">
               <div class="stat-value">${data.openings}</div>
               <div class="stat-label" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:0.68rem" title="${client}">${client.split(' ').slice(0,2).join(' ')}</div>
               <div style="font-size:0.63rem;color:var(--muted-lt);margin-top:2px">${data.reqs} hosting company</div>
