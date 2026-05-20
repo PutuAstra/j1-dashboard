@@ -950,34 +950,23 @@ const App = (() => {
         <p>J1 Visa application status and tracking</p>
       </div>
 
-      <!-- Stats + pie + filters — all in one compact band -->
+      <!-- Stats + pie + filters -->
       <div class="card" style="margin-bottom:12px;padding:10px 14px">
-        <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+        <div style="display:flex;flex-direction:column;gap:10px">
 
-          <!-- Stat chips -->
-          <div id="visaStatsGrid" style="display:flex;gap:8px;flex:1;min-width:0;align-items:stretch">
+          <!-- Row 1: Stat chips full width -->
+          <div id="visaStatsGrid" style="display:flex;gap:8px;align-items:stretch">
             ${renderStatsHTML(initStats)}
           </div>
 
           <!-- Divider -->
-          <div style="width:1px;background:var(--border);align-self:stretch;flex-shrink:0"></div>
+          <div style="height:1px;background:var(--border)"></div>
 
-          <!-- Pie chart + passing % -->
-          <div style="display:flex;align-items:center;gap:14px;flex-shrink:0">
-            <div style="display:flex;flex-direction:column;align-items:center">
-              <div style="font-size:0.7rem;font-weight:600;color:var(--text-secondary);margin-bottom:2px">Approved vs Rejected</div>
-              <div style="position:relative;height:110px;width:140px"><canvas id="visaPieChart"></canvas></div>
-            </div>
-            <div id="visaPassRate" style="display:flex;flex-direction:column;align-items:center;justify-content:center"></div>
-          </div>
+          <!-- Row 2: filters side-by-side + pie + rate -->
+          <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
 
-          <!-- Divider -->
-          <div style="width:1px;background:var(--border);align-self:stretch;flex-shrink:0"></div>
-
-          <!-- Filter controls -->
-          <div style="display:flex;flex-direction:column;gap:6px;flex-shrink:0">
-            <!-- Row 1: month picker -->
-            <div style="display:flex;align-items:center;gap:6px">
+            <!-- Filters side by side -->
+            <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
               <span style="font-size:0.73rem;font-weight:600;color:var(--text-secondary);white-space:nowrap">Appointment Month:</span>
               <select class="filter-select" id="visaMonthFilter" style="font-size:0.72rem;min-width:150px">
                 <option value="">All Months</option>
@@ -993,9 +982,6 @@ const App = (() => {
                     return `<option value="${ym}" ${_visaFilterMonth === ym ? 'selected' : ''}>${label}</option>`;
                   }).join('')}
               </select>
-            </div>
-            <!-- Row 2: nationality + clear + count -->
-            <div style="display:flex;align-items:center;gap:6px">
               <select class="filter-select" id="visaFilterNat" style="font-size:0.72rem">
                 <option value="">All Nationalities</option>
                 ${[...new Set(visaPool.map(p => p.country).filter(c => c && c !== '—'))].sort()
@@ -1004,8 +990,18 @@ const App = (() => {
               <button id="visaClearFilter" style="font-size:0.72rem;padding:3px 10px;border-radius:6px;border:1px solid var(--border);background:var(--card);color:var(--text);cursor:pointer;white-space:nowrap">Clear</button>
               <span id="visaFilterCount" style="font-size:0.72rem;color:var(--muted);white-space:nowrap">${initFiltered.length} record${initFiltered.length !== 1 ? 's' : ''}</span>
             </div>
-          </div>
 
+            <!-- Push pie + rate to the right -->
+            <div style="margin-left:auto;display:flex;align-items:center;gap:14px;flex-shrink:0">
+              <div style="width:1px;background:var(--border);align-self:stretch"></div>
+              <div style="display:flex;flex-direction:column;align-items:center">
+                <div style="font-size:0.7rem;font-weight:600;color:var(--text-secondary);margin-bottom:2px">Approved vs Rejected</div>
+                <div style="position:relative;height:90px;width:120px"><canvas id="visaPieChart"></canvas></div>
+              </div>
+              <div id="visaPassRate" style="display:flex;flex-direction:column;align-items:center;justify-content:center"></div>
+            </div>
+
+          </div>
         </div>
       </div>
 
