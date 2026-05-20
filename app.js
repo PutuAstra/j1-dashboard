@@ -742,6 +742,16 @@ const App = (() => {
       `;
     }
 
+    function renderPassRate(s) {
+      const el = document.getElementById('visaPassRate');
+      if (!el) return;
+      const pct = s.total ? Math.round(s.approved / s.total * 100) : 0;
+      el.innerHTML = `
+        <div style="font-size:2.6rem;font-weight:800;line-height:1;color:#16a34a">${pct}%</div>
+        <div style="font-size:0.67rem;font-weight:600;color:var(--muted);margin-top:4px;text-align:center;white-space:nowrap">Visa Passing<br>Percentage</div>
+      `;
+    }
+
     function drawPieChart(s) {
       if (_visaChartInst) { _visaChartInst.destroy(); _visaChartInst = null; }
       const canvas = document.getElementById('visaPieChart');
@@ -819,6 +829,7 @@ const App = (() => {
 
       document.getElementById('visaStatsGrid').innerHTML  = renderStatsHTML(s);
       drawPieChart(s);
+      renderPassRate(s);
       document.getElementById('visaTableCard').innerHTML  = visaTable(filtered);
       const countEl = document.getElementById('visaFilterCount');
       if (countEl) countEl.textContent = `${filtered.length} record${filtered.length !== 1 ? 's' : ''}`;
@@ -861,10 +872,13 @@ const App = (() => {
           <!-- Divider -->
           <div style="width:1px;background:var(--border);align-self:stretch;flex-shrink:0"></div>
 
-          <!-- Pie chart -->
-          <div style="flex:0 0 150px;display:flex;flex-direction:column;align-items:center">
-            <div style="font-size:0.7rem;font-weight:600;color:var(--text-secondary);margin-bottom:2px">Approved vs Rejected</div>
-            <div style="position:relative;height:110px;width:150px"><canvas id="visaPieChart"></canvas></div>
+          <!-- Pie chart + passing % -->
+          <div style="display:flex;align-items:center;gap:14px;flex-shrink:0">
+            <div style="display:flex;flex-direction:column;align-items:center">
+              <div style="font-size:0.7rem;font-weight:600;color:var(--text-secondary);margin-bottom:2px">Approved vs Rejected</div>
+              <div style="position:relative;height:110px;width:140px"><canvas id="visaPieChart"></canvas></div>
+            </div>
+            <div id="visaPassRate" style="display:flex;flex-direction:column;align-items:center;justify-content:center"></div>
           </div>
 
           <!-- Divider -->
@@ -904,6 +918,7 @@ const App = (() => {
     `;
 
     drawPieChart(initStats);
+    renderPassRate(initStats);
     wireVisaSort();
 
     document.getElementById('visaDateFrom').addEventListener('change',  e => { _visaFilterFrom        = e.target.value; refreshVisa(); });
