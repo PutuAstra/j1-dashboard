@@ -865,21 +865,27 @@ const App = (() => {
           <div style="width:1px;background:var(--border);align-self:stretch;flex-shrink:0"></div>
 
           <!-- Filter controls -->
-          <div style="display:flex;align-items:center;gap:8px;flex:1;flex-wrap:wrap;min-width:0">
-            <span style="font-size:0.75rem;font-weight:600;color:var(--text-secondary);white-space:nowrap">Appt Date:</span>
-            <label style="font-size:0.73rem;display:flex;align-items:center;gap:4px;white-space:nowrap">
-              From <input type="date" id="visaDateFrom" class="filter-select" style="padding:3px 6px;font-size:0.73rem" value="${_visaFilterFrom}">
-            </label>
-            <label style="font-size:0.73rem;display:flex;align-items:center;gap:4px;white-space:nowrap">
-              To <input type="date" id="visaDateTo" class="filter-select" style="padding:3px 6px;font-size:0.73rem" value="${_visaFilterTo}">
-            </label>
-            <select class="filter-select" id="visaFilterNat" style="min-width:130px;font-size:0.73rem">
-              <option value="">All Nationalities</option>
-              ${[...new Set(visaPool.map(p => p.country).filter(c => c && c !== '—'))].sort()
-                .map(c => `<option value="${c.toLowerCase()}" ${_visaFilterNationality === c.toLowerCase() ? 'selected' : ''}>${c}</option>`).join('')}
-            </select>
-            <button id="visaClearFilter" style="font-size:0.73rem;padding:3px 10px;border-radius:6px;border:1px solid var(--border);background:var(--card);color:var(--text);cursor:pointer;white-space:nowrap">Clear</button>
-            <span id="visaFilterCount" style="margin-left:auto;font-size:0.75rem;color:var(--muted);white-space:nowrap">${initFiltered.length} record${initFiltered.length !== 1 ? 's' : ''}</span>
+          <div style="display:flex;flex-direction:column;gap:6px;flex-shrink:0">
+            <!-- Row 1: date range -->
+            <div style="display:flex;align-items:center;gap:6px">
+              <span style="font-size:0.73rem;font-weight:600;color:var(--text-secondary);white-space:nowrap">Appt Date:</span>
+              <label style="font-size:0.72rem;display:flex;align-items:center;gap:4px;white-space:nowrap">
+                From <input type="date" id="visaDateFrom" class="filter-select" style="padding:3px 6px;font-size:0.72rem" value="${_visaFilterFrom}">
+              </label>
+              <label style="font-size:0.72rem;display:flex;align-items:center;gap:4px;white-space:nowrap">
+                To <input type="date" id="visaDateTo" class="filter-select" style="padding:3px 6px;font-size:0.72rem" value="${_visaFilterTo}">
+              </label>
+            </div>
+            <!-- Row 2: nationality + clear + count -->
+            <div style="display:flex;align-items:center;gap:6px">
+              <select class="filter-select" id="visaFilterNat" style="font-size:0.72rem">
+                <option value="">All Nationalities</option>
+                ${[...new Set(visaPool.map(p => p.country).filter(c => c && c !== '—'))].sort()
+                  .map(c => `<option value="${c.toLowerCase()}" ${_visaFilterNationality === c.toLowerCase() ? 'selected' : ''}>${c}</option>`).join('')}
+              </select>
+              <button id="visaClearFilter" style="font-size:0.72rem;padding:3px 10px;border-radius:6px;border:1px solid var(--border);background:var(--card);color:var(--text);cursor:pointer;white-space:nowrap">Clear</button>
+              <span id="visaFilterCount" style="font-size:0.72rem;color:var(--muted);white-space:nowrap">${initFiltered.length} record${initFiltered.length !== 1 ? 's' : ''}</span>
+            </div>
           </div>
 
         </div>
