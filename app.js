@@ -683,11 +683,13 @@ const App = (() => {
     ];
 
     function computeStats(list) {
+      const today    = new Date().toISOString().split('T')[0];
       const total    = list.length;
       const approved = list.filter(p => /^approved$/i.test(p.visaStatus)).length;
-      const rejected = list.filter(p => /rejected|denied/i.test(p.visaStatus)).length;
+      const rejected = list.filter(p => /rejected/i.test(p.visaStatus)).length;
       const pending  = list.filter(p => /pending/i.test(p.visaStatus)).length;
-      return { total, approved, rejected, pending };
+      const upcoming = list.filter(p => p.visaAppointment && p.visaAppointment >= today).length;
+      return { total, approved, rejected, pending, upcoming };
     }
 
     function applyVisaFilter(list) {
@@ -732,6 +734,10 @@ const App = (() => {
         <div style="${mini}">
           <div style="font-size:1.2rem;font-weight:700;line-height:1.1;color:#d97706">${s.pending}</div>
           <div style="font-size:0.67rem;color:var(--muted);margin-top:1px">Pending</div>
+        </div>
+        <div style="${mini}">
+          <div style="font-size:1.2rem;font-weight:700;line-height:1.1;color:#2563eb">${s.upcoming}</div>
+          <div style="font-size:0.67rem;color:var(--muted);margin-top:1px">Upcoming Appt.</div>
         </div>
       `;
     }
