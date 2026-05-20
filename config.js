@@ -73,6 +73,9 @@ const CONFIG = {
     eligiblePrograms:       'Eligible_Programs',
     consultationCallStatus: 'Consultation_Call_Status',
     consultationCallNotes:  'Consultation_Call_Notes',
+    consultationCallDate:   'Consultation_Call_Date',
+    consultationCallBy:     'Consultation_Call_Done_By',
+    withdrawalReason:       'Application_Withdrawal_Reason',
   },
 
   // 5. Verified field API names from Zoho Recruit → Developer Space → API Names
@@ -107,6 +110,33 @@ const CONFIG = {
     // Stage 2 — Sponsor / Hosting Company
     hostCompany:       'Hosting_Company_2',       // NOTE: API name is Hosting_Company_2
     processingSponsor: 'Processing_Sponsor',      // Sponsor that processes the participant
+
+    // Basic (additional)
+    age:                    'Age',
+    department:             'Department',
+    permanentAddress:       'Permanent_Address',
+    ctiUsaReview:           'CTI_USA_s_Review',
+
+    // Consultation Call
+    consultationCallDate:   'Consultation_Call_Date',
+    consultationCallBy:     'Consultation_Call_Done_By',
+    consultationCallNotes:  'Consultation_Call_Notes',
+    consultationCallStatus: 'Consultation_Call_Status',
+
+    // Stage 1
+    stage1Investment:       'Stage_1_Investment',
+    proofAcademic:          'Proof_of_Academic_Status',
+
+    // Stage 2
+    hcInterviewDate:        'HC_Interview_Date',
+
+    // USA Onboard
+    totalPaidInvestment:    'Total_Paid_Investment',
+    sponsorInvoiceStatus:   'Program_Sponsor_Invoice_Status',
+
+    // Archived
+    withdrawalReason:       'Application_Withdrawal_Reason',
+
     sponsorStatus:     'Sponsor_Interview_Status',
     sponsorSubmission: 'Submission_Date_Sponsor',
     hcInterviewStatus: 'Hosting_Company_Interview_Status',

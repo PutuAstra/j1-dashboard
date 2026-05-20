@@ -101,6 +101,26 @@ const Zoho = (() => {
       returnTripFrom:     r[F.returnTripFrom]     || '—',
       returnTripTo:       r[F.returnTripTo]       || '—',
       returnGateway:      r[F.returnGateway]      || '—',
+      // Additional basic
+      age:                  r[F.age]                  || '—',
+      department:           r[F.department]           || '—',
+      permanentAddress:     r[F.permanentAddress]     || '—',
+      ctiUsaReview:         r[F.ctiUsaReview]         || '—',
+      // Consultation Call
+      consultationCallDate: r[F.consultationCallDate] || null,
+      consultationCallBy:   r[F.consultationCallBy]   || '—',
+      consultationCallNotes:r[F.consultationCallNotes]|| '—',
+      consultationCallStatus:r[F.consultationCallStatus]|| '—',
+      // Stage 1
+      stage1Investment:     r[F.stage1Investment]     || '—',
+      proofAcademic:        r[F.proofAcademic]        || '—',
+      // Stage 2
+      hcInterviewDate:      r[F.hcInterviewDate]      || null,
+      // USA Onboard
+      totalPaidInvestment:  r[F.totalPaidInvestment]  || '—',
+      sponsorInvoiceStatus: r[F.sponsorInvoiceStatus] || '—',
+      // Archived
+      withdrawalReason:     r[F.withdrawalReason]     || '—',
       // Housing
       housingAvailability: r[F.housingAvailability] || '—',
       housingLandlord:     r[F.housingLandlord]     || '—',
@@ -141,6 +161,9 @@ const Zoho = (() => {
       ctiUsaReview:           r[CF.ctiUsaReview]           || '—',
       consultationCallStatus: r[CF.consultationCallStatus] || '—',
       consultationCallNotes:  r[CF.consultationCallNotes]  || '—',
+      consultationCallDate:   r[CF.consultationCallDate]   || null,
+      consultationCallBy:     r[CF.consultationCallBy]     || '—',
+      withdrawalReason:       r[CF.withdrawalReason]       || '—',
       programType:            r[CF.programType]            || '—',
       programSource:          r[CF.programSource]          || '—',
       eligiblePrograms:       Array.isArray(r[CF.eligiblePrograms])
@@ -183,6 +206,12 @@ const Zoho = (() => {
       housingPaymentInit:  null,
       housingPaymentMo:    null,
       housingAddress:      '—',
+      // Recruit-only fields — not in CRM
+      stage1Investment:    '—',
+      proofAcademic:       '—',
+      hcInterviewDate:     null,
+      totalPaidInvestment: '—',
+      sponsorInvoiceStatus: '—',
     }));
   }
 

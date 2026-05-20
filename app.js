@@ -305,22 +305,180 @@ const App = (() => {
   const KNOWN_STATUSES = /^(new submission|consultation call|sales call|stage 1|stage 2|stage 3|stage 4|usa onboard|program completed)$/i;
 
   let _activeParticipantTab = 'all';
-  let _sortCol = null;   // field key e.g. 'name'
-  let _sortDir = null;   // 'asc' | 'desc' | null
+  let _sortCol = null;
+  let _sortDir = null;
 
-  // Column definitions: label, field key, value getter
-  const P_COLS = [
-    { label: '#',           key: null,              get: null },
-    { label: 'Source',      key: '_source',         get: p => (p._source || '').toLowerCase() },
-    { label: 'Name',        key: 'name',            get: p => (p.name || '').toLowerCase() },
-    { label: 'Country',     key: 'country',         get: p => (p.country || '').toLowerCase() },
-    { label: 'Program',     key: 'programType',     get: p => (p.programType || '').toLowerCase() },
-    { label: 'Host Company',key: 'hostCompany',     get: p => (p.hostCompany || '').toLowerCase() },
-    { label: 'App Status',  key: 'placementStatus', get: p => (p.placementStatus || '').toLowerCase() },
-    { label: 'Visa Status', key: 'visaStatus',      get: p => (p.visaStatus || '').toLowerCase() },
-    { label: 'Arrival',     key: 'arrivalDate',     get: p => p.arrivalDate || '' },
-    { label: 'Flight',      key: 'flightBooked',    get: p => String(p.flightBooked) },
-  ];
+  // ── Per-tab column helpers ─────────────────────────────────
+  const tc  = (label, key, render) => ({
+    label, key,
+    get:    p => (p[key] != null ? String(p[key]) : '').toLowerCase(),
+    render: render || (p => p[key] || '—'),
+  });
+  const tcDate  = (label, key) => tc(label, key, p => formatDate(p[key]));
+  const tcBadge = (label, key) => tc(label, key, p => badge(p[key]));
+  const tcSrc   = () => ({ label: 'Source', key: '_source', get: p => p._source || '',
+    render: p => `<span class="source-badge source-${p._source||'recruit'}">${p._source==='crm'?'CRM':'Recruit'}</span>` });
+
+  // ── Column sets per tab ────────────────────────────────────
+  const TAB_COLS = {
+    all: [
+      tc('Name','name', p => `<strong>${p.name||'—'}</strong>`),
+      tc('Gender','gender'),
+      tc('Email','email'),
+      tc('Phone','phone'),
+      tc('Age','age'),
+      tc('Department','department'),
+      tc('Nationality','country'),
+      tc('Permanent Address','permanentAddress'),
+      tc('J1 Program Sources','programSource'),
+      tcSrc(),
+    ],
+    new_submission: [
+      tc('Name','name', p => `<strong>${p.name||'—'}</strong>`),
+      tc('Gender','gender'),
+      tc('Email','email'),
+      tc('Phone','phone'),
+      tc('Age','age'),
+      tc('Department','department'),
+      tc('Nationality','country'),
+      tc('Permanent Address','permanentAddress'),
+      tcBadge("CTI USA's Review",'ctiUsaReview'),
+      tc('Eligible Programs','eligiblePrograms'),
+      tcSrc(),
+    ],
+    consultation_call: [
+      tc('Name','name', p => `<strong>${p.name||'—'}</strong>`),
+      tc('Gender','gender'),
+      tc('Age','age'),
+      tc('Department','department'),
+      tc('Nationality','country'),
+      tc('Permanent Address','permanentAddress'),
+      tcDate('Consultation Call Date','consultationCallDate'),
+      tc('Done By','consultationCallBy'),
+      tc('Call Notes','consultationCallNotes'),
+      tcBadge('Call Status','consultationCallStatus'),
+      tcSrc(),
+    ],
+    sales_call: [
+      tc('Name','name', p => `<strong>${p.name||'—'}</strong>`),
+      tc('Gender','gender'),
+      tc('Age','age'),
+      tc('Department','department'),
+      tc('Nationality','country'),
+      tc('Permanent Address','permanentAddress'),
+      tcDate('Consultation Call Date','consultationCallDate'),
+      tcBadge('Call Status','consultationCallStatus'),
+      tc('J1 Program Sources','programSource'),
+      tc('Stage 1 Investment','stage1Investment'),
+      tcSrc(),
+    ],
+    stage_1: [
+      tc('Name','name', p => `<strong>${p.name||'—'}</strong>`),
+      tc('Gender','gender'),
+      tc('Age','age'),
+      tc('Department','department'),
+      tc('Nationality','country'),
+      tcBadge('Passport Status','passportStatus'),
+      tc('Passport Number','passportNumber'),
+      tcDate('Passport Expiry','passportExpiry'),
+      tcBadge('Proof of Academic','proofAcademic'),
+      tc('Processing Sponsor','processingSponsor'),
+      tcSrc(),
+    ],
+    stage_2: [
+      tc('Name','name', p => `<strong>${p.name||'—'}</strong>`),
+      tc('Gender','gender'),
+      tc('Age','age'),
+      tc('Department','department'),
+      tc('Nationality','country'),
+      tc('Processing Sponsor','processingSponsor'),
+      tc('Hosting Company','hostCompany'),
+      tcDate('HC Interview Date','hcInterviewDate'),
+      tcBadge('HC Interview Status','hcInterviewStatus'),
+      tcSrc(),
+    ],
+    stage_3: [
+      tc('Name','name', p => `<strong>${p.name||'—'}</strong>`),
+      tc('Gender','gender'),
+      tc('Department','department'),
+      tc('Nationality','country'),
+      tc('Processing Sponsor','processingSponsor'),
+      tc('Hosting Company','hostCompany'),
+      tcBadge('J1 Visa Status','visaStatus'),
+      tcDate('Visa Appointment','visaAppointment'),
+      tc('Visa Number','visaNumber'),
+      tcDate('Visa Expired','ds2019End'),
+    ],
+    stage_4: [
+      tc('Name','name', p => `<strong>${p.name||'—'}</strong>`),
+      tc('Gender','gender'),
+      tc('Nationality','country'),
+      tc('Hosting Company','hostCompany'),
+      tcDate('Departure Date','departureDate'),
+      tcDate('Arrival Date','arrivalDate'),
+      { label:'Route', key:null, get:()=>'', render: p => [p.tripFrom,p.tripTo].filter(v=>v&&v!=='—').join(' → ')||'—' },
+      tc('Airline','airline'),
+      tc('PNR Number','pnrNumber'),
+      tcBadge('Flight Status','flightBooked'),
+      tcBadge('Housing Avail.','housingAvailability'),
+      tc('Landlord','housingLandlord'),
+      tc('Housing Address','housingAddress'),
+    ],
+    usa_onboard: [
+      tc('Name','name', p => `<strong>${p.name||'—'}</strong>`),
+      tc('Gender','gender'),
+      tc('Department','department'),
+      tc('Nationality','country'),
+      tc('Processing Sponsor','processingSponsor'),
+      tc('Hosting Company','hostCompany'),
+      tc('Landlord','housingLandlord'),
+      tc('Housing Address','housingAddress'),
+      tcDate('Program Start','programStart'),
+      tcDate('Program End','programEnd'),
+      tc('Total Paid Investment','totalPaidInvestment'),
+      tcBadge('Sponsor Invoice Status','sponsorInvoiceStatus'),
+    ],
+    program_completed: [
+      tc('Name','name', p => `<strong>${p.name||'—'}</strong>`),
+      tc('Gender','gender'),
+      tc('Department','department'),
+      tc('Nationality','country'),
+      tc('Processing Sponsor','processingSponsor'),
+      tc('Hosting Company','hostCompany'),
+      tcDate('Program Start','programStart'),
+      tcDate('Program End','programEnd'),
+      tcDate('Return Arrival','returnArrival'),
+    ],
+    total_placement: [
+      tc('Name','name', p => `<strong>${p.name||'—'}</strong>`),
+      tc('Gender','gender'),
+      tc('Department','department'),
+      tc('Nationality','country'),
+      tc('Processing Sponsor','processingSponsor'),
+      tc('Hosting Company','hostCompany'),
+      tcDate('Program Start','programStart'),
+      tcDate('Program End','programEnd'),
+      tcBadge('App Status','placementStatus'),
+    ],
+    archived: [
+      tc('Name','name', p => `<strong>${p.name||'—'}</strong>`),
+      tc('Gender','gender'),
+      tc('Email','email'),
+      tc('Phone','phone'),
+      tc('Age','age'),
+      tc('Department','department'),
+      tc('Nationality','country'),
+      tc('Permanent Address','permanentAddress'),
+      tcBadge('J1 App Status','placementStatus'),
+      tcBadge("CTI USA's Review",'ctiUsaReview'),
+      tcDate('Consultation Call Date','consultationCallDate'),
+      tc('Done By','consultationCallBy'),
+      tcBadge('Call Status','consultationCallStatus'),
+      tc('Call Notes','consultationCallNotes'),
+      tc('Withdrawal Reason','withdrawalReason'),
+      tc('J1 Program Sources','programSource'),
+    ],
+  };
 
   async function renderParticipants() {
     const mc = document.getElementById('main-content');
@@ -344,31 +502,30 @@ const App = (() => {
     }
 
     function buildTable(list) {
+      const cols = TAB_COLS[_activeParticipantTab] || TAB_COLS.all;
       if (!list.length) return `<div class="empty-state"><p>No participants in this category.</p></div>`;
       return `
         <div class="table-wrap">
           <table>
             <thead>
               <tr>
-                ${P_COLS.map(c => c.key
-                  ? `<th class="sortable ${_sortCol === c.key ? 'sorted' : ''}" data-col="${c.key}">${c.label} ${sortIcon(c.key)}</th>`
-                  : `<th>#</th>`
-                ).join('')}
+                <th style="position:sticky;left:0;z-index:12;background:var(--card)">#</th>
+                ${cols.map((col, ci) => {
+                  const frozen = ci === 0 ? `style="position:sticky;left:40px;z-index:12;background:var(--card)"` : '';
+                  return col.key
+                    ? `<th class="sortable ${_sortCol===col.key?'sorted':''}" data-col="${col.key}" ${frozen}>${col.label} ${sortIcon(col.key)}</th>`
+                    : `<th ${frozen}>${col.label}</th>`;
+                }).join('')}
               </tr>
             </thead>
             <tbody>
               ${list.map((p, i) => `
                 <tr>
-                  <td class="row-num">${i + 1}</td>
-                  <td><span class="source-badge source-${p._source || 'recruit'}">${p._source === 'crm' ? 'CRM' : 'Recruit'}</span></td>
-                  <td><strong>${p.name}</strong></td>
-                  <td>${p.country}</td>
-                  <td>${badge(p.programType)}</td>
-                  <td>${p.hostCompany}</td>
-                  <td>${badge(p.placementStatus)}</td>
-                  <td>${badge(p.visaStatus)}</td>
-                  <td>${formatDate(p.arrivalDate)}</td>
-                  <td>${flightBadge(p.flightBooked)}</td>
+                  <td class="row-num" style="position:sticky;left:0;z-index:1;background:var(--card)">${i+1}</td>
+                  ${cols.map((col, ci) => {
+                    const frozen = ci === 0 ? `style="position:sticky;left:40px;z-index:1;background:var(--card)"` : '';
+                    return `<td ${frozen}>${col.render(p)}</td>`;
+                  }).join('')}
                 </tr>
               `).join('')}
             </tbody>
@@ -403,8 +560,9 @@ const App = (() => {
 
     function applySort(list) {
       if (!_sortCol || !_sortDir) return list;
-      const col = P_COLS.find(c => c.key === _sortCol);
-      if (!col) return list;
+      const cols = TAB_COLS[_activeParticipantTab] || TAB_COLS.all;
+      const col = cols.find(c => c.key === _sortCol);
+      if (!col || !col.get) return list;
       return [...list].sort((a, b) => {
         const av = col.get(a), bv = col.get(b);
         if (av < bv) return _sortDir === 'asc' ? -1 : 1;
@@ -477,6 +635,7 @@ const App = (() => {
     document.querySelectorAll('.tab-btn').forEach(btn => {
       btn.addEventListener('click', () => {
         _activeParticipantTab = btn.dataset.tab;
+        _sortCol = null; _sortDir = null; // reset sort on tab change
         document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
         btn.classList.add('active');
         refreshTable();
@@ -861,7 +1020,7 @@ const App = (() => {
       { label: 'City',               key: 'city',             get: j => (j.city || '').toLowerCase() },
       { label: 'Department',         key: 'department',       get: j => (j.department || '').toLowerCase() },
       { label: 'Requisition',        key: 'numPositions',     get: j => j.numPositions || 0 },
-      { label: 'Salary',             key: 'salary',           get: j => String(j.salary || '') },
+      { label: 'Stipend',            key: 'salary',           get: j => parseFloat(String(j.salary || '').replace(/[^0-9.]/g, '')) || 0 },
       { label: 'Payment Frequency',  key: 'paymentFrequency', get: j => (j.paymentFrequency || '').toLowerCase() },
       { label: 'Housing Availability', key: 'housingAvail',   get: j => (j.housingAvail || '').toLowerCase() },
       { label: 'Contract Length',    key: 'contractLength',   get: j => (j.contractLength || '').toLowerCase() },
