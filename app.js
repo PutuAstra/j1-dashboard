@@ -761,7 +761,9 @@ const App = (() => {
         const d = new Date(p.visaAppointment);
         return !isNaN(d) && d >= todayDate;
       }).length;
-      return { total, approved, rejected, pending, upcoming };
+      // Supporting letter requested
+      const refRequested = list.filter(p => /^requested$/i.test(p.refLetterStatus)).length;
+      return { total, approved, rejected, pending, upcoming, refRequested };
     }
 
     function applyVisaFilter(list) {
@@ -802,11 +804,12 @@ const App = (() => {
 
     function renderStatsHTML(s) {
       const chips = [
-        { key: 'total',    val: s.total,    label: 'Total Application', color: 'var(--text)'   },
-        { key: 'approved', val: s.approved, label: 'Approved',          color: '#16a34a'       },
-        { key: 'rejected', val: s.rejected, label: 'Rejected',          color: 'var(--accent)' },
-        { key: 'pending',  val: s.pending,  label: 'Pending',           color: '#d97706'       },
-        { key: 'upcoming', val: s.upcoming, label: 'Upcoming Appt.',    color: '#2563eb'       },
+        { key: 'total',        val: s.total,        label: 'Total Application',       color: 'var(--text)'   },
+        { key: 'approved',     val: s.approved,     label: 'Approved',                color: '#16a34a'       },
+        { key: 'rejected',     val: s.rejected,     label: 'Rejected',                color: 'var(--accent)' },
+        { key: 'pending',      val: s.pending,      label: 'Pending',                 color: '#d97706'       },
+        { key: 'upcoming',     val: s.upcoming,     label: 'Upcoming Appt.',          color: '#2563eb'       },
+        { key: 'refRequested', val: s.refRequested, label: 'Supp. Letter Requested',  color: '#7c3aed'       },
       ];
       return chips.map(c => {
         const isActive = _visaFilterStatus === c.key && c.key !== 'total';
@@ -823,8 +826,8 @@ const App = (() => {
       if (!el) return;
       const pct = s.total ? Math.round(s.approved / s.total * 100) : 0;
       el.innerHTML = `
-        <div style="font-size:2.6rem;font-weight:800;line-height:1;color:#16a34a">${pct}%</div>
-        <div style="font-size:0.67rem;font-weight:600;color:var(--muted);margin-top:4px;text-align:center;white-space:nowrap">Visa Approval Rate</div>
+        <div style="font-size:2rem;font-weight:800;line-height:1;color:#16a34a">${pct}%</div>
+        <div style="font-size:0.65rem;font-weight:600;color:var(--muted);margin-top:4px;text-align:center;white-space:nowrap">Visa Approval Rate</div>
       `;
     }
 
@@ -966,10 +969,10 @@ const App = (() => {
             <div style="width:1px;background:var(--border);flex-shrink:0"></div>
 
             <!-- Pie + rate -->
-            <div style="display:flex;align-items:center;gap:14px;flex-shrink:0">
+            <div style="display:flex;align-items:center;gap:8px;flex-shrink:0">
               <div style="display:flex;flex-direction:column;align-items:center">
-                <div style="font-size:0.7rem;font-weight:600;color:var(--text-secondary);margin-bottom:2px">Approved vs Rejected</div>
-                <div style="position:relative;height:90px;width:120px"><canvas id="visaPieChart"></canvas></div>
+                <div style="font-size:0.65rem;font-weight:600;color:var(--text-secondary);margin-bottom:2px">Approved vs Rejected</div>
+                <div style="position:relative;height:70px;width:90px"><canvas id="visaPieChart"></canvas></div>
               </div>
               <div id="visaPassRate" style="display:flex;flex-direction:column;align-items:center;justify-content:center"></div>
             </div>
