@@ -651,8 +651,13 @@ const App = (() => {
   }
 
   // ═══════════════════════════════════════════════════════════
-  //  PAGE: VISA / DS-2019
+  //  PAGE: VISA
   // ═══════════════════════════════════════════════════════════
+  let _visaFilterFrom = '';
+  let _visaFilterTo   = '';
+  let _visaSortCol    = null;
+  let _visaSortDir    = null;
+
   async function renderVisa() {
     const mc = document.getElementById('main-content');
     mc.innerHTML = skeletonHTML();
@@ -660,94 +665,219 @@ const App = (() => {
     const participants = await loadData();
     if (!participants) { mc.innerHTML = connectPromptHTML(); return; }
 
-    const today = new Date();
-    const withDates = participants
-      .filter(p => p.ds2019End)
-      .map(p => ({ ...p, daysLeft: daysUntil(p.ds2019End) }))
-      .sort((a, b) => a.daysLeft - b.daysLeft);
+    // Visa pool = all participants with any visa status
+    const visaPool = participants.filter(p => p.visaStatus && p.visaStatus !== '—');
 
-    const expired  = withDates.filter(p => p.daysLeft < 0);
-    const urgent   = withDates.filter(p => p.daysLeft >= 0 && p.daysLeft <= 30);
-    const warning  = withDates.filter(p => p.daysLeft > 30 && p.daysLeft <= 90);
-    const ok       = withDates.filter(p => p.daysLeft > 90);
-    const noDates  = participants.filter(p => !p.ds2019End);
+    // Stats
+    const matric   = participants.filter(p => p.visaNumber && p.visaNumber !== '—').length;
+    const total    = visaPool.length;
+    const approved = visaPool.filter(p => /approved/i.test(p.visaStatus)).length;
+    const rejected = visaPool.filter(p => /rejected|denied/i.test(p.visaStatus)).length;
+    const pending  = visaPool.filter(p => !/approved|rejected|denied/i.test(p.visaStatus)).length;
 
-    function visaList(list) {
-      if (!list.length) return `<div class="empty-state"><p>None in this category.</p></div>`;
-      return list.map(p => {
-        const d     = p.daysLeft;
-        const cls   = d < 0 ? 'urgent' : d <= 30 ? 'urgent' : d <= 90 ? 'warning' : 'ok';
-        const label = d < 0 ? 'Expired' : `${d}d`;
-        return `
-          <div class="visa-item">
-            <div class="visa-days ${cls}">
-              <span class="days-num">${d < 0 ? '!' : d}</span>
-              <span class="days-lbl">${d < 0 ? 'exp.' : 'days'}</span>
-            </div>
-            <div class="visa-info">
-              <div class="visa-name">${p.name}</div>
-              <div class="visa-meta">
-                ${p.country} · ${p.programType} ·
-                DS-2019 expires: <strong>${formatDate(p.ds2019End)}</strong>
-              </div>
-            </div>
-            ${badge(p.visaStatus)}
-          </div>
-        `;
-      }).join('');
+    const VISA_COLS = [
+      { label: 'Name',                      key: 'name',           get: p => (p.name || '').toLowerCase(),          render: p => `<strong>${p.name || '—'}</strong>` },
+      { label: 'J1 Visa Status',            key: 'visaStatus',     get: p => (p.visaStatus || '').toLowerCase(),     render: p => badge(p.visaStatus) },
+      { label: 'Supporting Letter Status',  key: 'refLetterStatus',get: p => (p.refLetterStatus || '').toLowerCase(),render: p => badge(p.refLetterStatus) },
+      { label: 'Visa Payment Date',         key: 'visaPaymentDate',get: p => p.visaPaymentDate || '',                render: p => formatDate(p.visaPaymentDate) },
+      { label: 'Visa Appointment Date',     key: 'visaAppointment',get: p => p.visaAppointment || '',                render: p => formatDate(p.visaAppointment) },
+      { label: 'Visa Number',               key: 'visaNumber',     get: p => (p.visaNumber || '').toLowerCase(),     render: p => p.visaNumber || '—' },
+      { label: 'Visa Expired Date',         key: 'ds2019End',      get: p => p.ds2019End || '',                      render: p => formatDate(p.ds2019End) },
+    ];
+
+    function vSortIcon(key) {
+      if (_visaSortCol !== key) return `<span class="sort-icon">⇅</span>`;
+      return `<span class="sort-icon active">${_visaSortDir === 'asc' ? '↑' : '↓'}</span>`;
+    }
+
+    function applyVisaSort(list) {
+      if (!_visaSortCol || !_visaSortDir) return list;
+      const col = VISA_COLS.find(c => c.key === _visaSortCol);
+      if (!col) return list;
+      return [...list].sort((a, b) => {
+        const av = col.get(a), bv = col.get(b);
+        const cmp = av < bv ? -1 : av > bv ? 1 : 0;
+        return _visaSortDir === 'asc' ? cmp : -cmp;
+      });
+    }
+
+    function applyVisaFilter(list) {
+      let out = list;
+      if (_visaFilterFrom) out = out.filter(p => p.visaAppointment && p.visaAppointment >= _visaFilterFrom);
+      if (_visaFilterTo)   out = out.filter(p => p.visaAppointment && p.visaAppointment <= _visaFilterTo);
+      return out;
+    }
+
+    function visaTable(list) {
+      const sorted = applyVisaSort(list);
+      if (!sorted.length) return `<div class="empty-state"><p>No visa records match the selected filters.</p></div>`;
+      return `
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th style="position:sticky;left:0;z-index:12;background:var(--card)">#</th>
+                ${VISA_COLS.map((c, ci) => {
+                  const frozen = ci === 0 ? `style="position:sticky;left:40px;z-index:12;background:var(--card)"` : '';
+                  return `<th class="sortable ${_visaSortCol === c.key ? 'sorted' : ''}" data-vcol="${c.key}" ${frozen}>${c.label} ${vSortIcon(c.key)}</th>`;
+                }).join('')}
+              </tr>
+            </thead>
+            <tbody>
+              ${sorted.map((p, i) => `
+                <tr>
+                  <td class="row-num" style="position:sticky;left:0;z-index:1;background:var(--card)">${i + 1}</td>
+                  ${VISA_COLS.map((c, ci) => {
+                    const frozen = ci === 0 ? `style="position:sticky;left:40px;z-index:1;background:var(--card)"` : '';
+                    return `<td ${frozen}>${c.render(p)}</td>`;
+                  }).join('')}
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        </div>
+      `;
+    }
+
+    function renderVisaContent() {
+      const filtered = applyVisaFilter(visaPool);
+      return visaTable(filtered);
     }
 
     mc.innerHTML = `
       <div class="page-header">
-        <h1>Visa / DS-2019 Tracker</h1>
-        <p>Monitor DS-2019 expiry dates and visa statuses</p>
+        <h1>Visa</h1>
+        <p>J1 Visa application status and tracking</p>
       </div>
 
-      <div class="stat-grid">
-        <div class="stat-card accent">
-          <div class="stat-value">${expired.length}</div>
-          <div class="stat-label">Expired</div>
+      <!-- Stat cards + pie chart side by side -->
+      <div style="display:flex;gap:12px;margin-bottom:16px;align-items:stretch">
+        <!-- Stat cards -->
+        <div class="stat-grid" style="flex:1;margin-bottom:0">
+          <div class="stat-card">
+            <div class="stat-value">${matric}</div>
+            <div class="stat-label">Matric Number</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value">${total}</div>
+            <div class="stat-label">Total Application</div>
+          </div>
+          <div class="stat-card good">
+            <div class="stat-value">${approved}</div>
+            <div class="stat-label">Approved</div>
+          </div>
+          <div class="stat-card accent">
+            <div class="stat-value">${rejected}</div>
+            <div class="stat-label">Rejected</div>
+          </div>
+          <div class="stat-card warn">
+            <div class="stat-value">${pending}</div>
+            <div class="stat-label">Pending</div>
+          </div>
         </div>
-        <div class="stat-card warn">
-          <div class="stat-value">${urgent.length}</div>
-          <div class="stat-label">Expiring ≤ 30 days</div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-value">${warning.length}</div>
-          <div class="stat-label">Expiring 31–90 days</div>
-        </div>
-        <div class="stat-card good">
-          <div class="stat-value">${ok.length}</div>
-          <div class="stat-label">Valid > 90 days</div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-value">${noDates.length}</div>
-          <div class="stat-label">No Date on File</div>
+        <!-- Pie chart -->
+        <div class="card" style="flex:0 0 220px;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:12px">
+          <div style="font-size:0.78rem;font-weight:600;margin-bottom:6px;color:var(--text-secondary)">Approved vs Rejected</div>
+          <div style="position:relative;height:160px;width:100%"><canvas id="visaPieChart"></canvas></div>
         </div>
       </div>
 
-      ${expired.length ? `
-      <div class="card">
-        <div class="card-header"><div class="card-title" style="color:var(--accent)">⚠ Expired DS-2019</div></div>
-        ${visaList(expired)}
-      </div>` : ''}
-
-      ${urgent.length ? `
-      <div class="card">
-        <div class="card-header"><div class="card-title" style="color:#d97706">⚡ Expiring Within 30 Days</div></div>
-        ${visaList(urgent)}
-      </div>` : ''}
-
-      <div class="card">
-        <div class="card-header"><div class="card-title">Expiring 31–90 Days</div></div>
-        ${visaList(warning.length ? warning : [])}
+      <!-- Filter by appointment date -->
+      <div class="card" style="margin-bottom:12px;padding:10px 14px">
+        <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+          <span style="font-size:0.8rem;font-weight:600;color:var(--text-secondary)">Filter by Appointment Date:</span>
+          <label style="font-size:0.78rem;display:flex;align-items:center;gap:6px">
+            From <input type="date" id="visaDateFrom" class="filter-select" style="padding:4px 8px" value="${_visaFilterFrom}">
+          </label>
+          <label style="font-size:0.78rem;display:flex;align-items:center;gap:6px">
+            To <input type="date" id="visaDateTo" class="filter-select" style="padding:4px 8px" value="${_visaFilterTo}">
+          </label>
+          <button id="visaClearFilter" class="btn-sm" style="font-size:0.75rem;padding:4px 10px;border-radius:6px;border:1px solid var(--border);background:var(--card);color:var(--text);cursor:pointer">Clear</button>
+          <span id="visaFilterCount" style="margin-left:auto;font-size:0.8rem;color:var(--muted)"></span>
+        </div>
       </div>
 
-      <div class="card">
-        <div class="card-header"><div class="card-title">Valid > 90 Days</div></div>
-        ${visaList(ok.length ? ok : [])}
+      <!-- Table -->
+      <div class="card" id="visaTableCard">
+        ${renderVisaContent()}
       </div>
     `;
+
+    // Pie chart
+    if (approved || rejected) {
+      new Chart(document.getElementById('visaPieChart').getContext('2d'), {
+        type: 'pie',
+        data: {
+          labels: ['Approved', 'Rejected', 'Pending'],
+          datasets: [{
+            data: [approved, rejected, pending],
+            backgroundColor: ['#16a34a', '#B01A18', '#d97706'],
+            borderWidth: 2,
+            borderColor: getComputedStyle(document.documentElement).getPropertyValue('--card').trim() || '#fff',
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { position: 'bottom', labels: { font: { size: 9, family: 'Inter' }, padding: 6, boxWidth: 10 } },
+            datalabels: {
+              display: ctx => ctx.dataset.data[ctx.dataIndex] > 0,
+              color: '#fff',
+              font: { size: 10, weight: '600' },
+              formatter: (val, ctx) => {
+                const sum = ctx.dataset.data.reduce((a, b) => a + b, 0);
+                return sum ? Math.round(val / sum * 100) + '%' : '';
+              }
+            }
+          }
+        }
+      });
+    }
+
+    // Update filter count
+    function updateFilterCount() {
+      const filtered = applyVisaFilter(visaPool);
+      const el = document.getElementById('visaFilterCount');
+      if (el) el.textContent = `${filtered.length} record${filtered.length !== 1 ? 's' : ''}`;
+    }
+    updateFilterCount();
+
+    // Filter events
+    document.getElementById('visaDateFrom').addEventListener('change', e => {
+      _visaFilterFrom = e.target.value;
+      document.getElementById('visaTableCard').innerHTML = renderVisaContent();
+      updateFilterCount();
+      wireVisaSort();
+    });
+    document.getElementById('visaDateTo').addEventListener('change', e => {
+      _visaFilterTo = e.target.value;
+      document.getElementById('visaTableCard').innerHTML = renderVisaContent();
+      updateFilterCount();
+      wireVisaSort();
+    });
+    document.getElementById('visaClearFilter').addEventListener('click', () => {
+      _visaFilterFrom = ''; _visaFilterTo = '';
+      document.getElementById('visaDateFrom').value = '';
+      document.getElementById('visaDateTo').value   = '';
+      document.getElementById('visaTableCard').innerHTML = renderVisaContent();
+      updateFilterCount();
+      wireVisaSort();
+    });
+
+    function wireVisaSort() {
+      document.querySelectorAll('[data-vcol]').forEach(th => {
+        th.addEventListener('click', () => {
+          const col = th.dataset.vcol;
+          if (_visaSortCol !== col) { _visaSortCol = col; _visaSortDir = 'asc'; }
+          else if (_visaSortDir === 'asc') { _visaSortDir = 'desc'; }
+          else { _visaSortCol = null; _visaSortDir = null; }
+          document.getElementById('visaTableCard').innerHTML = renderVisaContent();
+          wireVisaSort();
+        });
+      });
+    }
+    wireVisaSort();
   }
 
   // ═══════════════════════════════════════════════════════════
@@ -1364,7 +1494,7 @@ const App = (() => {
     overview:     { render: renderOverview,     title: 'Overview' },
     requisition:  { render: renderRequisition,  title: 'Requisition' },
     participants: { render: renderParticipants, title: 'Participants' },
-    visa:         { render: renderVisa,         title: 'Visa / DS-2019' },
+    visa:         { render: renderVisa,         title: 'Visa' },
     travel:       { render: renderTravel,       title: 'Travel' },
     housing:      { render: renderHousing,      title: 'Housing' },
   };

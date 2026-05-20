@@ -152,6 +152,7 @@ const CONFIG = {
     visaStatus:        'J1_Visa_Status',
     visaExpiredDate:   'J1_Visa_Expired_Date',    // DS-2019 / Visa expiry date
     visaAppointment:   'J1_Visa_Appointment_Date',
+    visaPaymentDate:   'J1_Visa_Payment_Date',
     visaNumber:        'J1_Visa_Number',
     refLetterStatus:   'Reference_Letter_Status',
 

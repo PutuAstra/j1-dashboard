@@ -80,6 +80,7 @@ const Zoho = (() => {
       visaStatus:         r[F.visaStatus]         || '—',
       visaNumber:         r[F.visaNumber]         || '—',
       visaAppointment:    r[F.visaAppointment]    || null,
+      visaPaymentDate:    r[F.visaPaymentDate]    || null,
       refLetterStatus:    r[F.refLetterStatus]    || '—',
       // Outbound travel
       flightBooked:       r[F.flightBooked],
