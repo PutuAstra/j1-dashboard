@@ -178,14 +178,14 @@ const App = (() => {
       });
     } catch(e) { /* job openings optional */ }
 
-    // ── Visa stats ────────────────────────────────────────────
-    const visaPool     = participants.filter(p => p.visaStatus && p.visaStatus !== '—');
+    // ── Visa stats — include any participant with visaAppointment filled ──
+    const visaPool     = participants.filter(p => p.visaAppointment && p.visaAppointment !== '—');
     const visaTotal    = visaPool.length;
     const visaApproved = visaPool.filter(p => /^approved$/i.test(p.visaStatus)).length;
     const visaPending  = visaPool.filter(p => /^pending$/i.test(p.visaStatus)).length;
-    const visaRejected = visaPool.filter(p => !/^approved$/i.test(p.visaStatus) && !/^pending$/i.test(p.visaStatus)).length;
-    const todayStr     = new Date().toISOString().split('T')[0];
-    const visaUpcoming = participants.filter(p => p.visaAppointment && p.visaAppointment >= todayStr).length;
+    const visaRejected = visaPool.filter(p => !/^approved$/i.test(p.visaStatus) && !/^pending$/i.test(p.visaStatus) && p.visaStatus && p.visaStatus !== '—').length;
+    const _todayD      = new Date(); _todayD.setHours(0, 0, 0, 0);
+    const visaUpcoming = visaPool.filter(p => { const d = new Date(p.visaAppointment); return !isNaN(d) && d >= _todayD; }).length;
     const visaPassPct  = visaTotal ? Math.round(visaApproved / visaTotal * 100) : 0;
 
     mc.innerHTML = `
@@ -744,8 +744,8 @@ const App = (() => {
     const participants = await loadData();
     if (!participants) { mc.innerHTML = connectPromptHTML(); return; }
 
-    // Visa pool = all participants with any visa status
-    const visaPool = participants.filter(p => p.visaStatus && p.visaStatus !== '—');
+    // Visa pool = all participants with visaAppointment filled, regardless of visa status
+    const visaPool = participants.filter(p => p.visaAppointment && p.visaAppointment !== '—');
 
     const VISA_COLS = [
       { label: 'Name',                     key: 'name',           get: p => (p.name || '').toLowerCase(),           render: p => `<strong>${p.name || '—'}</strong>` },
@@ -760,19 +760,30 @@ const App = (() => {
     ];
 
     function computeStats(list) {
-      const today    = new Date().toISOString().split('T')[0];
+      // list is already pre-filtered to participants with visaAppointment filled
       const total    = list.length;
       const approved = list.filter(p => /^approved$/i.test(p.visaStatus)).length;
       const pending  = list.filter(p => /^pending$/i.test(p.visaStatus)).length;
-      const rejected = list.filter(p => !/^approved$/i.test(p.visaStatus) && !/^pending$/i.test(p.visaStatus)).length;
-      // Upcoming = all participants with a future appointment, regardless of visa status
-      const upcoming = participants.filter(p => p.visaAppointment && p.visaAppointment >= today).length;
+      // Rejected = has a status AND it's not approved/pending
+      const rejected = list.filter(p => p.visaStatus && p.visaStatus !== '—' && !/^approved$/i.test(p.visaStatus) && !/^pending$/i.test(p.visaStatus)).length;
+      // Upcoming = future date comparison
+      const todayDate = new Date(); todayDate.setHours(0, 0, 0, 0);
+      const upcoming  = list.filter(p => {
+        const d = new Date(p.visaAppointment);
+        return !isNaN(d) && d >= todayDate;
+      }).length;
       return { total, approved, rejected, pending, upcoming };
     }
 
     function applyVisaFilter(list) {
       let out = list;
-      if (_visaFilterMonth)       out = out.filter(p => p.visaAppointment && p.visaAppointment.substring(0, 7) === _visaFilterMonth);
+      if (_visaFilterMonth) out = out.filter(p => {
+        if (!p.visaAppointment) return false;
+        const d = new Date(p.visaAppointment);
+        if (isNaN(d)) return false;
+        const ym = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0');
+        return ym === _visaFilterMonth;
+      });
       if (_visaFilterNationality) out = out.filter(p => (p.country || '').toLowerCase() === _visaFilterNationality);
       return out;
     }
@@ -968,7 +979,12 @@ const App = (() => {
               <span style="font-size:0.73rem;font-weight:600;color:var(--text-secondary);white-space:nowrap">Appointment Month:</span>
               <select class="filter-select" id="visaMonthFilter" style="font-size:0.72rem;min-width:150px">
                 <option value="">All Months</option>
-                ${[...new Set(visaPool.map(p => p.visaAppointment ? p.visaAppointment.substring(0,7) : null).filter(Boolean))].sort()
+                ${[...new Set(visaPool.map(p => {
+                    if (!p.visaAppointment) return null;
+                    const d = new Date(p.visaAppointment);
+                    if (isNaN(d)) return null;
+                    return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0');
+                  }).filter(Boolean))].sort()
                   .map(ym => {
                     const [yr, mo] = ym.split('-');
                     const label = new Date(yr, mo - 1).toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
