@@ -954,46 +954,19 @@ const App = (() => {
       <div class="card" style="margin-bottom:12px;padding:10px 14px">
         <div style="display:flex;flex-direction:column;gap:10px">
 
-          <!-- Row 1: Stat chips full width -->
-          <div id="visaStatsGrid" style="display:flex;gap:8px;align-items:stretch">
-            ${renderStatsHTML(initStats)}
-          </div>
+          <!-- Row 1: Stat chips (left) + pie chart + rate (right) -->
+          <div style="display:flex;align-items:stretch;gap:12px">
 
-          <!-- Divider -->
-          <div style="height:1px;background:var(--border)"></div>
-
-          <!-- Row 2: filters side-by-side + pie + rate -->
-          <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
-
-            <!-- Filters side by side -->
-            <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
-              <span style="font-size:0.73rem;font-weight:600;color:var(--text-secondary);white-space:nowrap">Appointment Month:</span>
-              <select class="filter-select" id="visaMonthFilter" style="font-size:0.72rem;min-width:150px">
-                <option value="">All Months</option>
-                ${[...new Set(visaPool.map(p => {
-                    if (!p.visaAppointment) return null;
-                    const d = new Date(p.visaAppointment);
-                    if (isNaN(d)) return null;
-                    return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0');
-                  }).filter(Boolean))].sort()
-                  .map(ym => {
-                    const [yr, mo] = ym.split('-');
-                    const label = new Date(yr, mo - 1).toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
-                    return `<option value="${ym}" ${_visaFilterMonth === ym ? 'selected' : ''}>${label}</option>`;
-                  }).join('')}
-              </select>
-              <select class="filter-select" id="visaFilterNat" style="font-size:0.72rem">
-                <option value="">All Nationalities</option>
-                ${[...new Set(visaPool.map(p => p.country).filter(c => c && c !== '—'))].sort()
-                  .map(c => `<option value="${c.toLowerCase()}" ${_visaFilterNationality === c.toLowerCase() ? 'selected' : ''}>${c}</option>`).join('')}
-              </select>
-              <button id="visaClearFilter" style="font-size:0.72rem;padding:3px 10px;border-radius:6px;border:1px solid var(--border);background:var(--card);color:var(--text);cursor:pointer;white-space:nowrap">Clear</button>
-              <span id="visaFilterCount" style="font-size:0.72rem;color:var(--muted);white-space:nowrap">${initFiltered.length} record${initFiltered.length !== 1 ? 's' : ''}</span>
+            <!-- Chips -->
+            <div id="visaStatsGrid" style="display:flex;gap:8px;flex:1;min-width:0;align-items:stretch">
+              ${renderStatsHTML(initStats)}
             </div>
 
-            <!-- Push pie + rate to the right -->
-            <div style="margin-left:auto;display:flex;align-items:center;gap:14px;flex-shrink:0">
-              <div style="width:1px;background:var(--border);align-self:stretch"></div>
+            <!-- Divider -->
+            <div style="width:1px;background:var(--border);flex-shrink:0"></div>
+
+            <!-- Pie + rate -->
+            <div style="display:flex;align-items:center;gap:14px;flex-shrink:0">
               <div style="display:flex;flex-direction:column;align-items:center">
                 <div style="font-size:0.7rem;font-weight:600;color:var(--text-secondary);margin-bottom:2px">Approved vs Rejected</div>
                 <div style="position:relative;height:90px;width:120px"><canvas id="visaPieChart"></canvas></div>
@@ -1002,6 +975,36 @@ const App = (() => {
             </div>
 
           </div>
+
+          <!-- Divider -->
+          <div style="height:1px;background:var(--border)"></div>
+
+          <!-- Row 2: Filters side by side -->
+          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+            <span style="font-size:0.73rem;font-weight:600;color:var(--text-secondary);white-space:nowrap">Appointment Month:</span>
+            <select class="filter-select" id="visaMonthFilter" style="font-size:0.72rem;min-width:150px">
+              <option value="">All Months</option>
+              ${[...new Set(visaPool.map(p => {
+                  if (!p.visaAppointment) return null;
+                  const d = new Date(p.visaAppointment);
+                  if (isNaN(d)) return null;
+                  return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0');
+                }).filter(Boolean))].sort()
+                .map(ym => {
+                  const [yr, mo] = ym.split('-');
+                  const label = new Date(yr, mo - 1).toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+                  return `<option value="${ym}" ${_visaFilterMonth === ym ? 'selected' : ''}>${label}</option>`;
+                }).join('')}
+            </select>
+            <select class="filter-select" id="visaFilterNat" style="font-size:0.72rem">
+              <option value="">All Nationalities</option>
+              ${[...new Set(visaPool.map(p => p.country).filter(c => c && c !== '—'))].sort()
+                .map(c => `<option value="${c.toLowerCase()}" ${_visaFilterNationality === c.toLowerCase() ? 'selected' : ''}>${c}</option>`).join('')}
+            </select>
+            <button id="visaClearFilter" style="font-size:0.72rem;padding:3px 10px;border-radius:6px;border:1px solid var(--border);background:var(--card);color:var(--text);cursor:pointer;white-space:nowrap">Clear</button>
+            <span id="visaFilterCount" style="font-size:0.72rem;color:var(--muted);white-space:nowrap">${initFiltered.length} record${initFiltered.length !== 1 ? 's' : ''}</span>
+          </div>
+
         </div>
       </div>
 
