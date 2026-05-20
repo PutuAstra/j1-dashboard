@@ -886,7 +886,7 @@ const App = (() => {
           <div style="display:flex;flex-direction:column;gap:6px;flex-shrink:0">
             <!-- Row 1: month picker -->
             <div style="display:flex;align-items:center;gap:6px">
-              <span style="font-size:0.73rem;font-weight:600;color:var(--text-secondary);white-space:nowrap">Appointment Date:</span>
+              <span style="font-size:0.73rem;font-weight:600;color:var(--text-secondary);white-space:nowrap">Appointment Month:</span>
               <select class="filter-select" id="visaMonthFilter" style="font-size:0.72rem;min-width:150px">
                 <option value="">All Months</option>
                 ${[...new Set(visaPool.map(p => p.visaAppointment ? p.visaAppointment.substring(0,7) : null).filter(Boolean))].sort()
