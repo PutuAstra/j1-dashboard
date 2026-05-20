@@ -76,6 +76,7 @@ const CONFIG = {
     consultationCallDate:   'Consultation_Call_Date',
     consultationCallBy:     'Consultation_Call_Done_By',
     withdrawalReason:       'Application_Withdrawal_Reason',
+    department:             'Department',
   },
 
   // 5. Verified field API names from Zoho Recruit → Developer Space → API Names

@@ -165,6 +165,7 @@ const Zoho = (() => {
       consultationCallDate:   r[CF.consultationCallDate]   || null,
       consultationCallBy:     r[CF.consultationCallBy]     || '—',
       withdrawalReason:       r[CF.withdrawalReason]       || '—',
+      department:             r[CF.department]             || '—',
       programType:            r[CF.programType]            || '—',
       programSource:          r[CF.programSource]          || '—',
       eligiblePrograms:       Array.isArray(r[CF.eligiblePrograms])
