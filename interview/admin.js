@@ -512,7 +512,11 @@ function renderTWSchedulePage() {
           </div>
           <div class="form-group" style="margin-bottom:0">
             <label>Time * &nbsp;<span style="font-size:10px;font-weight:400;text-transform:none;letter-spacing:0;color:var(--muted)">${(() => { try { return Intl.DateTimeFormat().resolvedOptions().timeZone; } catch(e){ return ''; } })()}</span></label>
-            <input type="time" id="tw-time" step="900" />
+            <div style="display:flex;gap:6px">
+              <select id="tw-time-h" style="flex:1">${[...Array(12)].map((_,i)=>{ const v=String(i+1).padStart(2,'0'); return `<option value="${v}"${i===8?' selected':''}>${v}</option>`; }).join('')}</select>
+              <select id="tw-time-m" style="flex:1"><option value="00" selected>00</option><option value="15">15</option><option value="30">30</option><option value="45">45</option></select>
+              <select id="tw-time-ap" style="flex:1"><option value="AM" selected>AM</option><option value="PM">PM</option></select>
+            </div>
           </div>
           <div class="form-group" style="margin-bottom:0">
             <label>Duration</label>
@@ -583,7 +587,13 @@ async function submitTWSession() {
   const candidateEmail = document.getElementById('tw-cand-email').value.trim();
   const position       = document.getElementById('tw-position').value.trim();
   const date           = document.getElementById('tw-date').value;
-  const time           = document.getElementById('tw-time').value;
+  const twH = document.getElementById('tw-time-h').value;
+  const twM = document.getElementById('tw-time-m').value;
+  const twAP = document.getElementById('tw-time-ap').value;
+  let twHour24 = parseInt(twH);
+  if (twAP === 'PM' && twHour24 !== 12) twHour24 += 12;
+  if (twAP === 'AM' && twHour24 === 12) twHour24 = 0;
+  const time = `${String(twHour24).padStart(2,'0')}:${twM}`;
   const duration       = parseInt(document.getElementById('tw-duration').value);
   const autoMeeting    = document.getElementById('tw-auto-meeting').checked;
   const meetingLink    = !autoMeeting ? (document.getElementById('tw-meeting-link')?.value.trim() || '') : '';
