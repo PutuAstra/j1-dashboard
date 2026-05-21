@@ -96,6 +96,40 @@
   </div><!-- /page-wide -->
 </div><!-- /app -->
 
+<!-- Modal: Edit Interview -->
+<div class="modal-overlay" id="modal-edit">
+  <div class="modal" style="max-width:620px">
+    <div class="modal-header">
+      <h2>Edit Interview</h2>
+      <button class="btn btn-ghost" onclick="closeModal('modal-edit')">✕</button>
+    </div>
+
+    <div class="form-group">
+      <label>Interview Title *</label>
+      <input type="text" id="edit-title" placeholder="e.g. J1 Intern Initial Screening" />
+    </div>
+
+    <div class="form-group">
+      <label>Description (shown to candidate)</label>
+      <textarea id="edit-desc" placeholder="Brief instructions for the candidate..."></textarea>
+    </div>
+
+    <hr class="divider" />
+
+    <div class="flex justify-between items-center mb-16">
+      <h3>Questions</h3>
+      <button class="btn btn-outline" onclick="addEditQuestion()">+ Add Question</button>
+    </div>
+
+    <div id="edit-questions-builder"></div>
+
+    <div class="mt-24 flex gap-8">
+      <button class="btn btn-primary" onclick="submitEditInterview()">Save Changes</button>
+      <button class="btn btn-outline" onclick="closeModal('modal-edit')">Cancel</button>
+    </div>
+  </div>
+</div>
+
 <!-- Modal: Sessions -->
 <div class="modal-overlay" id="modal-sessions">
   <div class="modal" style="max-width:720px">

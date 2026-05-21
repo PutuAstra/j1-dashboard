@@ -50,6 +50,7 @@ async function route(request) {
   }
   if (seg[0] === 'interview' && seg.length === 2) {
     if (m === 'GET')    return getInterview(seg[1], request);
+    if (m === 'PUT')    return updateInterview(seg[1], request);
     if (m === 'DELETE') return deleteInterview(seg[1], request);
   }
   if (seg[0] === 'interview' && seg[2] === 'sessions') {
@@ -184,6 +185,19 @@ async function getInterview(id, request) {
   const interview = await kvGet(`interview:${id}`);
   if (!interview) return jsonRes({ error: 'Not found' }, 404);
   return jsonRes(interview);
+}
+
+async function updateInterview(id, request) {
+  requireAdmin(request);
+  const existing = await kvGet(`interview:${id}`);
+  if (!existing) return jsonRes({ error: 'Not found' }, 404);
+
+  const { title, description, questions } = await request.json();
+  if (!title || !questions?.length) return jsonRes({ error: 'title and questions required' }, 400);
+
+  const updated = { ...existing, title, description: description || '', questions };
+  await kvPut(`interview:${id}`, updated);
+  return jsonRes(updated);
 }
 
 async function deleteInterview(id, request) {

@@ -9,6 +9,8 @@ const WORKER_URL = 'https://interview-api.putuastrawijaya.workers.dev';
 let adminKey = '';
 let questions = [];
 let currentInterviewId = null;
+let editInterviewId = null;
+let editQuestions = [];
 
 // ── Auth ──────────────────────────────────────────────────────
 
@@ -125,6 +127,7 @@ function renderInterviewCard(interview) {
           <button class="btn btn-outline" onclick="openSessions('${interview.id}', '${esc(interview.title)}')">
             Candidates
           </button>
+          <button class="btn btn-outline" onclick="openEditInterview('${interview.id}')">Edit</button>
           <button class="btn btn-danger" onclick="deleteInterview('${interview.id}')">Delete</button>
         </div>
       </div>
@@ -357,6 +360,76 @@ async function openReview(token, candidateName) {
     </div>`;
   } catch (e) {
     content.innerHTML = `<div class="empty-state" style="color:var(--red)">${e.message}</div>`;
+  }
+}
+
+// ── Edit interview ────────────────────────────────────────────
+
+async function openEditInterview(id) {
+  editInterviewId = id;
+  try {
+    const interview = await apiJSON('GET', `/api/interview/${id}`);
+    document.getElementById('edit-title').value = interview.title;
+    document.getElementById('edit-desc').value = interview.description || '';
+    editQuestions = interview.questions.map(q => ({ ...q }));
+    renderEditQuestions();
+    openModal('modal-edit');
+  } catch (e) {
+    toast(e.message, 'error');
+  }
+}
+
+function addEditQuestion() {
+  editQuestions.push({ text: '', duration: 120 });
+  renderEditQuestions();
+}
+
+function removeEditQuestion(i) {
+  if (editQuestions.length === 1) return toast('Need at least one question', 'error');
+  editQuestions.splice(i, 1);
+  renderEditQuestions();
+}
+
+function moveEditQuestion(i, dir) {
+  const j = i + dir;
+  if (j < 0 || j >= editQuestions.length) return;
+  [editQuestions[i], editQuestions[j]] = [editQuestions[j], editQuestions[i]];
+  renderEditQuestions();
+}
+
+function renderEditQuestions() {
+  const builder = document.getElementById('edit-questions-builder');
+  builder.innerHTML = editQuestions.map((q, i) => `
+    <div class="question-item">
+      <div class="q-num">${i + 1}</div>
+      <div class="q-fields">
+        <input type="text" placeholder="Question text *" value="${esc(q.text)}"
+          oninput="editQuestions[${i}].text = this.value" />
+        <select onchange="editQuestions[${i}].duration = parseInt(this.value)">
+          ${[30, 60, 90, 120, 180, 240, 300].map(s =>
+            `<option value="${s}" ${q.duration === s ? 'selected' : ''}>${s}s (${s < 60 ? s + 's' : (s/60) + ' min'})</option>`
+          ).join('')}
+        </select>
+      </div>
+      <button class="btn btn-ghost" onclick="moveEditQuestion(${i}, -1)" ${i === 0 ? 'disabled' : ''}>↑</button>
+      <button class="btn btn-ghost" onclick="removeEditQuestion(${i})" style="color:var(--red)">✕</button>
+    </div>
+  `).join('');
+}
+
+async function submitEditInterview() {
+  const title = document.getElementById('edit-title').value.trim();
+  const description = document.getElementById('edit-desc').value.trim();
+  if (!title) return toast('Title is required', 'error');
+  if (editQuestions.some(q => !q.text.trim())) return toast('All questions need text', 'error');
+
+  try {
+    await apiJSON('PUT', `/api/interview/${editInterviewId}`, { title, description, questions: editQuestions });
+    toast('Interview updated!', 'success');
+    closeModal('modal-edit');
+    loadInterviews();
+  } catch (e) {
+    toast(e.message, 'error');
   }
 }
 
