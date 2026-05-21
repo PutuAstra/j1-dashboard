@@ -123,7 +123,7 @@ function renderInterviewCard(interview) {
           <p class="text-muted text-sm mt-8">${qCount} question${qCount !== 1 ? 's' : ''} &nbsp;·&nbsp; Created ${created}</p>
         </div>
         <div class="flex gap-8">
-          <button class="btn btn-primary" onclick="openSessions('${interview.id}', '${esc(interview.title)}', 'invite')">Invite</button>
+          <button class="btn btn-outline" onclick="openSessions('${interview.id}', '${esc(interview.title)}', 'invite')">Invite</button>
           <button class="btn btn-outline" onclick="openSessions('${interview.id}', '${esc(interview.title)}', 'candidates')">Candidates</button>
           <button class="btn btn-outline" onclick="openEditInterview('${interview.id}')">Edit</button>
           <button class="btn btn-danger" onclick="deleteInterview('${interview.id}')">Delete</button>
