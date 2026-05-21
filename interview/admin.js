@@ -512,7 +512,7 @@ function renderTWSchedulePage() {
           </div>
           <div class="form-group" style="margin-bottom:0">
             <label>Time * &nbsp;<span style="font-size:10px;font-weight:400;text-transform:none;letter-spacing:0;color:var(--muted)">${(() => { try { return Intl.DateTimeFormat().resolvedOptions().timeZone; } catch(e){ return ''; } })()}</span></label>
-            <input type="time" id="tw-time" />
+            <input type="time" id="tw-time" step="900" />
           </div>
           <div class="form-group" style="margin-bottom:0">
             <label>Duration</label>
