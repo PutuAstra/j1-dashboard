@@ -387,6 +387,43 @@ const App = (() => {
   const tcSrc   = () => ({ label: 'Source', key: '_source', get: p => p._source || '',
     render: p => `<span class="source-badge source-${p._source||'recruit'}">${p._source==='crm'?'CRM':'Recruit'}</span>` });
 
+  // ── Editable field registry ────────────────────────────────
+  // Maps participant field key → { recruit: ZohoApiName, crm?: ZohoApiName, type, options? }
+  const EDITABLE_FIELDS = {
+    visaStatus:          { recruit: 'J1_Visa_Status',                        type: 'select', options: ['Pending','Approved','Rejected','—'] },
+    refLetterStatus:     { recruit: 'Reference_Letter_Status',                type: 'select', options: ['Requested','Submitted','—'] },
+    visaAppointment:     { recruit: 'J1_Visa_Appointment_Date',               type: 'date' },
+    visaNumber:          { recruit: 'J1_Visa_Number',                         type: 'text' },
+    flightBooked:        { recruit: 'Flight_Ticket_Status',                   type: 'select', options: ['Booked','Not Booked','—'] },
+    airline:             { recruit: 'Airline',                                type: 'text' },
+    pnrNumber:           { recruit: 'PNR_Number',                             type: 'text' },
+    departureDate:       { recruit: 'Departure_Date',                         type: 'date' },
+    arrivalDate:         { recruit: 'Arrival_Date',                           type: 'date' },
+    tripFrom:            { recruit: 'Trip_From',                              type: 'text' },
+    tripTo:              { recruit: 'Trip_To',                                type: 'text' },
+    airportGateway:      { recruit: 'Airport_Gateway',                        type: 'text' },
+    airportPickup:       { recruit: 'Airport_Pick_Up',                        type: 'text' },
+    ticketPayStatus:     { recruit: 'Ticket_Payment_Status',                  type: 'text' },
+    returnFlightStatus:  { recruit: 'Returning_Flight_Ticket_Status',         type: 'select', options: ['Booked','Not Booked','—'] },
+    returnAirline:       { recruit: 'Returning_Airline',                      type: 'text' },
+    returnPNR:           { recruit: 'Returning_Airline_PNR_Number',           type: 'text' },
+    returnDeparture:     { recruit: 'Returning_Departure_Date',               type: 'date' },
+    returnArrival:       { recruit: 'Returning_Arrival_Date',                 type: 'date' },
+    returnTripFrom:      { recruit: 'Returning_Trip_From',                    type: 'text' },
+    returnTripTo:        { recruit: 'Returning_Trip_To',                      type: 'text' },
+    returnGateway:       { recruit: 'Returning_Airport_Gateway',              type: 'text' },
+    housingAddress:      { recruit: 'Housing_Address',                        type: 'text' },
+    housingLandlord:     { recruit: 'Housing_Landlord',                       type: 'text' },
+    housingAvailability: { recruit: 'Housing_Availability',                   type: 'select', options: ['Available','Not Available','—'] },
+    hcInterviewStatus:   { recruit: 'Hosting_Company_Interview_Status',       type: 'text' },
+    sponsorStatus:       { recruit: 'Sponsor_Interview_Status',               type: 'text' },
+    consultationCallStatus: { recruit: 'Consultation_Call_Status', crm: 'Consultation_Call_Status', type: 'select', options: ['Pending','Scheduled','Done','—'] },
+    consultationCallNotes:  { recruit: 'Consultation_Call_Notes',  crm: 'Consultation_Call_Notes',  type: 'text' },
+    consultationCallBy:     { recruit: 'Consultation_Call_Done_By',crm: 'Consultation_Call_Done_By',type: 'text' },
+    consultationCallDate:   { recruit: 'Consultation_Call_Date',   crm: 'Consultation_Call_Date',   type: 'date' },
+    ctiUsaReview:           { recruit: 'CTI_USA_s_Review',         crm: 'CTI_USA_s_Review',         type: 'text' },
+  };
+
   // ── Column sets per tab ────────────────────────────────────
   const TAB_COLS = {
     all: [
@@ -548,6 +585,71 @@ const App = (() => {
     ],
   };
 
+  function openInlineEdit(cell, p, field) {
+    const meta = EDITABLE_FIELDS[field];
+    if (!meta) return;
+    const source = p._source === 'crm' ? 'crm' : 'recruit';
+    const zohoField = meta[source] || meta.recruit;
+    if (!zohoField) return;
+
+    const currentVal = p[field] === '—' ? '' : (p[field] || '');
+    let input;
+
+    if (meta.type === 'select') {
+      input = document.createElement('select');
+      input.className = 'inline-edit-input';
+      meta.options.forEach(opt => {
+        const o = document.createElement('option');
+        o.value = opt; o.textContent = opt;
+        if (opt === currentVal || (currentVal === '' && opt === '—')) o.selected = true;
+        input.appendChild(o);
+      });
+    } else if (meta.type === 'date') {
+      input = document.createElement('input');
+      input.type = 'date'; input.className = 'inline-edit-input';
+      if (currentVal) { const d = new Date(currentVal); if (!isNaN(d)) input.value = d.toISOString().split('T')[0]; }
+    } else {
+      input = document.createElement('input');
+      input.type = 'text'; input.className = 'inline-edit-input';
+      input.value = currentVal;
+    }
+
+    const originalHTML = cell.innerHTML;
+    cell.innerHTML = '';
+    cell.appendChild(input);
+    input.focus();
+    if (input.type === 'text') input.select();
+
+    let committed = false;
+    async function commit() {
+      if (committed) return;
+      committed = true;
+      let newVal = input.value.trim();
+      if (meta.type === 'date' && newVal) {
+        const [y, m, d] = newVal.split('-');
+        newVal = `${m}/${d}/${y}`;
+      }
+      const sendVal = (!newVal || newVal === '—') ? null : newVal;
+      cell.innerHTML = '<span style="opacity:.5;font-size:.8rem">saving…</span>';
+      try {
+        await Zoho.updateParticipant(p, { [zohoField]: sendVal });
+        p[field] = sendVal || '—';
+        const col = (TAB_COLS[_activeParticipantTab] || TAB_COLS.all).find(c => c.key === field);
+        cell.innerHTML = col ? col.render(p) : (sendVal || '—');
+        toast('Saved', 'success');
+      } catch (err) {
+        cell.innerHTML = originalHTML;
+        toast('Save failed: ' + err.message, 'error');
+      }
+    }
+
+    input.addEventListener('keydown', e => {
+      if (e.key === 'Enter')  { e.preventDefault(); input.blur(); }
+      if (e.key === 'Escape') { committed = true; cell.innerHTML = originalHTML; }
+    });
+    input.addEventListener('blur', commit);
+  }
+
   async function renderParticipants() {
     const mc = document.getElementById('main-content');
     mc.innerHTML = skeletonHTML();
@@ -592,7 +694,10 @@ const App = (() => {
                   <td class="row-num" style="position:sticky;left:0;z-index:1;background:var(--card)">${i+1}</td>
                   ${cols.map((col, ci) => {
                     const frozen = ci === 0 ? `style="position:sticky;left:40px;z-index:1;background:var(--card)"` : '';
-                    return `<td ${frozen}>${col.render(p)}</td>`;
+                    const meta = col.key && EDITABLE_FIELDS[col.key];
+                    const editable = meta && (p._source !== 'crm' || meta.crm);
+                    const editAttr = editable ? ` class="editable-cell" data-pid="${p.id}" data-field="${col.key}"` : '';
+                    return `<td ${frozen}${editAttr}>${col.render(p)}</td>`;
                   }).join('')}
                 </tr>
               `).join('')}
@@ -714,6 +819,14 @@ const App = (() => {
     document.getElementById('searchInput').addEventListener('input', refreshTable);
     document.getElementById('filterCountry').addEventListener('change', refreshTable);
     document.getElementById('filterSource').addEventListener('change', refreshTable);
+
+    // Wire inline edit (event delegation — survives tab/filter re-renders)
+    document.getElementById('participantTable').addEventListener('click', e => {
+      const cell = e.target.closest('td.editable-cell');
+      if (!cell || cell.querySelector('input,select')) return;
+      const p = (_participants || []).find(x => String(x.id) === String(cell.dataset.pid));
+      if (p) openInlineEdit(cell, p, cell.dataset.field);
+    });
 
     refreshTable(); // initial render
   }

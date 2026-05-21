@@ -554,6 +554,26 @@ tbody tr:hover { background: var(--bg); }
 .toast.info    { border-left: 3px solid #2563eb; }
 
 /* ─────────────────────────────────────────────────────────────
+   INLINE EDIT
+───────────────────────────────────────────────────────── */
+td.editable-cell { cursor: pointer; position: relative; }
+td.editable-cell:hover::after {
+  content: '✏';
+  position: absolute; right: 5px; top: 50%; transform: translateY(-50%);
+  font-size: 0.65rem; opacity: 0.35; pointer-events: none;
+}
+.inline-edit-input {
+  width: 100%; min-width: 80px;
+  padding: 3px 6px;
+  border: 1.5px solid var(--accent);
+  border-radius: var(--radius-sm);
+  background: var(--card); color: var(--text);
+  font-size: 0.82rem; font-family: inherit;
+  outline: none;
+}
+.inline-edit-input:focus { box-shadow: 0 0 0 3px rgba(176,26,24,0.15); }
+
+/* ─────────────────────────────────────────────────────────────
    EMPTY STATE
 ───────────────────────────────────────────────────────── */
 .empty-state {

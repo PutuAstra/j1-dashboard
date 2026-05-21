@@ -296,5 +296,38 @@ const Zoho = (() => {
     }));
   }
 
-  return { getAllParticipants, computeStats, groupBy, getJobOpenings };
+  // ── Write: PUT to Recruit ─────────────────────────────────
+  async function putRequest(endpoint, body) {
+    const url = `${PROXY}/recruit/v2/${endpoint}`;
+    const resp = await fetch(url, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+    if (!resp.ok) throw new Error(`PUT_ERROR_${resp.status}`);
+    return resp.json();
+  }
+
+  // ── Write: PUT to CRM ─────────────────────────────────────
+  async function putCRMRequest(endpoint, body) {
+    const url = `${PROXY}/crm/v2/${endpoint}`;
+    const resp = await fetch(url, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+    if (!resp.ok) throw new Error(`CRM_PUT_ERROR_${resp.status}`);
+    return resp.json();
+  }
+
+  // ── Update a participant field in Zoho ────────────────────
+  async function updateParticipant(participant, zohoFields) {
+    if (participant._source === 'crm') {
+      const crmId = String(participant.id).replace('crm_', '');
+      return putCRMRequest(`${CONFIG.CRM_MODULE}/${crmId}`, { data: [zohoFields] });
+    }
+    return putRequest(`${CONFIG.J1_MODULE}/${participant.id}`, { data: [zohoFields] });
+  }
+
+  return { getAllParticipants, computeStats, groupBy, getJobOpenings, updateParticipant };
 })();
