@@ -282,6 +282,7 @@ async function generateLink() {
   const name = document.getElementById('new-cand-name').value.trim();
   const email = document.getElementById('new-cand-email').value.trim();
   if (!name) return toast('Candidate name is required', 'error');
+  if (!email) return toast('Email is required', 'error');
 
   try {
     const data = await apiJSON('POST', `/api/interview/${currentInterviewId}/sessions`, {
