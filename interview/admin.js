@@ -49,7 +49,9 @@ function doLogout() {
 function showApp() {
   document.getElementById('login-gate').style.display = 'none';
   document.getElementById('app').style.display = 'block';
-  gotoPage('ow-list');
+  const valid = ['ow-list', 'ow-create', 'tw-list', 'tw-schedule'];
+  const hash  = window.location.hash.replace('#', '');
+  gotoPage(valid.includes(hash) ? hash : 'ow-list');
 }
 
 window.addEventListener('DOMContentLoaded', () => {
@@ -82,6 +84,7 @@ async function apiJSON(method, path, body = null) {
 // ── Navigation ────────────────────────────────────────────────
 
 function gotoPage(page) {
+  history.replaceState(null, '', '#' + page);
   document.querySelectorAll('.sidebar-item').forEach(btn =>
     btn.classList.toggle('active', btn.dataset.page === page)
   );
