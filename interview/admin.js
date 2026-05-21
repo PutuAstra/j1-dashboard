@@ -275,6 +275,15 @@ async function generateLink() {
     const link = buildTakeUrl(data.token);
     document.getElementById('generated-link-text').textContent = link;
     document.getElementById('generated-link-box').style.display = 'block';
+
+    const sendBtn = document.getElementById('send-email-btn');
+    if (email) {
+      sendBtn.style.display = 'inline-flex';
+      sendBtn.onclick = () => sendLinkEmail(data.token, link, email);
+    } else {
+      sendBtn.style.display = 'none';
+    }
+
     toast('Link generated!', 'success');
     await loadSessions(currentInterviewId);
   } catch (e) {
@@ -296,6 +305,21 @@ function copyLink() {
   const text = document.getElementById('generated-link-text').textContent;
   navigator.clipboard.writeText(text);
   toast('Copied!', 'success');
+}
+
+async function sendLinkEmail(token, link, email) {
+  const btn = document.getElementById('send-email-btn');
+  btn.disabled = true;
+  btn.textContent = 'Sending…';
+  try {
+    await apiJSON('POST', `/api/session/${token}/send-email`, { link });
+    toast(`Email sent to ${email}`, 'success');
+    btn.textContent = '✓ Email Sent';
+  } catch (e) {
+    toast('Failed to send: ' + e.message, 'error');
+    btn.disabled = false;
+    btn.textContent = 'Send Email';
+  }
 }
 
 // ── Review videos ─────────────────────────────────────────────
