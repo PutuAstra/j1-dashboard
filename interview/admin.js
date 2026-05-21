@@ -245,17 +245,19 @@ async function loadSessions(interviewId) {
   el.innerHTML = '<div class="empty-state">Loading…</div>';
   try {
     const sessions = await apiJSON('GET', `/api/interview/${interviewId}/sessions`);
+    const heading = document.getElementById('sessions-heading');
+    if (heading) heading.textContent = `Candidates (${sessions.length})`;
     if (!sessions.length) {
-      el.innerHTML = '<div class="empty-state">No candidates yet. Generate a link above.</div>';
+      el.innerHTML = '<div class="empty-state">No candidates yet. Use the Invite button to generate a link.</div>';
       return;
     }
-    el.innerHTML = sessions.map(s => renderSessionRow(s, interviewId)).join('');
+    el.innerHTML = sessions.map((s, i) => renderSessionRow(s, interviewId, i + 1)).join('');
   } catch (e) {
     el.innerHTML = `<div class="empty-state" style="color:var(--red)">${e.message}</div>`;
   }
 }
 
-function renderSessionRow(s, interviewId) {
+function renderSessionRow(s, interviewId, num) {
   const date = s.completedAt
     ? new Date(s.completedAt).toLocaleDateString()
     : s.createdAt ? new Date(s.createdAt).toLocaleDateString() : '—';
@@ -264,9 +266,12 @@ function renderSessionRow(s, interviewId) {
 
   return `
     <div class="session-row">
-      <div>
-        <strong style="font-size:13px">${esc(s.candidateName)}</strong>
-        ${s.candidateEmail ? `<div class="text-muted text-sm">${esc(s.candidateEmail)}</div>` : ''}
+      <div style="display:flex;align-items:flex-start;gap:10px">
+        <span style="color:var(--muted);font-size:13px;min-width:18px;padding-top:1px">${num}.</span>
+        <div>
+          <strong style="font-size:13px">${esc(s.candidateName)}</strong>
+          ${s.candidateEmail ? `<div class="text-muted text-sm">${esc(s.candidateEmail)}</div>` : ''}
+        </div>
       </div>
       <span class="badge badge-${s.status}">${s.status.replace('_', ' ')}</span>
       <span class="text-muted text-sm">${responseCount} video${responseCount !== 1 ? 's' : ''}</span>
