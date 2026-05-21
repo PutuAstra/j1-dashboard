@@ -76,6 +76,19 @@ async function route(request) {
     return getVideoUrl(seg[1], parseInt(seg[3]), request);
   }
 
+  // Two-way sessions
+  if (seg[0] === 'tw-sessions' && seg.length === 1) {
+    if (m === 'GET')  return listTWSessions(request);
+    if (m === 'POST') return createTWSession(request);
+  }
+  if (seg[0] === 'tw-session' && seg.length === 2) {
+    if (m === 'PUT')    return updateTWSession(seg[1], request);
+    if (m === 'DELETE') return deleteTWSessionHandler(seg[1], request);
+  }
+  if (seg[0] === 'tw-session' && seg[2] === 'send-email' && m === 'POST') {
+    return sendTWEmail(seg[1], request);
+  }
+
   return jsonRes({ error: 'Not found' }, 404);
 }
 
@@ -414,4 +427,126 @@ async function getVideoUrl(token, qIndex, request) {
   } catch (e) {
     return jsonRes({ error: 'Could not fetch video URL: ' + e.message }, 500);
   }
+}
+
+// ── Two-way session handlers ──────────────────────────────────
+
+async function createTWSession(request) {
+  requireAdmin(request);
+  const { candidateName, candidateEmail, position, scheduledAt, duration, meetingLink, notes } = await request.json();
+  if (!candidateName || !candidateEmail || !position) {
+    return jsonRes({ error: 'candidateName, candidateEmail, and position are required' }, 400);
+  }
+
+  const id = uid();
+  const session = {
+    id, candidateName, candidateEmail, position,
+    scheduledAt: scheduledAt || null,
+    duration: duration || 60,
+    meetingLink: meetingLink || '',
+    notes: notes || '',
+    status: 'scheduled',
+    createdAt: Date.now(),
+  };
+  await kvPut(`tw-session:${id}`, session);
+
+  const list = (await kvGet('tw-session:list')) || [];
+  list.unshift(id);
+  await kvPut('tw-session:list', list);
+
+  return jsonRes(session, 201);
+}
+
+async function listTWSessions(request) {
+  requireAdmin(request);
+  const ids = (await kvGet('tw-session:list')) || [];
+  const items = await Promise.all(ids.map(id => kvGet(`tw-session:${id}`)));
+  return jsonRes(items.filter(Boolean));
+}
+
+async function updateTWSession(id, request) {
+  requireAdmin(request);
+  const existing = await kvGet(`tw-session:${id}`);
+  if (!existing) return jsonRes({ error: 'Not found' }, 404);
+  const updates = await request.json();
+  const updated = { ...existing, ...updates };
+  await kvPut(`tw-session:${id}`, updated);
+  return jsonRes(updated);
+}
+
+async function deleteTWSessionHandler(id, request) {
+  requireAdmin(request);
+  await INTERVIEW_DATA.delete(`tw-session:${id}`);
+  const list = (await kvGet('tw-session:list')) || [];
+  await kvPut('tw-session:list', list.filter(i => i !== id));
+  return jsonRes({ ok: true });
+}
+
+async function sendTWEmail(id, request) {
+  requireAdmin(request);
+  const session = await kvGet(`tw-session:${id}`);
+  if (!session) return jsonRes({ error: 'Session not found' }, 404);
+  if (!session.candidateEmail) return jsonRes({ error: 'No email address for this candidate' }, 400);
+
+  const dt = session.scheduledAt ? new Date(session.scheduledAt) : null;
+  const dateStr = dt
+    ? dt.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })
+    : 'To Be Confirmed';
+  const timeStr = dt
+    ? dt.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })
+    : '';
+
+  const html = `
+    <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;border:1px solid #e5e7eb;border-radius:8px;overflow:hidden">
+      <div style="background:#B01A18;padding:28px 32px">
+        <h1 style="color:#fff;margin:0;font-size:22px;font-weight:700">CTI ClaudeHire</h1>
+        <p style="color:rgba(255,255,255,0.75);margin:4px 0 0;font-size:13px">CTI Group Worldwide Services, Inc.</p>
+      </div>
+      <div style="padding:32px;background:#ffffff">
+        <p style="font-size:15px;color:#1a1a1a">Dear <strong>${session.candidateName}</strong>,</p>
+        <p style="color:#374151">You have been scheduled for a two-way interview for the following position:</p>
+        <div style="background:#f9fafb;border-left:4px solid #B01A18;padding:14px 18px;margin:20px 0;border-radius:0 6px 6px 0">
+          <strong style="font-size:16px;color:#1a1a1a">${session.position}</strong>
+        </div>
+        <table style="width:100%;border-collapse:collapse;margin:20px 0">
+          <tr><td style="padding:8px 0;color:#6b7280;font-size:13px;width:100px;vertical-align:top">Date</td><td style="padding:8px 0;color:#1a1a1a;font-size:14px;font-weight:600">${dateStr}</td></tr>
+          ${timeStr ? `<tr><td style="padding:8px 0;color:#6b7280;font-size:13px;vertical-align:top">Time</td><td style="padding:8px 0;color:#1a1a1a;font-size:14px;font-weight:600">${timeStr}</td></tr>` : ''}
+          <tr><td style="padding:8px 0;color:#6b7280;font-size:13px;vertical-align:top">Duration</td><td style="padding:8px 0;color:#1a1a1a;font-size:14px">${session.duration} minutes</td></tr>
+          ${session.meetingLink ? `<tr><td style="padding:8px 0;color:#6b7280;font-size:13px;vertical-align:top">Meeting</td><td style="padding:8px 0"><a href="${session.meetingLink}" style="color:#B01A18;font-weight:600">Join Meeting Link</a></td></tr>` : ''}
+        </table>
+        ${session.meetingLink ? `
+        <div style="text-align:center;margin:32px 0">
+          <a href="${session.meetingLink}" style="background:#B01A18;color:#ffffff;padding:14px 36px;text-decoration:none;border-radius:6px;font-size:15px;font-weight:700;display:inline-block">
+            Join Interview →
+          </a>
+        </div>` : ''}
+        <hr style="border:none;border-top:1px solid #e5e7eb;margin:28px 0" />
+        <p style="color:#9ca3af;font-size:11px;text-align:center;margin:0">
+          CTI Group Worldwide Services, Inc. &nbsp;·&nbsp; ClaudeHire Portal<br/>
+          This is an automated message — please do not reply to this email.
+        </p>
+      </div>
+    </div>`;
+
+  const sender = EMAIL_SENDER || ONEDRIVE_USER;
+  const accessToken = await getAccessToken();
+  const res = await fetch(`https://graph.microsoft.com/v1.0/users/${sender}/sendMail`, {
+    method: 'POST',
+    headers: { 'Authorization': `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      message: {
+        subject: `Interview Scheduled: ${session.position} — CTI ClaudeHire`,
+        body: { contentType: 'HTML', content: html },
+        from: { emailAddress: { name: 'CTI ClaudeHire', address: sender } },
+        toRecipients: [{ emailAddress: { address: session.candidateEmail } }],
+      },
+      saveToSentItems: true,
+    }),
+  });
+
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    return jsonRes({ error: 'Email failed: ' + (err.error?.message || res.status) }, 500);
+  }
+  return jsonRes({ ok: true });
 }

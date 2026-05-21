@@ -10,7 +10,7 @@
   <meta name="theme-color" content="#B01A18" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="style.css?v=20250522d" />
+  <link rel="stylesheet" href="style.css?v=20250522e" />
 </head>
 <body>
 
@@ -33,7 +33,7 @@
   </div>
 </div>
 
-<!-- Main App (hidden until login) -->
+<!-- Main App -->
 <div id="app" style="display:none">
 
   <div class="topbar">
@@ -50,67 +50,27 @@
     </div>
   </div>
 
-  <div class="page-wide">
+  <div class="admin-body">
 
-    <div class="tabs">
-      <button class="tab-btn active" onclick="switchTab('interviews')">Interviews</button>
-      <button class="tab-btn" onclick="switchTab('create')">+ New Interview</button>
-    </div>
-
-    <!-- Tab: Interviews List -->
-    <div class="tab-pane active" id="tab-interviews">
-      <div class="flex justify-between items-center" style="margin-top:8px;margin-bottom:20px">
-        <h2>All Interviews</h2>
-        <button class="btn btn-outline" onclick="loadInterviews()">↻ Refresh</button>
+    <aside class="admin-sidebar">
+      <div class="sidebar-group">
+        <div class="sidebar-group-label">One-Way Interview</div>
+        <button class="sidebar-item" data-page="ow-list"   onclick="gotoPage('ow-list')">All Interviews</button>
+        <button class="sidebar-item" data-page="ow-create" onclick="gotoPage('ow-create')">+ New Interview</button>
       </div>
-      <div class="flex gap-8 mb-16">
-        <input type="text" id="search-interviews" placeholder="Search by name…"
-          oninput="filterAndRenderInterviews()"
-          style="flex:1;background:var(--card);border:1px solid var(--border);border-radius:6px;padding:8px 12px;color:var(--text);font-size:13px" />
-        <select id="sort-interviews" onchange="filterAndRenderInterviews()"
-          style="background:var(--card);border:1px solid var(--border);border-radius:6px;padding:8px 12px;color:var(--text);font-size:13px;cursor:pointer">
-          <option value="newest">Newest First</option>
-          <option value="oldest">Oldest First</option>
-          <option value="az">A → Z</option>
-          <option value="za">Z → A</option>
-          <option value="candidates">Most Candidates</option>
-        </select>
+      <div class="sidebar-group">
+        <div class="sidebar-group-label">Two-Way Interview</div>
+        <button class="sidebar-item" data-page="tw-list"     onclick="gotoPage('tw-list')">All Sessions</button>
+        <button class="sidebar-item" data-page="tw-schedule" onclick="gotoPage('tw-schedule')">+ Schedule</button>
       </div>
-      <div id="interviews-list"></div>
-    </div>
+    </aside>
 
-    <!-- Tab: Create Interview -->
-    <div class="tab-pane" id="tab-create">
-      <div class="card">
-        <h2 class="mb-16">Create New Interview</h2>
+    <main class="admin-main" id="admin-main">
+      <div class="spinner" style="margin:auto"></div>
+    </main>
 
-        <div class="form-group">
-          <label>Interview Title *</label>
-          <input type="text" id="new-title" placeholder="e.g. J1 Intern Initial Screening" />
-        </div>
+  </div>
 
-        <div class="form-group">
-          <label>Description (shown to candidate)</label>
-          <textarea id="new-desc" placeholder="Brief instructions for the candidate..."></textarea>
-        </div>
-
-        <hr class="divider" />
-
-        <div class="flex justify-between items-center mb-16">
-          <h3>Questions</h3>
-          <button class="btn btn-outline" onclick="addQuestion()">+ Add Question</button>
-        </div>
-
-        <div id="questions-builder"></div>
-
-        <div class="mt-24 flex gap-8">
-          <button class="btn btn-primary" onclick="submitInterview()">Create Interview</button>
-          <button class="btn btn-outline" onclick="resetCreateForm()">Clear</button>
-        </div>
-      </div>
-    </div>
-
-  </div><!-- /page-wide -->
 </div><!-- /app -->
 
 <!-- Modal: Edit Interview -->
@@ -120,26 +80,20 @@
       <h2>Edit Interview</h2>
       <button class="btn btn-ghost" onclick="closeModal('modal-edit')">✕</button>
     </div>
-
     <div class="form-group">
       <label>Interview Title *</label>
       <input type="text" id="edit-title" placeholder="e.g. J1 Intern Initial Screening" />
     </div>
-
     <div class="form-group">
       <label>Description (shown to candidate)</label>
       <textarea id="edit-desc" placeholder="Brief instructions for the candidate..."></textarea>
     </div>
-
     <hr class="divider" />
-
     <div class="flex justify-between items-center mb-16">
       <h3>Questions</h3>
       <button class="btn btn-outline" onclick="addEditQuestion()">+ Add Question</button>
     </div>
-
     <div id="edit-questions-builder"></div>
-
     <div class="mt-24 flex gap-8">
       <button class="btn btn-primary" onclick="submitEditInterview()">Save Changes</button>
       <button class="btn btn-outline" onclick="closeModal('modal-edit')">Cancel</button>
@@ -163,7 +117,6 @@
         <input type="email" id="new-cand-email" placeholder="Email *" style="flex:1;background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:8px 12px;color:var(--text);font-size:13px" />
         <button class="btn btn-primary" onclick="generateLink()">Generate Link</button>
       </div>
-
       <div id="generated-link-box" style="display:none">
         <p class="text-sm text-muted mb-4">Share this link with the candidate:</p>
         <div class="link-box">
@@ -217,7 +170,6 @@
 </div>
 
 <div id="toast"></div>
-
-<script src="admin.js?v=20250522d"></script>
+<script src="admin.js?v=20250522e"></script>
 </body>
 </html>
