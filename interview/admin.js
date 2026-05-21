@@ -264,21 +264,21 @@ function renderSessionRow(s, interviewId, num) {
 
   const responseCount = s.responses?.length || 0;
 
+  const invitedDate = s.createdAt ? new Date(s.createdAt).toLocaleDateString() : '—';
   return `
-    <div class="session-row">
-      <div style="display:flex;align-items:flex-start;gap:10px">
-        <span style="color:var(--muted);font-size:13px;min-width:18px;padding-top:1px">${num}.</span>
-        <div>
-          <strong style="font-size:13px">${esc(s.candidateName)}</strong>
-          ${s.candidateEmail ? `<div class="text-muted text-sm">${esc(s.candidateEmail)}</div>` : ''}
-          <div class="text-muted text-sm">Invited ${s.createdAt ? new Date(s.createdAt).toLocaleDateString() : '—'}</div>
+    <div class="session-row" style="padding:10px 4px">
+      <div style="display:flex;align-items:center;gap:10px;min-width:0;flex:1">
+        <span style="color:var(--muted);font-size:12px;min-width:20px;flex-shrink:0">${num}.</span>
+        <div style="min-width:0;flex:1">
+          <span style="font-size:13px;font-weight:600">${esc(s.candidateName)}</span>
+          <span class="text-muted" style="font-size:12px;margin-left:8px">${s.candidateEmail ? esc(s.candidateEmail) + ' · ' : ''}Invited ${invitedDate}</span>
         </div>
       </div>
-      <span class="badge badge-${s.status}">${s.status.replace('_', ' ')}</span>
-      <span class="text-muted text-sm">${responseCount} video${responseCount !== 1 ? 's' : ''}</span>
-      <div class="flex gap-8">
-        <button class="btn btn-ghost" title="Copy link" onclick="copySessionLink('${s.token}')">🔗</button>
-        ${s.status !== 'pending' ? `<button class="btn btn-outline" onclick="openReview('${s.token}', '${esc(s.candidateName)}')">Review</button>` : ''}
+      <div style="display:flex;align-items:center;gap:10px;flex-shrink:0">
+        <span class="badge badge-${s.status}">${s.status.replace('_', ' ')}</span>
+        <span class="text-muted" style="font-size:12px;white-space:nowrap">${responseCount} vid${responseCount !== 1 ? 's' : ''}</span>
+        <button class="btn btn-ghost" style="padding:2px 6px;font-size:13px" title="Copy link" onclick="copySessionLink('${s.token}')">🔗</button>
+        ${s.status !== 'pending' ? `<button class="btn btn-outline" style="padding:4px 12px;font-size:12px" onclick="openReview('${s.token}', '${esc(s.candidateName)}')">Review</button>` : ''}
       </div>
     </div>
   `;
