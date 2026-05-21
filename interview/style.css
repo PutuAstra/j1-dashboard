@@ -556,18 +556,46 @@ tr:hover td { background: var(--card-2); }
 .q-fields select:focus { border-color: var(--accent); }
 
 /* ── Session list ── */
+.sessions-table-header {
+  display: grid;
+  grid-template-columns: 1fr 120px 100px 160px;
+  gap: 12px;
+  padding: 6px 16px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--muted);
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 2px;
+}
+
 .session-row {
   display: grid;
-  grid-template-columns: 1fr auto auto auto;
+  grid-template-columns: 1fr 120px 100px 160px;
   gap: 12px;
   align-items: center;
-  padding: 12px 16px;
+  padding: 10px 16px;
   border-bottom: 1px solid rgba(51,65,85,0.5);
   font-size: 13px;
 }
 
 .session-row:last-child { border-bottom: none; }
 .session-row:hover { background: var(--card-2); }
+
+.filter-chip {
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--muted);
+  transition: all 0.15s;
+}
+.filter-chip.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+.filter-chip:hover:not(.active) { border-color: var(--accent); color: var(--accent); }
 
 /* ── Video review ── */
 .review-grid {

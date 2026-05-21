@@ -278,40 +278,73 @@ async function loadSessions(interviewId) {
   el.innerHTML = '<div class="empty-state">Loading…</div>';
   try {
     const sessions = await apiJSON('GET', `/api/interview/${interviewId}/sessions`);
-    const heading = document.getElementById('sessions-heading');
-    if (heading) heading.textContent = `Candidates (${sessions.length})`;
-    if (!sessions.length) {
-      el.innerHTML = '<div class="empty-state">No candidates yet. Use the Invite button to generate a link.</div>';
-      return;
-    }
-    el.innerHTML = sessions.map((s, i) => renderSessionRow(s, interviewId, i + 1)).join('');
+    _allSessions = sessions;
+    _sessionFilter = 'all';
+    setSessionFilter('all');
   } catch (e) {
     el.innerHTML = `<div class="empty-state" style="color:var(--red)">${e.message}</div>`;
   }
 }
 
-function renderSessionRow(s, interviewId, num) {
-  const date = s.completedAt
-    ? new Date(s.completedAt).toLocaleDateString()
-    : s.createdAt ? new Date(s.createdAt).toLocaleDateString() : '—';
+function setSessionFilter(filter) {
+  _sessionFilter = filter;
+  ['all', 'pending', 'completed'].forEach(f => {
+    const chip = document.getElementById(`fc-${f}`);
+    if (chip) chip.classList.toggle('active', f === filter);
+  });
+  filterAndRenderSessions();
+}
 
+function filterAndRenderSessions() {
+  const query = (document.getElementById('search-candidates')?.value || '').trim().toLowerCase();
+  let list = _allSessions.filter(s => {
+    if (_sessionFilter !== 'all' && s.status !== _sessionFilter) return false;
+    if (query && !s.candidateName.toLowerCase().includes(query) && !(s.candidateEmail || '').toLowerCase().includes(query)) return false;
+    return true;
+  });
+
+  const heading = document.getElementById('sessions-heading');
+  if (heading) heading.textContent = `Candidates (${_allSessions.length})`;
+
+  const el = document.getElementById('sessions-list');
+  if (!list.length) {
+    el.innerHTML = `<div class="empty-state">${_allSessions.length ? 'No candidates match your filter.' : 'No candidates yet. Use the Invite button to generate a link.'}</div>`;
+    return;
+  }
+  el.innerHTML = list.map((s, i) => renderSessionRow(s, currentInterviewId, i + 1)).join('');
+}
+
+function renderSessionRow(s, interviewId, num) {
+  const invitedDate = s.createdAt ? new Date(s.createdAt).toLocaleDateString() : '—';
   const responseCount = s.responses?.length || 0;
 
-  const invitedDate = s.createdAt ? new Date(s.createdAt).toLocaleDateString() : '—';
+  const videosCell = responseCount > 0
+    ? `<button class="btn btn-ghost" style="padding:3px 8px;font-size:12px;color:var(--accent);white-space:nowrap" onclick="openReview('${s.token}', '${esc(s.candidateName)}')">🎥 View ${responseCount}</button>`
+    : `<span class="text-muted" style="font-size:12px">—</span>`;
+
+  const actionsCell = s.status === 'pending'
+    ? `<button class="btn btn-ghost" style="padding:4px 8px;font-size:13px" title="Copy interview link" onclick="copySessionLink('${s.token}')">🔗</button>
+       <button class="btn btn-danger" style="padding:4px 10px;font-size:12px" onclick="revokeSession('${s.token}', '${esc(s.candidateName)}')">Revoke</button>`
+    : `<button class="btn btn-ghost" style="padding:4px 8px;font-size:13px" title="Copy interview link" onclick="copySessionLink('${s.token}')">🔗</button>
+       <button class="btn btn-outline" style="padding:4px 10px;font-size:12px" onclick="openReview('${s.token}', '${esc(s.candidateName)}')">Review</button>`;
+
   return `
-    <div class="session-row" style="padding:10px 4px">
-      <div style="display:flex;align-items:center;gap:10px;min-width:0;flex:1">
-        <span style="color:var(--muted);font-size:12px;min-width:20px;flex-shrink:0">${num}.</span>
-        <div style="min-width:0;flex:1">
-          <span style="font-size:13px;font-weight:600">${esc(s.candidateName)}</span>
-          <span class="text-muted" style="font-size:12px;margin-left:8px">${s.candidateEmail ? esc(s.candidateEmail) + ' · ' : ''}Invited ${invitedDate}</span>
+    <div class="session-row">
+      <div style="display:flex;align-items:center;gap:8px;min-width:0">
+        <span class="text-muted" style="font-size:12px;min-width:18px;flex-shrink:0">${num}.</span>
+        <div style="min-width:0">
+          <div style="font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(s.candidateName)}</div>
+          <div class="text-muted" style="font-size:11px">${s.candidateEmail ? esc(s.candidateEmail) + ' · ' : ''}Invited ${invitedDate}</div>
         </div>
       </div>
-      <div style="display:flex;align-items:center;gap:10px;flex-shrink:0">
+      <div style="display:flex;align-items:center;justify-content:center">
         <span class="badge badge-${s.status}">${s.status.replace('_', ' ')}</span>
-        <span class="text-muted" style="font-size:12px;white-space:nowrap">${responseCount} vid${responseCount !== 1 ? 's' : ''}</span>
-        <button class="btn btn-ghost" style="padding:2px 6px;font-size:13px" title="Copy link" onclick="copySessionLink('${s.token}')">🔗</button>
-        ${s.status === 'pending' ? `<button class="btn btn-danger" style="padding:4px 12px;font-size:12px" onclick="revokeSession('${s.token}')">Revoke</button>` : `<button class="btn btn-outline" style="padding:4px 12px;font-size:12px" onclick="openReview('${s.token}', '${esc(s.candidateName)}')">Review</button>`}
+      </div>
+      <div style="display:flex;align-items:center;justify-content:center">
+        ${videosCell}
+      </div>
+      <div style="display:flex;align-items:center;justify-content:flex-end;gap:6px">
+        ${actionsCell}
       </div>
     </div>
   `;
@@ -379,8 +412,8 @@ async function sendLinkEmail(token, link, email) {
   }
 }
 
-async function revokeSession(token) {
-  if (!confirm('Revoke this invitation? The candidate link will stop working immediately.')) return;
+async function revokeSession(token, name) {
+  if (!confirm(`Revoke ${name}'s invitation? Their interview link will stop working immediately.`)) return;
   try {
     await apiJSON('DELETE', `/api/session/${token}`);
     toast('Invitation revoked', 'success');

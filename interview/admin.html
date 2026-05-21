@@ -178,7 +178,25 @@
 
     <!-- Candidates pane -->
     <div id="session-pane-candidates" style="display:none">
-      <h3 class="mb-16" id="sessions-heading">Candidates</h3>
+      <div class="flex justify-between items-center mb-12">
+        <h3 id="sessions-heading">Candidates</h3>
+        <div class="flex gap-8 items-center">
+          <input type="text" id="search-candidates" placeholder="Search candidates…"
+            oninput="filterAndRenderSessions()"
+            style="background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:6px 10px;color:var(--text);font-size:12px;width:180px" />
+          <div class="flex gap-4">
+            <button class="filter-chip active" id="fc-all"       onclick="setSessionFilter('all')">All</button>
+            <button class="filter-chip"        id="fc-pending"   onclick="setSessionFilter('pending')">Pending</button>
+            <button class="filter-chip"        id="fc-completed" onclick="setSessionFilter('completed')">Completed</button>
+          </div>
+        </div>
+      </div>
+      <div class="sessions-table-header">
+        <span>Name</span>
+        <span style="text-align:center">Status</span>
+        <span style="text-align:center">Videos</span>
+        <span style="text-align:right">Actions</span>
+      </div>
       <div id="sessions-list"></div>
     </div>
   </div>
