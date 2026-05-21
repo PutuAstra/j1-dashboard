@@ -182,7 +182,19 @@ async function createInterview(request) {
 async function listInterviews(request) {
   requireAdmin(request);
   const ids = (await kvGet('interview:list')) || [];
-  const items = await Promise.all(ids.map(id => kvGet(`interview:${id}`)));
+  const items = await Promise.all(ids.map(async id => {
+    const interview = await kvGet(`interview:${id}`);
+    if (!interview) return null;
+    const tokens = (await kvGet(`interview:${id}:sessions`)) || [];
+    const sessions = await Promise.all(tokens.map(t => kvGet(`session:${t}`)));
+    const valid = sessions.filter(Boolean);
+    interview._counts = {
+      total: valid.length,
+      pending: valid.filter(s => s.status === 'pending').length,
+      completed: valid.filter(s => s.status === 'completed').length,
+    };
+    return interview;
+  }));
   return jsonRes(items.filter(Boolean));
 }
 

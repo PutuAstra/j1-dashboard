@@ -59,9 +59,22 @@
 
     <!-- Tab: Interviews List -->
     <div class="tab-pane active" id="tab-interviews">
-      <div class="flex justify-between items-center mb-16">
+      <div class="flex justify-between items-center" style="margin-top:8px;margin-bottom:20px">
         <h2>All Interviews</h2>
         <button class="btn btn-outline" onclick="loadInterviews()">↻ Refresh</button>
+      </div>
+      <div class="flex gap-8 mb-16">
+        <input type="text" id="search-interviews" placeholder="Search by name…"
+          oninput="filterAndRenderInterviews()"
+          style="flex:1;background:var(--card);border:1px solid var(--border);border-radius:6px;padding:8px 12px;color:var(--text);font-size:13px" />
+        <select id="sort-interviews" onchange="filterAndRenderInterviews()"
+          style="background:var(--card);border:1px solid var(--border);border-radius:6px;padding:8px 12px;color:var(--text);font-size:13px;cursor:pointer">
+          <option value="newest">Newest First</option>
+          <option value="oldest">Oldest First</option>
+          <option value="az">A → Z</option>
+          <option value="za">Z → A</option>
+          <option value="candidates">Most Candidates</option>
+        </select>
       </div>
       <div id="interviews-list"></div>
     </div>

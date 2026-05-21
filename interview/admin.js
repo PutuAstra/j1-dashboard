@@ -97,36 +97,69 @@ function switchTab(name) {
 
 // ── Interviews list ───────────────────────────────────────────
 
+let _allInterviews = [];
+
 async function loadInterviews() {
   const el = document.getElementById('interviews-list');
   el.innerHTML = '<div class="empty-state">Loading…</div>';
   try {
     const interviews = await apiJSON('GET', '/api/interviews');
+    _allInterviews = interviews;
     if (!interviews.length) {
       el.innerHTML = '<div class="empty-state">No interviews yet. Create one using the "+ New Interview" tab.</div>';
       return;
     }
-    el.innerHTML = interviews.map(renderInterviewCard).join('');
+    filterAndRenderInterviews();
   } catch (e) {
     el.innerHTML = `<div class="empty-state" style="color:var(--red)">${e.message}</div>`;
   }
 }
 
+function filterAndRenderInterviews() {
+  const query = (document.getElementById('search-interviews')?.value || '').trim().toLowerCase();
+  const sort = document.getElementById('sort-interviews')?.value || 'newest';
+
+  let list = _allInterviews.filter(i => !query || i.title.toLowerCase().includes(query));
+
+  list.sort((a, b) => {
+    if (sort === 'newest')     return b.createdAt - a.createdAt;
+    if (sort === 'oldest')     return a.createdAt - b.createdAt;
+    if (sort === 'az')         return a.title.localeCompare(b.title);
+    if (sort === 'za')         return b.title.localeCompare(a.title);
+    if (sort === 'candidates') return (b._counts?.total || 0) - (a._counts?.total || 0);
+    return 0;
+  });
+
+  const el = document.getElementById('interviews-list');
+  if (!list.length) {
+    el.innerHTML = '<div class="empty-state">No interviews match your search.</div>';
+    return;
+  }
+  el.innerHTML = list.map(renderInterviewCard).join('');
+}
+
 function renderInterviewCard(interview) {
   const qCount = interview.questions?.length || 0;
   const created = new Date(interview.createdAt).toLocaleDateString();
+  const c = interview._counts || { total: 0, pending: 0, completed: 0 };
+
+  const candidateLine = c.total > 0
+    ? `<span style="font-weight:600">${c.total} Candidate${c.total !== 1 ? 's' : ''}</span> <span class="text-muted">&nbsp;·&nbsp; ${c.pending} Pending &nbsp;·&nbsp; ${c.completed} Completed</span>`
+    : `<span class="text-muted">No candidates yet</span>`;
+
   return `
     <div class="card" style="margin-bottom:10px">
       <div class="flex justify-between items-center">
         <div>
           <h3>${esc(interview.title)}</h3>
-          <p class="text-muted text-sm mt-8">${qCount} question${qCount !== 1 ? 's' : ''} &nbsp;·&nbsp; Created ${created}</p>
+          <p class="text-muted text-sm" style="margin-top:4px">${qCount} question${qCount !== 1 ? 's' : ''} &nbsp;·&nbsp; Created ${created}</p>
+          <p class="text-sm" style="margin-top:6px">${candidateLine}</p>
         </div>
-        <div class="flex gap-8">
+        <div class="flex gap-8 items-center">
+          <button class="btn btn-primary" onclick="openSessions('${interview.id}', '${esc(interview.title)}', 'candidates')">Candidates</button>
           <button class="btn btn-outline" onclick="openSessions('${interview.id}', '${esc(interview.title)}', 'invite')">Invite</button>
-          <button class="btn btn-outline" onclick="openSessions('${interview.id}', '${esc(interview.title)}', 'candidates')">Candidates</button>
-          <button class="btn btn-outline" onclick="openEditInterview('${interview.id}')">Edit</button>
-          <button class="btn btn-danger" onclick="deleteInterview('${interview.id}')">Delete</button>
+          <button class="btn btn-ghost" style="padding:6px 10px;font-size:15px" title="Edit" onclick="openEditInterview('${interview.id}')">✏</button>
+          <button class="btn btn-ghost" style="padding:6px 10px;font-size:15px;color:var(--red)" title="Delete" onclick="deleteInterview('${interview.id}')">🗑</button>
         </div>
       </div>
     </div>
