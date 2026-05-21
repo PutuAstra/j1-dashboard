@@ -1,150 +1,208 @@
 // ─────────────────────────────────────────────────────────────
-//  CTI Interview API — Cloudflare Worker
+//  CTI Interview API — Cloudflare Worker (OneDrive storage)
+//  Format: Service Worker (addEventListener) — paste into Cloudflare dashboard
 //
-//  Required bindings (set in Cloudflare dashboard):
-//    KV namespace : INTERVIEW_DATA
-//    R2 bucket    : RECORDINGS
-//    Secret       : ADMIN_KEY  (any string you choose)
+//  Required secrets (Worker Settings → Bindings → Secret):
+//    ADMIN_KEY       — your chosen admin password
+//    TENANT_ID       — Azure tenant ID
+//    CLIENT_ID       — Azure app client ID
+//    CLIENT_SECRET   — Azure app client secret
+//    ONEDRIVE_USER   — OneDrive owner email (e.g. putua@ctigroup.com)
+//
+//  Required KV binding (Worker Settings → Bindings → KV Namespace):
+//    INTERVIEW_DATA  → interview-data
+//
+//  No R2 bucket needed.
 // ─────────────────────────────────────────────────────────────
 
-export default {
-  async fetch(request, env) {
-    const url = new URL(request.url);
-    const cors = {
-      'Access-Control-Allow-Origin': '*',
-      'Access-Control-Allow-Methods': 'GET, POST, DELETE, OPTIONS',
-      'Access-Control-Allow-Headers': 'Content-Type, X-Admin-Key',
-    };
-
-    if (request.method === 'OPTIONS') return new Response(null, { headers: cors });
-
-    try {
-      return await route(request, env, cors, url);
-    } catch (e) {
-      const status = e.message === 'Unauthorized' ? 401 : 500;
-      return json({ error: e.message }, status, cors);
-    }
-  }
+const CORS = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Methods': 'GET, POST, DELETE, OPTIONS',
+  'Access-Control-Allow-Headers': 'Content-Type, X-Admin-Key',
 };
+
+addEventListener('fetch', event => {
+  event.respondWith(handle(event.request));
+});
+
+async function handle(request) {
+  if (request.method === 'OPTIONS') {
+    return new Response(null, { status: 204, headers: CORS });
+  }
+  try {
+    return await route(request);
+  } catch (e) {
+    const status = e.message === 'Unauthorized' ? 401 : 500;
+    return jsonRes({ error: e.message }, status);
+  }
+}
 
 // ── Router ────────────────────────────────────────────────────
 
-async function route(request, env, cors, url) {
+async function route(request) {
+  const url = new URL(request.url);
   const m = request.method;
   const seg = url.pathname.replace(/^\/api\//, '').split('/');
 
-  // /api/interviews
   if (seg[0] === 'interviews' && seg.length === 1) {
-    if (m === 'GET')  return listInterviews(request, env, cors);
-    if (m === 'POST') return createInterview(request, env, cors);
+    if (m === 'GET')  return listInterviews(request);
+    if (m === 'POST') return createInterview(request);
   }
-
-  // /api/interview/:id
   if (seg[0] === 'interview' && seg.length === 2) {
-    if (m === 'GET')    return getInterview(seg[1], request, env, cors);
-    if (m === 'DELETE') return deleteInterview(seg[1], request, env, cors);
+    if (m === 'GET')    return getInterview(seg[1], request);
+    if (m === 'DELETE') return deleteInterview(seg[1], request);
   }
-
-  // /api/interview/:id/sessions
   if (seg[0] === 'interview' && seg[2] === 'sessions') {
-    if (m === 'GET')  return listSessions(seg[1], request, env, cors);
-    if (m === 'POST') return createSession(seg[1], request, env, cors);
+    if (m === 'GET')  return listSessions(seg[1], request);
+    if (m === 'POST') return createSession(seg[1], request);
   }
-
-  // /api/session/:token
-  if (seg[0] === 'session' && seg.length === 2) {
-    if (m === 'GET') return getSession(seg[1], env, cors);
+  if (seg[0] === 'session' && seg.length === 2 && m === 'GET') {
+    return getSession(seg[1]);
   }
-
-  // /api/session/:token/upload/:qIndex
   if (seg[0] === 'session' && seg[2] === 'upload' && m === 'POST') {
-    return uploadVideo(seg[1], parseInt(seg[3]), request, env, cors);
+    return uploadVideo(seg[1], parseInt(seg[3]), request);
   }
-
-  // /api/session/:token/complete
   if (seg[0] === 'session' && seg[2] === 'complete' && m === 'POST') {
-    return completeSession(seg[1], env, cors);
+    return completeSession(seg[1]);
   }
-
-  // /api/session/:token/video/:qIndex
   if (seg[0] === 'session' && seg[2] === 'video' && m === 'GET') {
-    return streamVideo(seg[1], parseInt(seg[3]), request, env, cors);
+    return getVideoUrl(seg[1], parseInt(seg[3]), request);
   }
 
-  return json({ error: 'Not found' }, 404, cors);
+  return jsonRes({ error: 'Not found' }, 404);
 }
 
 // ── Helpers ───────────────────────────────────────────────────
 
-function json(data, status = 200, headers = {}) {
+function jsonRes(data, status = 200) {
   return new Response(JSON.stringify(data), {
     status,
-    headers: { 'Content-Type': 'application/json', ...headers },
+    headers: { 'Content-Type': 'application/json', ...CORS },
   });
 }
 
-function requireAdmin(request, env) {
-  if (request.headers.get('X-Admin-Key') !== env.ADMIN_KEY) throw new Error('Unauthorized');
+function requireAdmin(request) {
+  if (request.headers.get('X-Admin-Key') !== ADMIN_KEY) throw new Error('Unauthorized');
 }
 
 function uid() {
   return crypto.randomUUID();
 }
 
+async function kvGet(key) {
+  const v = await INTERVIEW_DATA.get(key);
+  return v ? JSON.parse(v) : null;
+}
+
+async function kvPut(key, value) {
+  await INTERVIEW_DATA.put(key, JSON.stringify(value));
+}
+
+// ── Microsoft Graph ───────────────────────────────────────────
+
+async function getAccessToken() {
+  const res = await fetch(
+    `https://login.microsoftonline.com/${TENANT_ID}/oauth2/v2.0/token`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({
+        grant_type:    'client_credentials',
+        client_id:     CLIENT_ID,
+        client_secret: CLIENT_SECRET,
+        scope:         'https://graph.microsoft.com/.default',
+      }),
+    }
+  );
+  const data = await res.json();
+  if (!data.access_token) throw new Error('Failed to get Microsoft access token');
+  return data.access_token;
+}
+
+async function uploadToOneDrive(filePath, blob, accessToken) {
+  const encodedPath = filePath.split('/').map(encodeURIComponent).join('/');
+  const sessionUrl = `https://graph.microsoft.com/v1.0/users/${ONEDRIVE_USER}/drive/root:/${encodedPath}:/createUploadSession`;
+
+  // Create upload session
+  const sessionRes = await fetch(sessionUrl, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${accessToken}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      item: { '@microsoft.graph.conflictBehavior': 'replace' },
+    }),
+  });
+
+  const session = await sessionRes.json();
+  if (!session.uploadUrl) throw new Error('Could not create OneDrive upload session');
+
+  // Upload file in one PUT (works up to ~150MB)
+  const size = blob.byteLength;
+  const uploadRes = await fetch(session.uploadUrl, {
+    method: 'PUT',
+    headers: {
+      'Content-Length': String(size),
+      'Content-Range': `bytes 0-${size - 1}/${size}`,
+      'Content-Type': 'video/webm',
+    },
+    body: blob,
+  });
+
+  if (!uploadRes.ok) throw new Error('OneDrive upload failed: ' + uploadRes.status);
+  return await uploadRes.json(); // file item with id, webUrl, etc.
+}
+
 // ── Interview handlers ────────────────────────────────────────
 
-async function createInterview(request, env, cors) {
-  requireAdmin(request, env);
+async function createInterview(request) {
+  requireAdmin(request);
   const { title, description, questions } = await request.json();
-  if (!title || !questions?.length) return json({ error: 'title and questions required' }, 400, cors);
+  if (!title || !questions?.length) return jsonRes({ error: 'title and questions required' }, 400);
 
   const id = uid();
   const interview = { id, title, description: description || '', questions, createdAt: Date.now() };
-  await env.INTERVIEW_DATA.put(`interview:${id}`, JSON.stringify(interview));
+  await kvPut(`interview:${id}`, interview);
 
-  const listRaw = await env.INTERVIEW_DATA.get('interview:list');
-  const list = listRaw ? JSON.parse(listRaw) : [];
+  const list = (await kvGet('interview:list')) || [];
   list.unshift(id);
-  await env.INTERVIEW_DATA.put('interview:list', JSON.stringify(list));
+  await kvPut('interview:list', list);
 
-  return json(interview, 201, cors);
+  return jsonRes(interview, 201);
 }
 
-async function listInterviews(request, env, cors) {
-  requireAdmin(request, env);
-  const listRaw = await env.INTERVIEW_DATA.get('interview:list');
-  const ids = listRaw ? JSON.parse(listRaw) : [];
-  const items = await Promise.all(ids.map(id =>
-    env.INTERVIEW_DATA.get(`interview:${id}`).then(v => v ? JSON.parse(v) : null)
-  ));
-  return json(items.filter(Boolean), 200, cors);
+async function listInterviews(request) {
+  requireAdmin(request);
+  const ids = (await kvGet('interview:list')) || [];
+  const items = await Promise.all(ids.map(id => kvGet(`interview:${id}`)));
+  return jsonRes(items.filter(Boolean));
 }
 
-async function getInterview(id, request, env, cors) {
-  requireAdmin(request, env);
-  const raw = await env.INTERVIEW_DATA.get(`interview:${id}`);
-  if (!raw) return json({ error: 'Not found' }, 404, cors);
-  return json(JSON.parse(raw), 200, cors);
+async function getInterview(id, request) {
+  requireAdmin(request);
+  const interview = await kvGet(`interview:${id}`);
+  if (!interview) return jsonRes({ error: 'Not found' }, 404);
+  return jsonRes(interview);
 }
 
-async function deleteInterview(id, request, env, cors) {
-  requireAdmin(request, env);
-  await env.INTERVIEW_DATA.delete(`interview:${id}`);
-  const listRaw = await env.INTERVIEW_DATA.get('interview:list');
-  const list = listRaw ? JSON.parse(listRaw) : [];
-  await env.INTERVIEW_DATA.put('interview:list', JSON.stringify(list.filter(i => i !== id)));
-  return json({ ok: true }, 200, cors);
+async function deleteInterview(id, request) {
+  requireAdmin(request);
+  await INTERVIEW_DATA.delete(`interview:${id}`);
+  const list = (await kvGet('interview:list')) || [];
+  await kvPut('interview:list', list.filter(i => i !== id));
+  return jsonRes({ ok: true });
 }
 
 // ── Session handlers ──────────────────────────────────────────
 
-async function createSession(interviewId, request, env, cors) {
-  requireAdmin(request, env);
-  const raw = await env.INTERVIEW_DATA.get(`interview:${interviewId}`);
-  if (!raw) return json({ error: 'Interview not found' }, 404, cors);
+async function createSession(interviewId, request) {
+  requireAdmin(request);
+  const interview = await kvGet(`interview:${interviewId}`);
+  if (!interview) return jsonRes({ error: 'Interview not found' }, 404);
 
   const { candidateName, candidateEmail } = await request.json();
-  if (!candidateName) return json({ error: 'candidateName required' }, 400, cors);
+  if (!candidateName) return jsonRes({ error: 'candidateName required' }, 400);
 
   const token = uid();
   const session = {
@@ -155,72 +213,100 @@ async function createSession(interviewId, request, env, cors) {
     createdAt: Date.now(),
     completedAt: null,
   };
-  await env.INTERVIEW_DATA.put(`session:${token}`, JSON.stringify(session));
+  await kvPut(`session:${token}`, session);
 
-  const sessRaw = await env.INTERVIEW_DATA.get(`interview:${interviewId}:sessions`);
-  const sess = sessRaw ? JSON.parse(sessRaw) : [];
-  sess.unshift(token);
-  await env.INTERVIEW_DATA.put(`interview:${interviewId}:sessions`, JSON.stringify(sess));
+  const sessions = (await kvGet(`interview:${interviewId}:sessions`)) || [];
+  sessions.unshift(token);
+  await kvPut(`interview:${interviewId}:sessions`, sessions);
 
-  return json({ token, session }, 201, cors);
+  return jsonRes({ token, session }, 201);
 }
 
-async function listSessions(interviewId, request, env, cors) {
-  requireAdmin(request, env);
-  const raw = await env.INTERVIEW_DATA.get(`interview:${interviewId}:sessions`);
-  const tokens = raw ? JSON.parse(raw) : [];
-  const sessions = await Promise.all(tokens.map(t =>
-    env.INTERVIEW_DATA.get(`session:${t}`).then(v => v ? JSON.parse(v) : null)
-  ));
-  return json(sessions.filter(Boolean), 200, cors);
+async function listSessions(interviewId, request) {
+  requireAdmin(request);
+  const tokens = (await kvGet(`interview:${interviewId}:sessions`)) || [];
+  const sessions = await Promise.all(tokens.map(t => kvGet(`session:${t}`)));
+  return jsonRes(sessions.filter(Boolean));
 }
 
-async function getSession(token, env, cors) {
-  const raw = await env.INTERVIEW_DATA.get(`session:${token}`);
-  if (!raw) return json({ error: 'Session not found' }, 404, cors);
-  const session = JSON.parse(raw);
-  const intRaw = await env.INTERVIEW_DATA.get(`interview:${session.interviewId}`);
-  return json({ session, interview: intRaw ? JSON.parse(intRaw) : null }, 200, cors);
+async function getSession(token) {
+  const session = await kvGet(`session:${token}`);
+  if (!session) return jsonRes({ error: 'Session not found' }, 404);
+  const interview = await kvGet(`interview:${session.interviewId}`);
+  return jsonRes({ session, interview });
 }
 
-async function uploadVideo(token, qIndex, request, env, cors) {
-  const raw = await env.INTERVIEW_DATA.get(`session:${token}`);
-  if (!raw) return json({ error: 'Session not found' }, 404, cors);
+async function uploadVideo(token, qIndex, request) {
+  const session = await kvGet(`session:${token}`);
+  if (!session) return jsonRes({ error: 'Session not found' }, 404);
+  if (session.status === 'completed') return jsonRes({ error: 'Session already completed' }, 400);
 
-  const session = JSON.parse(raw);
-  if (session.status === 'completed') return json({ error: 'Session already completed' }, 400, cors);
+  const interview = await kvGet(`interview:${session.interviewId}`);
+  const interviewTitle = interview?.title || 'Interview';
+  const safeName = session.candidateName.replace(/[^a-zA-Z0-9 _-]/g, '').trim();
+  const shortToken = token.slice(0, 8);
 
-  const r2Key = `${token}/${qIndex}.webm`;
+  // Folder: CTI Interviews/{Interview Title}/{Candidate Name} ({shortToken})
+  const filePath = `CTI Interviews/${interviewTitle}/${safeName} (${shortToken})/Q${qIndex + 1}.webm`;
+
   const blob = await request.arrayBuffer();
-  await env.RECORDINGS.put(r2Key, blob, { httpMetadata: { contentType: 'video/webm' } });
+
+  let driveItemId = null;
+  let webUrl = null;
+
+  try {
+    const accessToken = await getAccessToken();
+    const fileItem = await uploadToOneDrive(filePath, blob, accessToken);
+    driveItemId = fileItem.id;
+    webUrl = fileItem.webUrl;
+  } catch (e) {
+    return jsonRes({ error: 'OneDrive upload failed: ' + e.message }, 500);
+  }
 
   const existing = session.responses.find(r => r.questionIndex === qIndex);
   if (existing) {
+    existing.driveItemId = driveItemId;
+    existing.webUrl = webUrl;
     existing.uploadedAt = Date.now();
   } else {
-    session.responses.push({ questionIndex: qIndex, uploadedAt: Date.now() });
+    session.responses.push({ questionIndex: qIndex, driveItemId, webUrl, uploadedAt: Date.now() });
   }
   if (session.status === 'pending') session.status = 'in_progress';
-  await env.INTERVIEW_DATA.put(`session:${token}`, JSON.stringify(session));
+  await kvPut(`session:${token}`, session);
 
-  return json({ ok: true }, 200, cors);
+  return jsonRes({ ok: true, webUrl });
 }
 
-async function completeSession(token, env, cors) {
-  const raw = await env.INTERVIEW_DATA.get(`session:${token}`);
-  if (!raw) return json({ error: 'Session not found' }, 404, cors);
-  const session = JSON.parse(raw);
+async function completeSession(token) {
+  const session = await kvGet(`session:${token}`);
+  if (!session) return jsonRes({ error: 'Session not found' }, 404);
   session.status = 'completed';
   session.completedAt = Date.now();
-  await env.INTERVIEW_DATA.put(`session:${token}`, JSON.stringify(session));
-  return json({ ok: true }, 200, cors);
+  await kvPut(`session:${token}`, session);
+  return jsonRes({ ok: true });
 }
 
-async function streamVideo(token, qIndex, request, env, cors) {
-  requireAdmin(request, env);
-  const obj = await env.RECORDINGS.get(`${token}/${qIndex}.webm`);
-  if (!obj) return json({ error: 'Video not found' }, 404, cors);
-  return new Response(obj.body, {
-    headers: { 'Content-Type': 'video/webm', 'Access-Control-Allow-Origin': '*', 'Cache-Control': 'no-store' },
-  });
+async function getVideoUrl(token, qIndex, request) {
+  requireAdmin(request);
+  const session = await kvGet(`session:${token}`);
+  if (!session) return jsonRes({ error: 'Session not found' }, 404);
+
+  const response = session.responses.find(r => r.questionIndex === qIndex);
+  if (!response?.driveItemId) return jsonRes({ error: 'Video not found' }, 404);
+
+  try {
+    const accessToken = await getAccessToken();
+    const itemRes = await fetch(
+      `https://graph.microsoft.com/v1.0/users/${ONEDRIVE_USER}/drive/items/${response.driveItemId}`,
+      { headers: { 'Authorization': `Bearer ${accessToken}` } }
+    );
+    const item = await itemRes.json();
+
+    return jsonRes({
+      downloadUrl: item['@microsoft.graph.downloadUrl'],
+      webUrl: item.webUrl,
+    });
+  } catch (e) {
+    return jsonRes({ error: 'Could not fetch video URL: ' + e.message }, 500);
+  }
 }

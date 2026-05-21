@@ -333,21 +333,24 @@ async function openReview(token, candidateName) {
 
     const items = await Promise.all(session.responses.map(async (r) => {
       const q = interview?.questions?.[r.questionIndex];
-      const videoRes = await fetch(
+      const urlRes = await fetch(
         `${WORKER_URL}/api/session/${token}/video/${r.questionIndex}`,
         { headers: { 'X-Admin-Key': adminKey } }
       );
-      const blob = await videoRes.blob();
-      const objectUrl = URL.createObjectURL(blob);
-      return { q, objectUrl, questionIndex: r.questionIndex };
+      const { downloadUrl, webUrl } = await urlRes.json();
+      return { q, downloadUrl, webUrl, questionIndex: r.questionIndex };
     }));
 
     content.innerHTML = `<div class="review-grid">
-      ${items.map(({ q, objectUrl, questionIndex }) => `
+      ${items.map(({ q, downloadUrl, webUrl, questionIndex }) => `
         <div class="review-item">
-          <video src="${objectUrl}" controls preload="metadata"></video>
-          <div class="review-item-label">
-            <strong>Q${questionIndex + 1}:</strong> ${q ? esc(q.text) : 'Question ' + (questionIndex + 1)}
+          ${downloadUrl
+            ? `<video src="${downloadUrl}" controls preload="metadata"></video>`
+            : `<div style="aspect-ratio:16/9;background:#000;display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:13px">Video unavailable</div>`
+          }
+          <div class="review-item-label" style="display:flex;justify-content:space-between;align-items:center">
+            <span><strong>Q${questionIndex + 1}:</strong> ${q ? esc(q.text) : 'Question ' + (questionIndex + 1)}</span>
+            ${webUrl ? `<a href="${webUrl}" target="_blank" class="btn btn-ghost" style="font-size:11px;padding:2px 8px">Open in OneDrive ↗</a>` : ''}
           </div>
         </div>
       `).join('')}
