@@ -271,6 +271,7 @@ function renderSessionRow(s, interviewId, num) {
         <div>
           <strong style="font-size:13px">${esc(s.candidateName)}</strong>
           ${s.candidateEmail ? `<div class="text-muted text-sm">${esc(s.candidateEmail)}</div>` : ''}
+          <div class="text-muted text-sm">Invited ${s.createdAt ? new Date(s.createdAt).toLocaleDateString() : '—'}</div>
         </div>
       </div>
       <span class="badge badge-${s.status}">${s.status.replace('_', ' ')}</span>
