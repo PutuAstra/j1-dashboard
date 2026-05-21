@@ -142,12 +142,7 @@
       <button class="btn btn-ghost" onclick="closeModal('modal-sessions')">✕</button>
     </div>
 
-    <div class="tabs" style="margin-bottom:20px">
-      <button class="tab-btn" id="session-tab-invite" onclick="switchSessionTab('invite')">Invite</button>
-      <button class="tab-btn" id="session-tab-candidates" onclick="switchSessionTab('candidates')">Candidates</button>
-    </div>
-
-    <!-- Invite tab -->
+    <!-- Invite pane -->
     <div id="session-pane-invite" style="display:none">
       <div class="mb-16 flex gap-8 items-center">
         <input type="text" id="new-cand-name" placeholder="Candidate name *" style="flex:1;background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:8px 12px;color:var(--text);font-size:13px" />
@@ -167,8 +162,9 @@
       </div>
     </div>
 
-    <!-- Candidates tab -->
+    <!-- Candidates pane -->
     <div id="session-pane-candidates" style="display:none">
+      <h3 class="mb-16">Candidates</h3>
       <div id="sessions-list"></div>
     </div>
   </div>

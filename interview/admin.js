@@ -217,7 +217,6 @@ function resetCreateForm() {
 
 function switchSessionTab(name) {
   ['invite', 'candidates'].forEach(t => {
-    document.getElementById(`session-tab-${t}`).classList.toggle('active', t === name);
     document.getElementById(`session-pane-${t}`).style.display = t === name ? 'block' : 'none';
   });
 }
