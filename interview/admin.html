@@ -138,31 +138,39 @@
 <div class="modal-overlay" id="modal-sessions">
   <div class="modal" style="max-width:720px">
     <div class="modal-header">
-      <h2 id="modal-interview-title">Candidates</h2>
+      <h2 id="modal-interview-title">Interview</h2>
       <button class="btn btn-ghost" onclick="closeModal('modal-sessions')">✕</button>
     </div>
 
-    <div class="mb-16 flex gap-8 items-center">
-      <input type="text" id="new-cand-name" placeholder="Candidate name *" style="flex:1;background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:8px 12px;color:var(--text);font-size:13px" />
-      <input type="email" id="new-cand-email" placeholder="Email (optional)" style="flex:1;background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:8px 12px;color:var(--text);font-size:13px" />
-      <button class="btn btn-primary" onclick="generateLink()">Generate Link</button>
+    <div class="tabs" style="margin-bottom:20px">
+      <button class="tab-btn" id="session-tab-invite" onclick="switchSessionTab('invite')">Invite</button>
+      <button class="tab-btn" id="session-tab-candidates" onclick="switchSessionTab('candidates')">Candidates</button>
     </div>
 
-    <div id="generated-link-box" style="display:none">
-      <p class="text-sm text-muted mb-4">Share this link with the candidate:</p>
-      <div class="link-box">
-        <span id="generated-link-text" style="flex:1"></span>
-        <button class="btn btn-ghost" style="padding:2px 8px;font-size:11px;flex-shrink:0" onclick="copyLink()">Copy</button>
+    <!-- Invite tab -->
+    <div id="session-pane-invite" style="display:none">
+      <div class="mb-16 flex gap-8 items-center">
+        <input type="text" id="new-cand-name" placeholder="Candidate name *" style="flex:1;background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:8px 12px;color:var(--text);font-size:13px" />
+        <input type="email" id="new-cand-email" placeholder="Email (optional)" style="flex:1;background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:8px 12px;color:var(--text);font-size:13px" />
+        <button class="btn btn-primary" onclick="generateLink()">Generate Link</button>
       </div>
-      <div class="mt-8" style="text-align:right">
-        <button id="send-email-btn" class="btn btn-primary" style="display:none">✉ Send Email</button>
+
+      <div id="generated-link-box" style="display:none">
+        <p class="text-sm text-muted mb-4">Share this link with the candidate:</p>
+        <div class="link-box">
+          <span id="generated-link-text" style="flex:1"></span>
+          <button class="btn btn-ghost" style="padding:2px 8px;font-size:11px;flex-shrink:0" onclick="copyLink()">Copy</button>
+        </div>
+        <div class="mt-8" style="text-align:right">
+          <button id="send-email-btn" class="btn btn-primary" style="display:none">✉ Send Email</button>
+        </div>
       </div>
     </div>
 
-    <hr class="divider" />
-    <h3 class="mb-8">Submitted Responses</h3>
-
-    <div id="sessions-list"></div>
+    <!-- Candidates tab -->
+    <div id="session-pane-candidates" style="display:none">
+      <div id="sessions-list"></div>
+    </div>
   </div>
 </div>
 

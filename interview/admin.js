@@ -214,12 +214,28 @@ function resetCreateForm() {
 
 // ── Sessions (candidates) ─────────────────────────────────────
 
+function switchSessionTab(name) {
+  ['invite', 'candidates'].forEach(t => {
+    document.getElementById(`session-tab-${t}`).classList.toggle('active', t === name);
+    document.getElementById(`session-pane-${t}`).style.display = t === name ? 'block' : 'none';
+  });
+}
+
+function resetInviteForm() {
+  document.getElementById('new-cand-name').value = '';
+  document.getElementById('new-cand-email').value = '';
+  document.getElementById('generated-link-box').style.display = 'none';
+  const btn = document.getElementById('send-email-btn');
+  btn.style.display = 'none';
+  btn.disabled = false;
+  btn.textContent = '✉ Send Email';
+}
+
 async function openSessions(interviewId, title) {
   currentInterviewId = interviewId;
   document.getElementById('modal-interview-title').textContent = title;
-  document.getElementById('generated-link-box').style.display = 'none';
-  document.getElementById('new-cand-name').value = '';
-  document.getElementById('new-cand-email').value = '';
+  resetInviteForm();
+  switchSessionTab('invite');
   openModal('modal-sessions');
   await loadSessions(interviewId);
 }
@@ -314,11 +330,12 @@ async function sendLinkEmail(token, link, email) {
   try {
     await apiJSON('POST', `/api/session/${token}/send-email`, { link });
     toast(`Email sent to ${email}`, 'success');
-    btn.textContent = '✓ Email Sent';
+    resetInviteForm();
+    await loadSessions(currentInterviewId);
   } catch (e) {
     toast('Failed to send: ' + e.message, 'error');
     btn.disabled = false;
-    btn.textContent = 'Send Email';
+    btn.textContent = '✉ Send Email';
   }
 }
 
