@@ -585,7 +585,7 @@ const App = (() => {
     ],
   };
 
-  function openInlineEdit(cell, p, field) {
+  function openInlineEdit(cell, p, field, colSet) {
     const meta = EDITABLE_FIELDS[field];
     if (!meta) return;
     const source = p._source === 'crm' ? 'crm' : 'recruit';
@@ -634,7 +634,7 @@ const App = (() => {
       try {
         await Zoho.updateParticipant(p, { [zohoField]: sendVal });
         p[field] = sendVal || '—';
-        const col = (TAB_COLS[_activeParticipantTab] || TAB_COLS.all).find(c => c.key === field);
+        const col = (colSet || TAB_COLS[_activeParticipantTab] || TAB_COLS.all).find(c => c.key === field);
         cell.innerHTML = col ? col.render(p) : (sendVal || '—');
         toast('Saved', 'success');
       } catch (err) {
@@ -841,6 +841,18 @@ const App = (() => {
   let _visaSortDir           = null;
   let _visaChartInst         = null;
 
+  const VISA_COLS = [
+    { label: 'Name',                  key: 'name',           get: p => (p.name || '').toLowerCase(),           render: p => `<strong>${p.name || '—'}</strong>` },
+    { label: 'Program Start',         key: 'programStart',   get: p => p.programStart || '',                   render: p => formatDate(p.programStart) },
+    { label: 'Nationality',           key: 'country',        get: p => (p.country || '').toLowerCase(),        render: p => p.country || '—' },
+    { label: 'J1 Visa Status',        key: 'visaStatus',     get: p => (p.visaStatus || '').toLowerCase(),     render: p => badge(p.visaStatus) },
+    { label: 'SL Status',             key: 'refLetterStatus',get: p => (p.refLetterStatus || '').toLowerCase(),render: p => badge(p.refLetterStatus) },
+    { label: 'Visa Appointment Date', key: 'visaAppointment',get: p => p.visaAppointment || '',                render: p => formatDate(p.visaAppointment) },
+    { label: 'Visa Number',           key: 'visaNumber',     get: p => (p.visaNumber || '').toLowerCase(),     render: p => p.visaNumber || '—' },
+    { label: 'Visa Expired Date',     key: 'ds2019End',      get: p => p.ds2019End || '',                      render: p => formatDate(p.ds2019End) },
+    { label: 'J1 Program Source',     key: 'programSource',  get: p => (p.programSource || '').toLowerCase(),  render: p => p.programSource || '—' },
+  ];
+
   async function renderVisa() {
     const mc = document.getElementById('main-content');
     mc.innerHTML = skeletonHTML();
@@ -850,18 +862,6 @@ const App = (() => {
 
     // Visa pool = all participants with visaAppointment filled, regardless of visa status
     const visaPool = participants.filter(p => p.visaAppointment && p.visaAppointment !== '—');
-
-    const VISA_COLS = [
-      { label: 'Name',                     key: 'name',           get: p => (p.name || '').toLowerCase(),           render: p => `<strong>${p.name || '—'}</strong>` },
-      { label: 'Program Start',            key: 'programStart',   get: p => p.programStart || '',                   render: p => formatDate(p.programStart) },
-      { label: 'Nationality',              key: 'country',        get: p => (p.country || '').toLowerCase(),        render: p => p.country || '—' },
-      { label: 'J1 Visa Status',           key: 'visaStatus',     get: p => (p.visaStatus || '').toLowerCase(),     render: p => badge(p.visaStatus) },
-      { label: 'SL Status', key: 'refLetterStatus',get: p => (p.refLetterStatus || '').toLowerCase(),render: p => badge(p.refLetterStatus) },
-      { label: 'Visa Appointment Date',    key: 'visaAppointment',get: p => p.visaAppointment || '',                render: p => formatDate(p.visaAppointment) },
-      { label: 'Visa Number',              key: 'visaNumber',     get: p => (p.visaNumber || '').toLowerCase(),     render: p => p.visaNumber || '—' },
-      { label: 'Visa Expired Date',        key: 'ds2019End',      get: p => p.ds2019End || '',                      render: p => formatDate(p.ds2019End) },
-      { label: 'J1 Program Source',        key: 'programSource',  get: p => (p.programSource || '').toLowerCase(),  render: p => p.programSource || '—' },
-    ];
 
     function computeStats(list) {
       // list is already pre-filtered to participants with visaAppointment filled
@@ -1008,7 +1008,10 @@ const App = (() => {
                   <td class="row-num" style="position:sticky;left:0;z-index:1;background:var(--card)">${i + 1}</td>
                   ${VISA_COLS.map((c, ci) => {
                     const frozen = ci === 0 ? `style="position:sticky;left:40px;z-index:1;background:var(--card)"` : '';
-                    return `<td ${frozen}>${c.render(p)}</td>`;
+                    const meta = c.key && EDITABLE_FIELDS[c.key];
+                    const editable = meta && (p._source !== 'crm' || meta.crm);
+                    const editAttr = editable ? ` class="editable-cell" data-pid="${p.id}" data-field="${c.key}"` : '';
+                    return `<td ${frozen}${editAttr}>${c.render(p)}</td>`;
                   }).join('')}
                 </tr>
               `).join('')}
@@ -1137,6 +1140,14 @@ const App = (() => {
     renderPassRate(initStats);
     wireVisaSort();
     wireVisaChips();
+
+    // Wire inline edit on visa table (event delegation — survives filter re-renders)
+    document.getElementById('visaTableCard').addEventListener('click', e => {
+      const cell = e.target.closest('td.editable-cell');
+      if (!cell || cell.querySelector('input,select')) return;
+      const p = (_participants || []).find(x => String(x.id) === String(cell.dataset.pid));
+      if (p) openInlineEdit(cell, p, cell.dataset.field, VISA_COLS);
+    });
 
     document.getElementById('visaMonthFilter').addEventListener('change', e => { _visaFilterMonth       = e.target.value; refreshVisa(); });
     document.getElementById('visaFilterNat').addEventListener('change',   e => { _visaFilterNationality = e.target.value; refreshVisa(); });
