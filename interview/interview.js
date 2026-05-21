@@ -70,7 +70,7 @@ function showIntro() {
         </ul>
       </div>
 
-      <button class="btn btn-primary btn-lg mt-24" style="width:100%" onclick="requestCamera()">
+      <button class="btn btn-primary btn-lg mt-24" onclick="requestCamera()">
         Start Interview
       </button>
     </div>`;
