@@ -717,6 +717,14 @@ tr:hover td { background: var(--card-2); }
   transition: all 0.15s;
 }
 
+.sidebar-item.sidebar-module {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  padding: 14px 16px 10px;
+}
+
 .sidebar-item:hover { background: rgba(255,255,255,0.04); color: var(--text); }
 
 .sidebar-item.active {
