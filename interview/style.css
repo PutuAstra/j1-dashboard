@@ -756,3 +756,35 @@ tr:hover td { background: var(--card-2); }
 
 .tw-session-row:last-child { border-bottom: none; }
 .tw-session-row:hover { background: var(--card-2); }
+
+/* ── Invite mode toggle ── */
+.invite-mode-btn {
+  padding: 5px 14px;
+  font-size: 12px;
+  font-weight: 500;
+  border: none;
+  background: transparent;
+  color: var(--muted);
+  border-radius: 5px;
+  cursor: pointer;
+  font-family: inherit;
+  transition: all 0.15s;
+}
+.invite-mode-btn.active { background: var(--card); color: var(--text); }
+.invite-mode-btn:hover:not(.active) { color: var(--text-2); }
+
+/* ── Bulk drop zone ── */
+#bulk-drop-zone {
+  border: 2px dashed var(--border);
+  border-radius: 10px;
+  padding: 32px 20px;
+  text-align: center;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+  user-select: none;
+}
+#bulk-drop-zone:hover,
+#bulk-drop-zone.drag-over {
+  border-color: var(--accent);
+  background: rgba(176,26,24,0.05);
+}

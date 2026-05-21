@@ -10,7 +10,7 @@
   <meta name="theme-color" content="#B01A18" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="style.css?v=20250522e" />
+  <link rel="stylesheet" href="style.css?v=20250522f" />
 </head>
 <body>
 
@@ -111,21 +111,48 @@
 
     <!-- Invite pane -->
     <div id="session-pane-invite" style="display:none">
-      <h3 class="mb-16">Invite</h3>
-      <div class="mb-16 flex gap-8 items-center">
-        <input type="text" id="new-cand-name" placeholder="Candidate name *" style="flex:1;background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:8px 12px;color:var(--text);font-size:13px" />
-        <input type="email" id="new-cand-email" placeholder="Email *" style="flex:1;background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:8px 12px;color:var(--text);font-size:13px" />
-        <button class="btn btn-primary" onclick="generateLink()">Generate Link</button>
+      <div class="flex justify-between items-center mb-16">
+        <h3>Invite</h3>
+        <div style="display:flex;background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:2px;gap:2px">
+          <button class="invite-mode-btn active" id="invite-mode-single" onclick="switchInviteMode('single')">Single</button>
+          <button class="invite-mode-btn" id="invite-mode-bulk" onclick="switchInviteMode('bulk')">Bulk Import</button>
+        </div>
       </div>
-      <div id="generated-link-box" style="display:none">
-        <p class="text-sm text-muted mb-4">Share this link with the candidate:</p>
-        <div class="link-box">
-          <span id="generated-link-text" style="flex:1"></span>
-          <button class="btn btn-ghost" style="padding:2px 8px;font-size:11px;flex-shrink:0" onclick="copyLink()">Copy</button>
+
+      <!-- Single invite -->
+      <div id="invite-single-section">
+        <div class="mb-16 flex gap-8 items-center">
+          <input type="text" id="new-cand-name" placeholder="Candidate name *" style="flex:1;background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:8px 12px;color:var(--text);font-size:13px" />
+          <input type="email" id="new-cand-email" placeholder="Email *" style="flex:1;background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:8px 12px;color:var(--text);font-size:13px" />
+          <button class="btn btn-primary" onclick="generateLink()">Generate Link</button>
         </div>
-        <div class="mt-8" style="text-align:right">
-          <button id="send-email-btn" class="btn btn-primary" style="display:none">✉ Send Email</button>
+        <div id="generated-link-box" style="display:none">
+          <p class="text-sm text-muted mb-4">Share this link with the candidate:</p>
+          <div class="link-box">
+            <span id="generated-link-text" style="flex:1"></span>
+            <button class="btn btn-ghost" style="padding:2px 8px;font-size:11px;flex-shrink:0" onclick="copyLink()">Copy</button>
+          </div>
+          <div class="mt-8" style="text-align:right">
+            <button id="send-email-btn" class="btn btn-primary" style="display:none">✉ Send Email</button>
+          </div>
         </div>
+      </div>
+
+      <!-- Bulk import -->
+      <div id="invite-bulk-section" style="display:none">
+        <div id="bulk-drop-zone"
+          onclick="document.getElementById('bulk-file-input').click()"
+          ondragover="event.preventDefault();this.classList.add('drag-over')"
+          ondragleave="this.classList.remove('drag-over')"
+          ondrop="event.preventDefault();this.classList.remove('drag-over');handleBulkFile(event.dataTransfer.files[0])">
+          <div style="font-size:28px;margin-bottom:8px">📂</div>
+          <div style="font-size:14px;font-weight:600;color:var(--text)">Drop Excel or CSV file here</div>
+          <div style="font-size:12px;color:var(--muted);margin-top:4px">or click to browse &nbsp;·&nbsp; .xlsx, .xls, .csv</div>
+        </div>
+        <input type="file" id="bulk-file-input" accept=".csv,.xlsx,.xls" style="display:none"
+          onchange="handleBulkFile(this.files[0])" />
+        <div id="bulk-preview-section" style="display:none"></div>
+        <div id="bulk-import-progress" style="display:none;margin-top:16px"></div>
       </div>
     </div>
 
@@ -170,6 +197,7 @@
 </div>
 
 <div id="toast"></div>
-<script src="admin.js?v=20250522e"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="admin.js?v=20250522f"></script>
 </body>
 </html>

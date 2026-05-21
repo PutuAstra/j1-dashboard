@@ -15,6 +15,10 @@ let _allSessions = [];
 let _sessionFilter = 'all';
 let _allTWSessions = [];
 let _twFilter = 'all';
+let _bulkRows = [];
+let _bulkHeaders = [];
+let _bulkNameCol = null;
+let _bulkEmailCol = null;
 
 // ── Auth ──────────────────────────────────────────────────────
 
@@ -545,6 +549,269 @@ function resetInviteForm() {
   btn.style.display = 'none';
   btn.disabled = false;
   btn.textContent = '✉ Send Email';
+  resetBulkUpload();
+  switchInviteMode('single');
+}
+
+// ── Invite mode toggle ────────────────────────────────────────
+
+function switchInviteMode(mode) {
+  document.getElementById('invite-single-section').style.display = mode === 'single' ? 'block' : 'none';
+  document.getElementById('invite-bulk-section').style.display   = mode === 'bulk'   ? 'block' : 'none';
+  document.getElementById('invite-mode-single').classList.toggle('active', mode === 'single');
+  document.getElementById('invite-mode-bulk').classList.toggle('active',   mode === 'bulk');
+}
+
+// ── Bulk import ───────────────────────────────────────────────
+
+async function handleBulkFile(file) {
+  if (!file) return;
+  const ext = file.name.split('.').pop().toLowerCase();
+
+  let rows, headers;
+  try {
+    if (ext === 'csv') {
+      const text = await file.text();
+      ({ rows, headers } = parseCsvText(text));
+    } else if (ext === 'xlsx' || ext === 'xls') {
+      if (typeof XLSX === 'undefined') return toast('Excel library not loaded — try CSV instead', 'error');
+      const buffer = await file.arrayBuffer();
+      ({ rows, headers } = parseXlsxBuffer(buffer));
+    } else {
+      return toast('Please upload a .csv, .xlsx, or .xls file', 'error');
+    }
+  } catch (e) {
+    return toast('Could not read file: ' + e.message, 'error');
+  }
+
+  if (!rows.length) return toast('No data rows found in file', 'error');
+
+  _bulkRows    = rows;
+  _bulkHeaders = headers;
+
+  // Auto-detect name column
+  _bulkNameCol = detectBestCol(headers, ['full name', 'fullname', 'name', 'candidate']);
+  if (!_bulkNameCol) {
+    const first = headers.find(h => /first.?name|fname/i.test(h));
+    const last  = headers.find(h => /last.?name|lname|surname/i.test(h));
+    if (first && last) _bulkNameCol = `__concat__${first}__${last}`;
+    else _bulkNameCol = first || last || headers[0];
+  }
+
+  // Auto-detect email column
+  _bulkEmailCol = detectBestCol(headers, ['email', 'e-mail', 'mail']);
+
+  renderBulkPreview();
+}
+
+function detectBestCol(headers, keywords) {
+  for (const kw of keywords) {
+    const m = headers.find(h => h.toLowerCase().includes(kw));
+    if (m) return m;
+  }
+  return null;
+}
+
+function parseCsvText(text) {
+  const lines = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n').trim().split('\n');
+  if (!lines.length) return { rows: [], headers: [] };
+
+  const parseRow = line => {
+    const result = []; let cur = ''; let inQ = false;
+    for (let i = 0; i < line.length; i++) {
+      const ch = line[i];
+      if (ch === '"') {
+        if (inQ && line[i + 1] === '"') { cur += '"'; i++; }
+        else inQ = !inQ;
+      } else if (ch === ',' && !inQ) { result.push(cur.trim()); cur = ''; }
+      else { cur += ch; }
+    }
+    result.push(cur.trim());
+    return result;
+  };
+
+  const headers = parseRow(lines[0]);
+  const rows = [];
+  for (let i = 1; i < lines.length; i++) {
+    const cells = parseRow(lines[i]);
+    if (cells.every(c => !c)) continue;
+    const obj = {};
+    headers.forEach((h, idx) => { obj[h] = cells[idx] || ''; });
+    rows.push(obj);
+  }
+  return { rows, headers };
+}
+
+function parseXlsxBuffer(buffer) {
+  const wb   = XLSX.read(buffer, { type: 'array' });
+  const ws   = wb.Sheets[wb.SheetNames[0]];
+  const data = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
+  if (!data.length) return { rows: [], headers: [] };
+
+  const headers = data[0].map(String);
+  const rows = [];
+  for (let i = 1; i < data.length; i++) {
+    const cells = data[i];
+    if (cells.every(c => !String(c))) continue;
+    const obj = {};
+    headers.forEach((h, idx) => { obj[h] = String(cells[idx] ?? ''); });
+    rows.push(obj);
+  }
+  return { rows, headers };
+}
+
+function getBulkName(row) {
+  if (_bulkNameCol?.startsWith('__concat__')) {
+    const parts = _bulkNameCol.slice('__concat__'.length).split('__');
+    return parts.map(k => row[k] || '').filter(Boolean).join(' ');
+  }
+  return row[_bulkNameCol] || '';
+}
+
+function getBulkEmail(row) {
+  return row[_bulkEmailCol] || '';
+}
+
+function renderBulkPreview() {
+  const section = document.getElementById('bulk-preview-section');
+
+  // Build name options (includes concat option if first+last exist)
+  const first = _bulkHeaders.find(h => /first.?name|fname/i.test(h));
+  const last  = _bulkHeaders.find(h => /last.?name|lname|surname/i.test(h));
+  const concatKey = first && last ? `__concat__${first}__${last}` : null;
+
+  const nameOpts = [
+    ...(concatKey ? [`<option value="${esc(concatKey)}" ${_bulkNameCol === concatKey ? 'selected' : ''}>First + Last Name</option>`] : []),
+    ..._bulkHeaders.map(h => `<option value="${esc(h)}" ${_bulkNameCol === h ? 'selected' : ''}>${esc(h)}</option>`),
+  ].join('');
+
+  const emailOpts = _bulkHeaders
+    .map(h => `<option value="${esc(h)}" ${_bulkEmailCol === h ? 'selected' : ''}>${esc(h)}</option>`)
+    .join('');
+
+  const preview = _bulkRows.slice(0, 5);
+  const validCount = _bulkRows.filter(r => getBulkName(r) && getBulkEmail(r)).length;
+
+  section.style.display = 'block';
+  section.innerHTML = `
+    <div style="margin-top:14px;padding:14px 16px;background:var(--bg);border:1px solid var(--border);border-radius:8px">
+      <div style="display:grid;grid-template-columns:1fr 1fr auto;gap:12px;align-items:end;margin-bottom:14px">
+        <div>
+          <label style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;color:var(--muted);display:block;margin-bottom:4px">Name Column</label>
+          <select id="bulk-name-col" onchange="_bulkNameCol=this.value;renderBulkPreview()"
+            style="width:100%;background:var(--card);border:1px solid var(--border);border-radius:6px;padding:7px 10px;color:var(--text);font-size:13px;font-family:inherit">
+            ${nameOpts}
+          </select>
+        </div>
+        <div>
+          <label style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;color:var(--muted);display:block;margin-bottom:4px">Email Column</label>
+          <select id="bulk-email-col" onchange="_bulkEmailCol=this.value;renderBulkPreview()"
+            style="width:100%;background:var(--card);border:1px solid var(--border);border-radius:6px;padding:7px 10px;color:var(--text);font-size:13px;font-family:inherit">
+            ${emailOpts}
+          </select>
+        </div>
+        <button class="btn btn-ghost" style="font-size:12px;white-space:nowrap" onclick="resetBulkUpload()">✕ Clear</button>
+      </div>
+
+      <div style="font-size:12px;color:var(--muted);margin-bottom:6px">
+        Preview — first 5 of <strong style="color:var(--text)">${_bulkRows.length}</strong> rows
+        ${validCount < _bulkRows.length ? `<span style="color:var(--red)">&nbsp;·&nbsp; ${_bulkRows.length - validCount} rows missing name or email</span>` : ''}
+      </div>
+      <div style="border:1px solid var(--border);border-radius:6px;overflow:hidden;margin-bottom:14px">
+        <div style="display:grid;grid-template-columns:1fr 1fr;padding:7px 12px;background:var(--card-2);font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;color:var(--muted)">
+          <span>Name</span><span>Email</span>
+        </div>
+        ${preview.map(r => {
+          const name = getBulkName(r), email = getBulkEmail(r);
+          return `<div style="display:grid;grid-template-columns:1fr 1fr;padding:7px 12px;border-top:1px solid rgba(51,65,85,0.5);font-size:12px${!name || !email ? ';background:rgba(239,68,68,0.05)' : ''}">
+            <span style="${!name ? 'color:var(--red)' : ''}">${name || '⚠ missing'}</span>
+            <span style="${!email ? 'color:var(--red)' : ''}">${email || '⚠ missing'}</span>
+          </div>`;
+        }).join('')}
+        ${_bulkRows.length > 5 ? `<div style="padding:6px 12px;border-top:1px solid rgba(51,65,85,0.5);font-size:11px;color:var(--muted);text-align:center">and ${_bulkRows.length - 5} more…</div>` : ''}
+      </div>
+
+      <div class="flex gap-8 items-center">
+        <button class="btn btn-primary"  onclick="runBulkImport(false)">Generate Links for ${validCount}</button>
+        <button class="btn btn-outline"  onclick="runBulkImport(true)">Generate &amp; Send Emails</button>
+      </div>
+    </div>
+  `;
+}
+
+function resetBulkUpload() {
+  _bulkRows = []; _bulkHeaders = []; _bulkNameCol = null; _bulkEmailCol = null;
+  const preview  = document.getElementById('bulk-preview-section');
+  const progress = document.getElementById('bulk-import-progress');
+  if (preview)  { preview.style.display  = 'none'; preview.innerHTML  = ''; }
+  if (progress) { progress.style.display = 'none'; progress.innerHTML = ''; }
+  const fi = document.getElementById('bulk-file-input');
+  if (fi) fi.value = '';
+}
+
+async function runBulkImport(sendEmails) {
+  const validRows = _bulkRows.filter(r => getBulkName(r) && getBulkEmail(r));
+  if (!validRows.length) return toast('No valid rows to import', 'error');
+
+  // Disable preview buttons
+  document.getElementById('bulk-preview-section').querySelectorAll('button, select').forEach(el => el.disabled = true);
+
+  const progress = document.getElementById('bulk-import-progress');
+  progress.style.display = 'block';
+
+  let done = 0, failed = 0;
+  const errors = [];
+  const total = validRows.length;
+
+  const showProgress = () => {
+    const pct = Math.round((done + failed) / total * 100);
+    progress.innerHTML = `
+      <div style="font-size:13px;color:var(--text-2);margin-bottom:8px">
+        Importing${sendEmails ? ' &amp; sending emails' : ''}…
+        <strong>${done + failed}</strong> / ${total}
+      </div>
+      <div style="background:var(--border);border-radius:4px;height:6px;overflow:hidden">
+        <div style="background:var(--accent);height:100%;border-radius:4px;width:${pct}%;transition:width 0.15s"></div>
+      </div>
+    `;
+  };
+
+  showProgress();
+
+  for (const row of validRows) {
+    try {
+      const name  = getBulkName(row);
+      const email = getBulkEmail(row);
+      const data  = await apiJSON('POST', `/api/interview/${currentInterviewId}/sessions`, {
+        candidateName: name, candidateEmail: email,
+      });
+      if (sendEmails && data.token) {
+        try {
+          await apiJSON('POST', `/api/session/${data.token}/send-email`, { link: buildTakeUrl(data.token) });
+        } catch { /* email fail is non-fatal */ }
+      }
+      done++;
+    } catch (e) {
+      failed++;
+      errors.push(e.message);
+    }
+    showProgress();
+  }
+
+  progress.innerHTML = `
+    <div style="padding:14px 16px;background:var(--bg);border:1px solid var(--border);border-radius:8px">
+      <div style="font-size:14px;font-weight:600;margin-bottom:8px">Import complete</div>
+      <div class="flex gap-16">
+        <span style="color:var(--green)">✓ ${done} imported${sendEmails ? ' &amp; emailed' : ''}</span>
+        ${failed ? `<span style="color:var(--red)">✗ ${failed} failed</span>` : ''}
+      </div>
+      ${errors.length ? `<div class="text-muted text-sm mt-8">${errors.slice(0, 3).map(e => `<div>• ${esc(e)}</div>`).join('')}${errors.length > 3 ? `<div>…and ${errors.length - 3} more</div>` : ''}</div>` : ''}
+      <button class="btn btn-outline mt-16" onclick="resetBulkUpload();switchInviteMode('single')">Done</button>
+    </div>
+  `;
+
+  await loadSessions(currentInterviewId);
+  loadInterviews();
 }
 
 async function openSessions(interviewId, title, tab = 'invite') {
