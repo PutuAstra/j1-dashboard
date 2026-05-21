@@ -456,6 +456,10 @@ const App = (() => {
     housingPaymentInit: { recruit: 'Initial_Housing_Payment_Before_Departure', type: 'text' },
     housingPaymentMo:   { recruit: 'Monthly_Housing_Payment',  type: 'text' },
     housingAddress:     { recruit: 'Housing_Address',          type: 'text' },
+    // Host company (text — too many options for a dropdown)
+    hostCompany:        { recruit: 'Hosting_Company_2', crm: 'Hosting_Company',   type: 'text' },
+    // Eligible programs (multiselect)
+    eligiblePrograms:   { recruit: 'Eligible_Programs', crm: 'Eligible_Programs', type: 'multiselect', options: ['Work and Travel','Intern','Trainee with Degree','Trainee Professional'] },
   };
 
   // ── Column sets per tab ────────────────────────────────────
@@ -638,6 +642,18 @@ const App = (() => {
         if (opt === currentVal || (currentVal === '' && opt === '—')) o.selected = true;
         input.appendChild(o);
       });
+    } else if (meta.type === 'multiselect') {
+      input = document.createElement('select');
+      input.multiple = true;
+      input.className = 'inline-edit-input';
+      input.size = meta.options.length;
+      const selected = currentVal ? currentVal.split(',').map(s => s.trim()) : [];
+      meta.options.forEach(opt => {
+        const o = document.createElement('option');
+        o.value = opt; o.textContent = opt;
+        if (selected.includes(opt)) o.selected = true;
+        input.appendChild(o);
+      });
     } else if (meta.type === 'date') {
       input = document.createElement('input');
       input.type = 'date'; input.className = 'inline-edit-input';
@@ -658,15 +674,24 @@ const App = (() => {
     async function commit() {
       if (committed) return;
       committed = true;
-      let newVal = input.value.trim();
+      let newVal;
+      if (meta.type === 'multiselect') {
+        const sel = Array.from(input.selectedOptions).map(o => o.value);
+        newVal = sel.join(', ');
+      } else {
+        newVal = input.value.trim();
+      }
       if (meta.type === 'date' && newVal) {
         const [y, m, d] = newVal.split('-');
         newVal = `${m}/${d}/${y}`;
       }
       const sendVal = (!newVal || newVal === '—') ? null : newVal;
+      const zohoSendVal = (meta.type === 'multiselect' && sendVal)
+        ? sendVal.split(', ')
+        : sendVal;
       cell.innerHTML = '<span style="opacity:.5;font-size:.8rem">saving…</span>';
       try {
-        await Zoho.updateParticipant(p, { [zohoField]: sendVal });
+        await Zoho.updateParticipant(p, { [zohoField]: zohoSendVal });
         p[field] = sendVal || '—';
         const col = (colSet || TAB_COLS[_activeParticipantTab] || TAB_COLS.all).find(c => c.key === field);
         cell.innerHTML = col ? col.render(p) : (sendVal || '—');
