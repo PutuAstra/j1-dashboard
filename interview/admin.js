@@ -496,11 +496,12 @@ function renderTWSchedulePage() {
             <label>Meeting Link (manual)</label>
             <input type="url" id="tw-meeting-link" placeholder="https://teams.microsoft.com/… or Zoom link" />
           </div>
-          <div class="form-group" style="margin-top:-8px">
-            <label class="flex gap-8 items-center" style="cursor:pointer;text-transform:none;letter-spacing:0;font-size:13px;font-weight:400;color:var(--muted)">
-              <input type="checkbox" id="tw-send-email" style="accent-color:var(--accent)" />
-              Send email invite to candidate
-            </label>
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:16px;cursor:pointer"
+            onclick="document.getElementById('tw-send-email').click()">
+            <input type="checkbox" id="tw-send-email"
+              style="accent-color:var(--accent);width:14px;height:14px;flex-shrink:0;cursor:pointer"
+              onclick="event.stopPropagation()" />
+            <span style="font-size:13px;color:var(--muted)">Send email invite to candidate</span>
           </div>
         </div>
 
