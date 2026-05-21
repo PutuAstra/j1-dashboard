@@ -433,7 +433,7 @@ async function getVideoUrl(token, qIndex, request) {
 
 async function createTWSession(request) {
   requireAdmin(request);
-  const { candidateName, candidateEmail, position, scheduledAt, duration, meetingLink, notes } = await request.json();
+  const { candidateName, candidateEmail, position, scheduledAt, duration, meetingLink, notes, autoMeeting } = await request.json();
   if (!candidateName || !candidateEmail || !position) {
     return jsonRes({ error: 'candidateName, candidateEmail, and position are required' }, 400);
   }
@@ -448,6 +448,19 @@ async function createTWSession(request) {
     status: 'scheduled',
     createdAt: Date.now(),
   };
+
+  if (autoMeeting && scheduledAt) {
+    try {
+      const meeting = await createTeamsMeeting(session);
+      session.meetingLink     = meeting.joinUrl;
+      session.calendarEventId = meeting.eventId;
+      session.calendarWebLink = meeting.webLink;
+      session.teamsGenerated  = true;
+    } catch (e) {
+      session.teamsError = e.message;
+    }
+  }
+
   await kvPut(`tw-session:${id}`, session);
 
   const list = (await kvGet('tw-session:list')) || [];
@@ -530,7 +543,7 @@ async function sendTWEmail(id, request) {
 
   const sender = EMAIL_SENDER || ONEDRIVE_USER;
   const accessToken = await getAccessToken();
-  const res = await fetch(`https://graph.microsoft.com/v1.0/users/${sender}/sendMail`, {
+  const emailRes = await fetch(`https://graph.microsoft.com/v1.0/users/${sender}/sendMail`, {
     method: 'POST',
     headers: { 'Authorization': `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
     body: JSON.stringify({
@@ -544,9 +557,69 @@ async function sendTWEmail(id, request) {
     }),
   });
 
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
-    return jsonRes({ error: 'Email failed: ' + (err.error?.message || res.status) }, 500);
+  if (!emailRes.ok) {
+    const err = await emailRes.json().catch(() => ({}));
+    return jsonRes({ error: 'Email failed: ' + (err.error?.message || emailRes.status) }, 500);
   }
   return jsonRes({ ok: true });
+}
+
+async function createTeamsMeeting(session) {
+  const accessToken = await getAccessToken();
+  const organizer   = EMAIL_SENDER || ONEDRIVE_USER;
+
+  const startMs  = session.scheduledAt;
+  const endMs    = startMs + (session.duration || 60) * 60 * 1000;
+  const startStr = new Date(startMs).toISOString().replace('Z', '');
+  const endStr   = new Date(endMs).toISOString().replace('Z', '');
+
+  const eventBody = {
+    subject: `Interview: ${session.position} — ${session.candidateName}`,
+    body: {
+      contentType: 'HTML',
+      content: `
+        <p>Interview scheduled via <strong>CTI ClaudeHire</strong>.</p>
+        <table cellpadding="6" style="font-family:Arial,sans-serif;font-size:14px">
+          <tr><td style="color:#6b7280;width:100px">Candidate</td><td><strong>${session.candidateName}</strong> &lt;${session.candidateEmail}&gt;</td></tr>
+          <tr><td style="color:#6b7280">Position</td><td>${session.position}</td></tr>
+          <tr><td style="color:#6b7280">Duration</td><td>${session.duration || 60} minutes</td></tr>
+          ${session.notes ? `<tr><td style="color:#6b7280;vertical-align:top">Notes</td><td>${session.notes}</td></tr>` : ''}
+        </table>
+      `,
+    },
+    start: { dateTime: startStr, timeZone: 'UTC' },
+    end:   { dateTime: endStr,   timeZone: 'UTC' },
+    isOnlineMeeting: true,
+    onlineMeetingProvider: 'teamsForBusiness',
+    attendees: [
+      {
+        emailAddress: { address: session.candidateEmail, name: session.candidateName },
+        type: 'required',
+      },
+    ],
+  };
+
+  const res = await fetch(
+    `https://graph.microsoft.com/v1.0/users/${organizer}/calendar/events`,
+    {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${accessToken}`,
+        'Content-Type':  'application/json',
+      },
+      body: JSON.stringify(eventBody),
+    }
+  );
+
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error('Teams: ' + (err.error?.message || res.status));
+  }
+
+  const event = await res.json();
+  return {
+    joinUrl: event.onlineMeeting?.joinUrl || '',
+    eventId: event.id,
+    webLink: event.webLink || '',
+  };
 }

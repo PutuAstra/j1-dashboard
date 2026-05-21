@@ -378,7 +378,7 @@ function renderTWSessionRow(s) {
   let actions = '';
   if (s.status === 'scheduled') {
     actions = `
-      ${s.meetingLink ? `<a href="${esc(s.meetingLink)}" target="_blank" class="btn btn-ghost" style="padding:4px 8px;font-size:12px">🔗 Join</a>` : ''}
+      ${s.meetingLink ? `<a href="${esc(s.meetingLink)}" target="_blank" class="btn btn-ghost" style="padding:4px 8px;font-size:12px">${s.teamsGenerated ? '🟦' : '🔗'} Join</a>` : ''}
       <button class="btn btn-outline" style="padding:4px 10px;font-size:12px" onclick="markTWCompleted('${s.id}')">✓ Done</button>
       <button class="btn btn-danger"  style="padding:4px 10px;font-size:12px" onclick="cancelTWSession('${s.id}', '${esc(s.candidateName)}')">Cancel</button>
     `;
@@ -390,7 +390,7 @@ function renderTWSessionRow(s) {
     <div class="tw-session-row">
       <div style="min-width:0">
         <div style="font-weight:600;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(s.candidateName)}</div>
-        <div class="text-muted" style="font-size:11px">${s.candidateEmail ? esc(s.candidateEmail) : ''}</div>
+        <div class="text-muted" style="font-size:11px">${s.candidateEmail ? esc(s.candidateEmail) : ''}${s.teamsGenerated ? ' &nbsp;·&nbsp; <span style="color:#6264a7">Teams</span>' : ''}</div>
       </div>
       <div style="font-size:13px;color:var(--text-2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(s.position || '—')}</div>
       <div>
@@ -472,25 +472,56 @@ function renderTWSchedulePage() {
             </select>
           </div>
         </div>
+
+        <!-- Teams meeting section -->
         <div class="form-group mt-16">
-          <label>Meeting Link</label>
-          <input type="url" id="tw-meeting-link" placeholder="https://teams.microsoft.com/… or Zoom link" />
+          <label>Microsoft Teams Meeting</label>
+          <div style="display:flex;align-items:flex-start;gap:10px;padding:12px 14px;background:var(--bg);border:1px solid var(--border);border-radius:6px;cursor:pointer"
+            onclick="document.getElementById('tw-auto-meeting').click()">
+            <input type="checkbox" id="tw-auto-meeting" checked
+              style="accent-color:var(--accent);width:16px;height:16px;flex-shrink:0;margin-top:2px;cursor:pointer"
+              onclick="event.stopPropagation()"
+              onchange="toggleTWAutoMeeting(this.checked)" />
+            <div>
+              <div style="font-size:13px;font-weight:600;color:var(--text)">Auto-generate Microsoft Teams link</div>
+              <div style="font-size:11px;color:var(--muted);margin-top:2px" id="tw-teams-description">
+                Creates a Teams meeting on <strong style="color:var(--text-2)">corporate-recruiter@cti-usa.com</strong> calendar.
+                Candidate receives a calendar invite with the join link automatically.
+              </div>
+            </div>
+          </div>
         </div>
-        <div class="form-group">
+        <div id="tw-manual-link-wrap" style="display:none">
+          <div class="form-group">
+            <label>Meeting Link (manual)</label>
+            <input type="url" id="tw-meeting-link" placeholder="https://teams.microsoft.com/… or Zoom link" />
+          </div>
+          <div class="form-group" style="margin-top:-8px">
+            <label class="flex gap-8 items-center" style="cursor:pointer;text-transform:none;letter-spacing:0;font-size:13px;font-weight:400;color:var(--muted)">
+              <input type="checkbox" id="tw-send-email" style="accent-color:var(--accent)" />
+              Send email invite to candidate
+            </label>
+          </div>
+        </div>
+
+        <div class="form-group mt-8">
           <label>Notes (optional)</label>
           <textarea id="tw-notes" placeholder="Internal notes about this session..."></textarea>
         </div>
-        <div class="flex gap-8 items-center mt-8">
-          <button class="btn btn-primary" onclick="submitTWSession()">Schedule Interview</button>
+        <div class="flex gap-8 items-center">
+          <button class="btn btn-primary" id="tw-schedule-btn" onclick="submitTWSession()">Schedule &amp; Create Teams Meeting</button>
           <button class="btn btn-outline" onclick="gotoPage('tw-list')">Cancel</button>
-          <label class="flex gap-8 items-center" style="font-size:13px;color:var(--muted);cursor:pointer;margin-left:8px">
-            <input type="checkbox" id="tw-send-email" style="accent-color:var(--accent)" />
-            Send email invite to candidate
-          </label>
         </div>
       </div>
     </div>
   `;
+}
+
+function toggleTWAutoMeeting(checked) {
+  document.getElementById('tw-manual-link-wrap').style.display = checked ? 'none' : 'block';
+  document.getElementById('tw-schedule-btn').textContent = checked
+    ? 'Schedule & Create Teams Meeting'
+    : 'Schedule Interview';
 }
 
 async function submitTWSession() {
@@ -500,24 +531,33 @@ async function submitTWSession() {
   const date           = document.getElementById('tw-date').value;
   const time           = document.getElementById('tw-time').value;
   const duration       = parseInt(document.getElementById('tw-duration').value);
-  const meetingLink    = document.getElementById('tw-meeting-link').value.trim();
+  const autoMeeting    = document.getElementById('tw-auto-meeting').checked;
+  const meetingLink    = !autoMeeting ? (document.getElementById('tw-meeting-link')?.value.trim() || '') : '';
   const notes          = document.getElementById('tw-notes').value.trim();
-  const sendEmail      = document.getElementById('tw-send-email').checked;
+  const sendEmail      = !autoMeeting && document.getElementById('tw-send-email')?.checked;
 
   if (!candidateName)  return toast('Candidate name is required', 'error');
   if (!candidateEmail) return toast('Candidate email is required', 'error');
   if (!position)       return toast('Position is required', 'error');
   if (!date || !time)  return toast('Date and time are required', 'error');
 
+  const btn = document.getElementById('tw-schedule-btn');
+  btn.disabled = true;
+  btn.textContent = autoMeeting ? 'Creating Teams meeting…' : 'Scheduling…';
+
   const scheduledAt = new Date(`${date}T${time}`).getTime();
 
   try {
     const session = await apiJSON('POST', '/api/tw-sessions', {
       candidateName, candidateEmail, position,
-      scheduledAt, duration, meetingLink, notes,
+      scheduledAt, duration, meetingLink, notes, autoMeeting,
     });
 
-    if (sendEmail && session.id) {
+    if (session.teamsError) {
+      toast('Scheduled, but Teams failed: ' + session.teamsError, 'info');
+    } else if (autoMeeting && session.teamsGenerated) {
+      toast('Teams meeting created! Calendar invite sent to candidate.', 'success');
+    } else if (sendEmail && session.id) {
       try {
         await apiJSON('POST', `/api/tw-session/${session.id}/send-email`);
         toast('Session scheduled & email sent!', 'success');
@@ -530,6 +570,8 @@ async function submitTWSession() {
     gotoPage('tw-list');
   } catch (e) {
     toast(e.message, 'error');
+    btn.disabled = false;
+    btn.textContent = autoMeeting ? 'Schedule & Create Teams Meeting' : 'Schedule Interview';
   }
 }
 
