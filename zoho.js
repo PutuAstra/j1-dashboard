@@ -194,8 +194,7 @@ const Zoho = (() => {
       housingPaymentInit:  null,
       housingPaymentMo:    null,
       housingAddress:      '—',
-      // Recruit-only fields — not in CRM
-      stage1Investment:    '—',
+      stage1Investment:    r[CF.stage1Investment]       || '—',
       proofAcademic:       '—',
       hcInterviewDate:     null,
       totalPaidInvestment: '—',

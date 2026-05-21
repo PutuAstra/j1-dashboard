@@ -411,7 +411,7 @@ const App = (() => {
     // CRM-only
     positionApplied:  { crm: 'Position_Applied', type: 'text' },
     // Stages
-    stage1Investment:    { recruit: 'Stage_1_Investment',           type: 'text' },
+    stage1Investment:    { recruit: 'Stage_1_Investment', crm: 'Stage_1_Investment', type: 'text' },
     passportStatus:      { recruit: 'Passport_Status',              type: 'select', options: ['Need to Process','In Process','Valid','—'] },
     passportNumber:      { recruit: 'Passport_Number',              type: 'text' },
     passportExpiry:      { recruit: 'Passport_Expired_Date',        type: 'date' },
