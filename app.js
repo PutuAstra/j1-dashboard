@@ -394,7 +394,7 @@ const App = (() => {
     gender:              { recruit: 'Gender',                              crm: 'Gender',                        type: 'select', options: ['Male','Female','—'] },
     email:               { recruit: 'Email',                               crm: 'Email',                         type: 'text' },
     phone:               { recruit: 'Phone_Number1',                       crm: 'Phone_Number',                  type: 'text' },
-    age:                 { recruit: 'Age',                                  crm: 'Age',                           type: 'text' },
+
     department:          { recruit: 'Department',                           crm: 'Department',                    type: 'text' },
     country:             { recruit: 'Country',                              crm: 'Country',                       type: 'text' },
     permanentAddress:    { recruit: 'Permanent_Address',                    crm: 'Permanent_Address',             type: 'text' },
