@@ -63,7 +63,7 @@ p  { color: var(--text-2); }
 
 /* ── Topbar ── */
 .topbar {
-  background: var(--card);
+  background: var(--bg);
   border-bottom: 1px solid var(--border);
   padding: 0 24px;
   height: 54px;
