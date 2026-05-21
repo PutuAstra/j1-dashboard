@@ -390,38 +390,72 @@ const App = (() => {
   // ── Editable field registry ────────────────────────────────
   // Maps participant field key → { recruit: ZohoApiName, crm?: ZohoApiName, type, options? }
   const EDITABLE_FIELDS = {
-    visaStatus:          { recruit: 'J1_Visa_Status',                        type: 'select', options: ['Pending','Approved','Rejected','—'] },
-    refLetterStatus:     { recruit: 'Reference_Letter_Status',                type: 'select', options: ['Requested','Submitted','—'] },
-    visaAppointment:     { recruit: 'J1_Visa_Appointment_Date',               type: 'date' },
-    visaNumber:          { recruit: 'J1_Visa_Number',                         type: 'text' },
-    flightBooked:        { recruit: 'Flight_Ticket_Status',                   type: 'select', options: ['Booked','Not Booked','—'] },
-    airline:             { recruit: 'Airline',                                type: 'text' },
-    pnrNumber:           { recruit: 'PNR_Number',                             type: 'text' },
-    departureDate:       { recruit: 'Departure_Date',                         type: 'date' },
-    arrivalDate:         { recruit: 'Arrival_Date',                           type: 'date' },
-    tripFrom:            { recruit: 'Trip_From',                              type: 'text' },
-    tripTo:              { recruit: 'Trip_To',                                type: 'text' },
-    airportGateway:      { recruit: 'Airport_Gateway',                        type: 'text' },
-    airportPickup:       { recruit: 'Airport_Pick_Up',                        type: 'text' },
-    ticketPayStatus:     { recruit: 'Ticket_Payment_Status',                  type: 'text' },
-    returnFlightStatus:  { recruit: 'Returning_Flight_Ticket_Status',         type: 'select', options: ['Booked','Not Booked','—'] },
-    returnAirline:       { recruit: 'Returning_Airline',                      type: 'text' },
-    returnPNR:           { recruit: 'Returning_Airline_PNR_Number',           type: 'text' },
-    returnDeparture:     { recruit: 'Returning_Departure_Date',               type: 'date' },
-    returnArrival:       { recruit: 'Returning_Arrival_Date',                 type: 'date' },
-    returnTripFrom:      { recruit: 'Returning_Trip_From',                    type: 'text' },
-    returnTripTo:        { recruit: 'Returning_Trip_To',                      type: 'text' },
-    returnGateway:       { recruit: 'Returning_Airport_Gateway',              type: 'text' },
-    housingAddress:      { recruit: 'Housing_Address',                        type: 'text' },
-    housingLandlord:     { recruit: 'Housing_Landlord',                       type: 'text' },
-    housingAvailability: { recruit: 'Housing_Availability',                   type: 'select', options: ['Available','Not Available','—'] },
-    hcInterviewStatus:   { recruit: 'Hosting_Company_Interview_Status',       type: 'text' },
-    sponsorStatus:       { recruit: 'Sponsor_Interview_Status',               type: 'text' },
+    // Basic info (both sources)
+    gender:              { recruit: 'Gender',                              crm: 'Gender',                        type: 'select', options: ['Male','Female','—'] },
+    email:               { recruit: 'Email',                               crm: 'Email',                         type: 'text' },
+    phone:               { recruit: 'Phone_Number1',                       crm: 'Phone_Number',                  type: 'text' },
+    age:                 { recruit: 'Age',                                  crm: 'Age',                           type: 'text' },
+    department:          { recruit: 'Department',                           crm: 'Department',                    type: 'text' },
+    country:             { recruit: 'Country',                              crm: 'Country',                       type: 'text' },
+    permanentAddress:    { recruit: 'Permanent_Address',                    crm: 'Permanent_Address',             type: 'text' },
+    programSource:       { recruit: 'J1_Program_Sources',                   crm: 'J1_Program_Source',             type: 'text' },
+    withdrawalReason:    { recruit: 'Application_Withdrawal_Reason',        crm: 'Application_Withdrawal_Reason', type: 'text' },
+    ctiUsaReview:        { recruit: 'CTI_USA_s_Review',                     crm: 'CTI_USA_s_Review',              type: 'text' },
+    placementStatus:     { recruit: 'J1_Application_Status',                crm: 'J1_Application_Status',
+      type: 'select', options: ['New Submission','Consultation Call','Sales Call','Stage 1','Stage 2','Stage 3','Stage 4','USA Onboard','Program Completed','—'] },
+    // Consultation Call (both sources)
     consultationCallStatus: { recruit: 'Consultation_Call_Status', crm: 'Consultation_Call_Status', type: 'select', options: ['Pending','Scheduled','Done','—'] },
     consultationCallNotes:  { recruit: 'Consultation_Call_Notes',  crm: 'Consultation_Call_Notes',  type: 'text' },
     consultationCallBy:     { recruit: 'Consultation_Call_Done_By',crm: 'Consultation_Call_Done_By',type: 'text' },
     consultationCallDate:   { recruit: 'Consultation_Call_Date',   crm: 'Consultation_Call_Date',   type: 'date' },
-    ctiUsaReview:           { recruit: 'CTI_USA_s_Review',         crm: 'CTI_USA_s_Review',         type: 'text' },
+    // CRM-only
+    positionApplied:     { crm: 'Position_Applied',                                                              type: 'text' },
+    // Recruit-only — Stage fields
+    stage1Investment:    { recruit: 'Stage_1_Investment',                                                         type: 'text' },
+    passportStatus:      { recruit: 'Passport_Status',                                                            type: 'text' },
+    passportNumber:      { recruit: 'Passport_Number',                                                            type: 'text' },
+    passportExpiry:      { recruit: 'Passport_Expired_Date',                                                      type: 'date' },
+    proofAcademic:       { recruit: 'Proof_of_Academic_Status',                                                   type: 'text' },
+    hcInterviewDate:     { recruit: 'HC_Interview_Date',                                                          type: 'date' },
+    hcInterviewStatus:   { recruit: 'Hosting_Company_Interview_Status',                                           type: 'text' },
+    sponsorStatus:       { recruit: 'Sponsor_Interview_Status',                                                   type: 'text' },
+    programStart:        { recruit: 'Program_Start_Date',                                                         type: 'date' },
+    programEnd:          { recruit: 'Program_End_Date',                                                           type: 'date' },
+    totalPaidInvestment: { recruit: 'Total_Paid_Investment',                                                      type: 'text' },
+    sponsorInvoiceStatus:{ recruit: 'Program_Sponsor_Invoice_Status',                                             type: 'text' },
+    // Visa
+    visaStatus:          { recruit: 'J1_Visa_Status',                                                             type: 'select', options: ['Pending','Approved','Rejected','—'] },
+    refLetterStatus:     { recruit: 'Reference_Letter_Status',                                                     type: 'select', options: ['Requested','Submitted','—'] },
+    visaAppointment:     { recruit: 'J1_Visa_Appointment_Date',                                                   type: 'date' },
+    visaNumber:          { recruit: 'J1_Visa_Number',                                                             type: 'text' },
+    ds2019End:           { recruit: 'J1_Visa_Expired_Date',                                                       type: 'date' },
+    // Travel outbound
+    flightBooked:        { recruit: 'Flight_Ticket_Status',                                                       type: 'select', options: ['Booked','Not Booked','—'] },
+    airline:             { recruit: 'Airline',                                                                    type: 'text' },
+    pnrNumber:           { recruit: 'PNR_Number',                                                                 type: 'text' },
+    departureDate:       { recruit: 'Departure_Date',                                                             type: 'date' },
+    arrivalDate:         { recruit: 'Arrival_Date',                                                               type: 'date' },
+    tripFrom:            { recruit: 'Trip_From',                                                                  type: 'text' },
+    tripTo:              { recruit: 'Trip_To',                                                                    type: 'text' },
+    airportGateway:      { recruit: 'Airport_Gateway',                                                            type: 'text' },
+    airportPickup:       { recruit: 'Airport_Pick_Up',                                                            type: 'text' },
+    ticketPayStatus:     { recruit: 'Ticket_Payment_Status',                                                      type: 'text' },
+    ticketPricing:       { recruit: 'Ticket_Pricing',                                                             type: 'text' },
+    // Return travel
+    returnFlightStatus:  { recruit: 'Returning_Flight_Ticket_Status',                                             type: 'select', options: ['Booked','Not Booked','—'] },
+    returnAirline:       { recruit: 'Returning_Airline',                                                          type: 'text' },
+    returnPNR:           { recruit: 'Returning_Airline_PNR_Number',                                               type: 'text' },
+    returnDeparture:     { recruit: 'Returning_Departure_Date',                                                   type: 'date' },
+    returnArrival:       { recruit: 'Returning_Arrival_Date',                                                     type: 'date' },
+    returnTripFrom:      { recruit: 'Returning_Trip_From',                                                        type: 'text' },
+    returnTripTo:        { recruit: 'Returning_Trip_To',                                                          type: 'text' },
+    returnGateway:       { recruit: 'Returning_Airport_Gateway',                                                  type: 'text' },
+    // Housing
+    housingAvailability: { recruit: 'Housing_Availability',                                                       type: 'select', options: ['Available','Not Available','—'] },
+    housingLandlord:     { recruit: 'Housing_Landlord',                                                           type: 'text' },
+    housingPaymentInit:  { recruit: 'Initial_Housing_Payment_Before_Departure',                                   type: 'text' },
+    housingPaymentMo:    { recruit: 'Monthly_Housing_Payment',                                                    type: 'text' },
+    housingAddress:      { recruit: 'Housing_Address',                                                            type: 'text' },
   };
 
   // ── Column sets per tab ────────────────────────────────────
@@ -853,6 +887,46 @@ const App = (() => {
     { label: 'J1 Program Source',     key: 'programSource',  get: p => (p.programSource || '').toLowerCase(),  render: p => p.programSource || '—' },
   ];
 
+  const JOINING_COLS = [
+    { label: 'Name',          key: 'name',           get: p => (p.name || '').toLowerCase(),             render: p => `<strong>${p.name || '—'}</strong>` },
+    { label: 'Country',       key: 'country',        get: p => (p.country || '').toLowerCase(),          render: p => p.country || '—' },
+    { label: 'Trip From',     key: 'tripFrom',       get: p => (p.tripFrom || '').toLowerCase(),         render: p => p.tripFrom || '—' },
+    { label: 'Trip To',       key: 'tripTo',         get: p => (p.tripTo || '').toLowerCase(),           render: p => p.tripTo || '—' },
+    { label: 'Departure',     key: 'departureDate',  get: p => p.departureDate || '',                    render: p => formatDate(p.departureDate) },
+    { label: 'Arrival',       key: 'arrivalDate',    get: p => p.arrivalDate || '',                      render: p => formatDate(p.arrivalDate) },
+    { label: 'Airline',       key: 'airline',        get: p => (p.airline || '').toLowerCase(),          render: p => p.airline || '—' },
+    { label: 'PNR',           key: 'pnrNumber',      get: p => (p.pnrNumber || '').toLowerCase(),        render: p => `<span style="font-family:monospace;font-size:0.82rem">${p.pnrNumber || '—'}</span>` },
+    { label: 'Gateway',       key: 'airportGateway', get: p => (p.airportGateway || '').toLowerCase(),   render: p => p.airportGateway || '—' },
+    { label: 'Pick-Up',       key: 'airportPickup',  get: p => (p.airportPickup || '').toLowerCase(),    render: p => p.airportPickup || '—' },
+    { label: 'Flight Status', key: 'flightBooked',   get: p => String(p.flightBooked),                   render: p => flightBadge(p.flightBooked) },
+    { label: 'Ticket Payment',key: 'ticketPayStatus',get: p => (p.ticketPayStatus || '').toLowerCase(),  render: p => badge(p.ticketPayStatus) },
+    { label: 'Pricing',       key: 'ticketPricing',  get: p => p.ticketPricing || 0,                     render: p => p.ticketPricing ? '$' + p.ticketPricing : '—' },
+  ];
+
+  const RETURNING_COLS = [
+    { label: 'Name',          key: 'name',              get: p => (p.name || '').toLowerCase(),              render: p => `<strong>${p.name || '—'}</strong>` },
+    { label: 'Country',       key: 'country',           get: p => (p.country || '').toLowerCase(),           render: p => p.country || '—' },
+    { label: 'Trip From',     key: 'returnTripFrom',    get: p => (p.returnTripFrom || '').toLowerCase(),    render: p => p.returnTripFrom || '—' },
+    { label: 'Trip To',       key: 'returnTripTo',      get: p => (p.returnTripTo || '').toLowerCase(),      render: p => p.returnTripTo || '—' },
+    { label: 'Departure',     key: 'returnDeparture',   get: p => p.returnDeparture || '',                   render: p => formatDate(p.returnDeparture) },
+    { label: 'Arrival',       key: 'returnArrival',     get: p => p.returnArrival || '',                     render: p => formatDate(p.returnArrival) },
+    { label: 'Airline',       key: 'returnAirline',     get: p => (p.returnAirline || '').toLowerCase(),     render: p => p.returnAirline || '—' },
+    { label: 'PNR',           key: 'returnPNR',         get: p => (p.returnPNR || '').toLowerCase(),         render: p => `<span style="font-family:monospace;font-size:0.82rem">${p.returnPNR || '—'}</span>` },
+    { label: 'Gateway',       key: 'returnGateway',     get: p => (p.returnGateway || '').toLowerCase(),     render: p => p.returnGateway || '—' },
+    { label: 'Flight Status', key: 'returnFlightStatus',get: p => (p.returnFlightStatus || '').toLowerCase(),render: p => badge(p.returnFlightStatus) },
+  ];
+
+  const HOUSING_COLS = [
+    { label: 'Name',                             key: 'name',               get: p => (p.name || '').toLowerCase(),               render: p => `<strong>${p.name || '—'}</strong>` },
+    { label: 'Country',                          key: 'country',            get: p => (p.country || '').toLowerCase(),            render: p => p.country || '—' },
+    { label: 'Host Company',                     key: 'hostCompany',        get: p => (p.hostCompany || '').toLowerCase(),        render: p => p.hostCompany || '—' },
+    { label: 'Housing Availability',             key: 'housingAvailability',get: p => (p.housingAvailability || '').toLowerCase(), render: p => badge(p.housingAvailability) },
+    { label: 'Housing Landlord',                 key: 'housingLandlord',    get: p => (p.housingLandlord || '').toLowerCase(),    render: p => p.housingLandlord || '—' },
+    { label: 'Initial Payment Before Departure', key: 'housingPaymentInit', get: p => p.housingPaymentInit || 0,                  render: p => p.housingPaymentInit ? '$' + p.housingPaymentInit : '—' },
+    { label: 'Monthly Payment',                  key: 'housingPaymentMo',   get: p => p.housingPaymentMo || 0,                    render: p => p.housingPaymentMo ? '$' + p.housingPaymentMo : '—' },
+    { label: 'Housing Address',                  key: 'housingAddress',     get: p => (p.housingAddress || '').toLowerCase(),     render: p => p.housingAddress || '—' },
+  ];
+
   async function renderVisa() {
     const mc = document.getElementById('main-content');
     mc.innerHTML = skeletonHTML();
@@ -1184,35 +1258,6 @@ const App = (() => {
     const returnBooked    = returningAll.filter(p => /yes|booked|confirmed/i.test(String(p.returnFlightStatus)));
     const returnNotBooked = returningAll.filter(p => !/yes|booked|confirmed/i.test(String(p.returnFlightStatus)));
 
-    // Column defs for each tab
-    const JOINING_COLS = [
-      { label: '#',             key: null },
-      { label: 'Name',          key: 'name',           get: p => (p.name || '').toLowerCase() },
-      { label: 'Country',       key: 'country',        get: p => (p.country || '').toLowerCase() },
-      { label: 'Route',         key: 'tripFrom',       get: p => (p.tripFrom || '').toLowerCase() },
-      { label: 'Departure',     key: 'departureDate',  get: p => p.departureDate || '' },
-      { label: 'Arrival',       key: 'arrivalDate',    get: p => p.arrivalDate || '' },
-      { label: 'Airline',       key: 'airline',        get: p => (p.airline || '').toLowerCase() },
-      { label: 'PNR',           key: 'pnrNumber',      get: p => (p.pnrNumber || '').toLowerCase() },
-      { label: 'Gateway',       key: 'airportGateway', get: p => (p.airportGateway || '').toLowerCase() },
-      { label: 'Pick-Up',       key: 'airportPickup',  get: p => (p.airportPickup || '').toLowerCase() },
-      { label: 'Flight Status', key: 'flightBooked',   get: p => String(p.flightBooked) },
-      { label: 'Ticket Payment',key: 'ticketPayStatus',get: p => (p.ticketPayStatus || '').toLowerCase() },
-      { label: 'Pricing',       key: 'ticketPricing',  get: p => p.ticketPricing || 0 },
-    ];
-
-    const RETURNING_COLS = [
-      { label: '#',             key: null },
-      { label: 'Name',          key: 'name',              get: p => (p.name || '').toLowerCase() },
-      { label: 'Country',       key: 'country',           get: p => (p.country || '').toLowerCase() },
-      { label: 'Route',         key: 'returnTripFrom',    get: p => (p.returnTripFrom || '').toLowerCase() },
-      { label: 'Departure',     key: 'returnDeparture',   get: p => p.returnDeparture || '' },
-      { label: 'Arrival',       key: 'returnArrival',     get: p => p.returnArrival || '' },
-      { label: 'Airline',       key: 'returnAirline',     get: p => (p.returnAirline || '').toLowerCase() },
-      { label: 'PNR',           key: 'returnPNR',         get: p => (p.returnPNR || '').toLowerCase() },
-      { label: 'Gateway',       key: 'returnGateway',     get: p => (p.returnGateway || '').toLowerCase() },
-      { label: 'Flight Status', key: 'returnFlightStatus',get: p => (p.returnFlightStatus || '').toLowerCase() },
-    ];
 
     function tSortIcon(key) {
       if (_travelSortCol !== key) return `<span class="sort-icon">⇅</span>`;
@@ -1240,9 +1285,9 @@ const App = (() => {
           <table>
             <thead>
               <tr>
-                ${JOINING_COLS.map(c => c.key
-                  ? `<th class="sortable ${_travelSortCol === c.key ? 'sorted' : ''}" data-tcol="${c.key}">${c.label} ${tSortIcon(c.key)}</th>`
-                  : `<th>#</th>`
+                <th>#</th>
+                ${JOINING_COLS.map(c =>
+                  `<th class="sortable ${_travelSortCol === c.key ? 'sorted' : ''}" data-tcol="${c.key}">${c.label} ${tSortIcon(c.key)}</th>`
                 ).join('')}
               </tr>
             </thead>
@@ -1250,18 +1295,11 @@ const App = (() => {
               ${sorted.map((p, i) => `
                 <tr>
                   <td class="row-num">${i + 1}</td>
-                  <td><strong>${p.name}</strong></td>
-                  <td>${p.country}</td>
-                  <td style="font-size:0.8rem;white-space:nowrap">${p.tripFrom} → ${p.tripTo}</td>
-                  <td>${formatDate(p.departureDate)}</td>
-                  <td>${formatDate(p.arrivalDate)}</td>
-                  <td>${p.airline}</td>
-                  <td style="font-family:monospace;font-size:0.82rem">${p.pnrNumber}</td>
-                  <td>${p.airportGateway}</td>
-                  <td>${p.airportPickup}</td>
-                  <td>${flightBadge(p.flightBooked)}</td>
-                  <td>${badge(p.ticketPayStatus)}</td>
-                  <td>${p.ticketPricing ? '$' + p.ticketPricing : '—'}</td>
+                  ${JOINING_COLS.map(c => {
+                    const meta = c.key && EDITABLE_FIELDS[c.key];
+                    const editAttr = meta ? ` class="editable-cell" data-pid="${p.id}" data-field="${c.key}"` : '';
+                    return `<td${editAttr}>${c.render(p)}</td>`;
+                  }).join('')}
                 </tr>
               `).join('')}
             </tbody>
@@ -1278,9 +1316,9 @@ const App = (() => {
           <table>
             <thead>
               <tr>
-                ${RETURNING_COLS.map(c => c.key
-                  ? `<th class="sortable ${_travelSortCol === c.key ? 'sorted' : ''}" data-tcol="${c.key}">${c.label} ${tSortIcon(c.key)}</th>`
-                  : `<th>#</th>`
+                <th>#</th>
+                ${RETURNING_COLS.map(c =>
+                  `<th class="sortable ${_travelSortCol === c.key ? 'sorted' : ''}" data-tcol="${c.key}">${c.label} ${tSortIcon(c.key)}</th>`
                 ).join('')}
               </tr>
             </thead>
@@ -1288,15 +1326,11 @@ const App = (() => {
               ${sorted.map((p, i) => `
                 <tr>
                   <td class="row-num">${i + 1}</td>
-                  <td><strong>${p.name}</strong></td>
-                  <td>${p.country}</td>
-                  <td style="font-size:0.8rem;white-space:nowrap">${p.returnTripFrom} → ${p.returnTripTo}</td>
-                  <td>${formatDate(p.returnDeparture)}</td>
-                  <td>${formatDate(p.returnArrival)}</td>
-                  <td>${p.returnAirline}</td>
-                  <td style="font-family:monospace;font-size:0.82rem">${p.returnPNR}</td>
-                  <td>${p.returnGateway}</td>
-                  <td>${badge(p.returnFlightStatus)}</td>
+                  ${RETURNING_COLS.map(c => {
+                    const meta = c.key && EDITABLE_FIELDS[c.key];
+                    const editAttr = meta ? ` class="editable-cell" data-pid="${p.id}" data-field="${c.key}"` : '';
+                    return `<td${editAttr}>${c.render(p)}</td>`;
+                  }).join('')}
                 </tr>
               `).join('')}
             </tbody>
@@ -1388,6 +1422,15 @@ const App = (() => {
     }
 
     renderTravelPage();
+
+    mc.addEventListener('click', e => {
+      const cell = e.target.closest('td.editable-cell');
+      if (!cell || cell.querySelector('input,select')) return;
+      const p = (_participants || []).find(x => String(x.id) === String(cell.dataset.pid));
+      if (!p) return;
+      const cols = _activeTravelTab === 'returning' ? RETURNING_COLS : JOINING_COLS;
+      openInlineEdit(cell, p, cell.dataset.field, cols);
+    });
   }
 
   // ═══════════════════════════════════════════════════════════
@@ -1663,17 +1706,6 @@ const App = (() => {
     const housed    = withCompany.filter(p => p.housingAvailability && p.housingAvailability !== '—');
     const noHousing = withCompany.filter(p => !p.housingAvailability || p.housingAvailability === '—');
 
-    const HOUSING_COLS = [
-      { label: '#',                              key: null },
-      { label: 'Name',                           key: 'name',              get: p => (p.name || '').toLowerCase() },
-      { label: 'Country',                        key: 'country',           get: p => (p.country || '').toLowerCase() },
-      { label: 'Host Company',                   key: 'hostCompany',       get: p => (p.hostCompany || '').toLowerCase() },
-      { label: 'Housing Availability',           key: 'housingAvailability', get: p => (p.housingAvailability || '').toLowerCase() },
-      { label: 'Housing Landlord',               key: 'housingLandlord',   get: p => (p.housingLandlord || '').toLowerCase() },
-      { label: 'Initial Payment Before Departure', key: 'housingPaymentInit', get: p => p.housingPaymentInit || 0 },
-      { label: 'Monthly Payment',                key: 'housingPaymentMo',  get: p => p.housingPaymentMo || 0 },
-      { label: 'Housing Address',                key: 'housingAddress',    get: p => (p.housingAddress || '').toLowerCase() },
-    ];
 
     function hSortIcon(key) {
       if (_housingSortCol !== key) return `<span class="sort-icon">⇅</span>`;
@@ -1701,9 +1733,9 @@ const App = (() => {
           <table>
             <thead>
               <tr>
-                ${HOUSING_COLS.map(c => c.key
-                  ? `<th class="sortable ${_housingSortCol === c.key ? 'sorted' : ''}" data-hcol="${c.key}">${c.label} ${hSortIcon(c.key)}</th>`
-                  : `<th>#</th>`
+                <th>#</th>
+                ${HOUSING_COLS.map(c =>
+                  `<th class="sortable ${_housingSortCol === c.key ? 'sorted' : ''}" data-hcol="${c.key}">${c.label} ${hSortIcon(c.key)}</th>`
                 ).join('')}
               </tr>
             </thead>
@@ -1711,14 +1743,11 @@ const App = (() => {
               ${sorted.map((p, i) => `
                 <tr>
                   <td class="row-num">${i + 1}</td>
-                  <td><strong>${p.name}</strong></td>
-                  <td>${p.country}</td>
-                  <td>${p.hostCompany}</td>
-                  <td>${badge(p.housingAvailability)}</td>
-                  <td>${p.housingLandlord}</td>
-                  <td>${p.housingPaymentInit ? '$' + p.housingPaymentInit : '—'}</td>
-                  <td>${p.housingPaymentMo ? '$' + p.housingPaymentMo : '—'}</td>
-                  <td>${p.housingAddress}</td>
+                  ${HOUSING_COLS.map(c => {
+                    const meta = c.key && EDITABLE_FIELDS[c.key];
+                    const editAttr = meta ? ` class="editable-cell" data-pid="${p.id}" data-field="${c.key}"` : '';
+                    return `<td${editAttr}>${c.render(p)}</td>`;
+                  }).join('')}
                 </tr>
               `).join('')}
             </tbody>
@@ -1778,6 +1807,13 @@ const App = (() => {
         _housingSortCol = col; _housingSortDir = 'asc';
       }
       document.getElementById('housingContent').innerHTML = renderHousingContent();
+    });
+
+    mc.addEventListener('click', e => {
+      const cell = e.target.closest('td.editable-cell');
+      if (!cell || cell.querySelector('input,select')) return;
+      const p = (_participants || []).find(x => String(x.id) === String(cell.dataset.pid));
+      if (p) openInlineEdit(cell, p, cell.dataset.field, HOUSING_COLS);
     });
   }
 
