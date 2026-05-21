@@ -88,6 +88,12 @@ async function route(request) {
   if (seg[0] === 'tw-session' && seg[2] === 'send-email' && m === 'POST') {
     return sendTWEmail(seg[1], request);
   }
+  if (seg[0] === 'tw-session' && seg[2] === 'fetch-recording' && m === 'POST') {
+    return fetchTWRecording(seg[1], request);
+  }
+  if (seg[0] === 'tw-session' && seg[2] === 'recording-url' && m === 'GET') {
+    return getTWRecordingUrl(seg[1], request);
+  }
 
   return jsonRes({ error: 'Not found' }, 404);
 }
@@ -562,6 +568,78 @@ async function sendTWEmail(id, request) {
     return jsonRes({ error: 'Email failed: ' + (err.error?.message || emailRes.status) }, 500);
   }
   return jsonRes({ ok: true });
+}
+
+async function fetchTWRecording(id, request) {
+  requireAdmin(request);
+  const session = await kvGet(`tw-session:${id}`);
+  if (!session) return jsonRes({ error: 'Session not found' }, 404);
+
+  const organizer   = EMAIL_SENDER || ONEDRIVE_USER;
+  const accessToken = await getAccessToken();
+
+  // List recent files in the organizer's OneDrive Recordings folder
+  const listRes = await fetch(
+    `https://graph.microsoft.com/v1.0/users/${organizer}/drive/root:/Recordings:/children` +
+    `?$orderby=createdDateTime+desc&$top=30&$select=id,name,createdDateTime,size,webUrl`,
+    { headers: { 'Authorization': `Bearer ${accessToken}` } }
+  );
+
+  if (!listRes.ok) {
+    if (listRes.status === 404) return jsonRes({ notFound: true, message: 'No Recordings folder found yet. Teams saves recordings there after the meeting ends.' });
+    const err = await listRes.json().catch(() => ({}));
+    return jsonRes({ error: 'Could not access Recordings folder: ' + (err.error?.message || listRes.status) }, 500);
+  }
+
+  const { value: files } = await listRes.json();
+  const meetingStart = session.scheduledAt || 0;
+
+  // Match MP4 files created after the meeting started
+  const candidates = (files || []).filter(f =>
+    f.name.toLowerCase().endsWith('.mp4') &&
+    new Date(f.createdDateTime).getTime() > meetingStart
+  );
+
+  if (!candidates.length) {
+    return jsonRes({ notFound: true, message: 'No recording found yet. Recording may still be processing — try again in a few minutes.' });
+  }
+
+  // Prefer a file whose name contains the candidate name or "Interview"
+  const namePart = session.candidateName.split(' ')[0].toLowerCase();
+  let best = candidates.find(f => f.name.toLowerCase().includes(namePart))
+          || candidates.find(f => f.name.toLowerCase().includes('interview'))
+          || candidates[0];
+
+  session.recordingDriveItemId = best.id;
+  session.recordingFileName    = best.name;
+  session.recordingWebUrl      = best.webUrl;
+  await kvPut(`tw-session:${id}`, session);
+
+  return jsonRes({ ok: true, fileName: best.name, webUrl: best.webUrl });
+}
+
+async function getTWRecordingUrl(id, request) {
+  requireAdmin(request);
+  const session = await kvGet(`tw-session:${id}`);
+  if (!session) return jsonRes({ error: 'Session not found' }, 404);
+  if (!session.recordingDriveItemId) return jsonRes({ error: 'No recording linked to this session' }, 404);
+
+  try {
+    const organizer   = EMAIL_SENDER || ONEDRIVE_USER;
+    const accessToken = await getAccessToken();
+    const itemRes = await fetch(
+      `https://graph.microsoft.com/v1.0/users/${organizer}/drive/items/${session.recordingDriveItemId}`,
+      { headers: { 'Authorization': `Bearer ${accessToken}` } }
+    );
+    const item = await itemRes.json();
+    return jsonRes({
+      downloadUrl: item['@microsoft.graph.downloadUrl'],
+      webUrl:      item.webUrl,
+      fileName:    session.recordingFileName,
+    });
+  } catch (e) {
+    return jsonRes({ error: 'Could not fetch recording URL: ' + e.message }, 500);
+  }
 }
 
 async function createTeamsMeeting(session) {

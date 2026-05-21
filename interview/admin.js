@@ -385,6 +385,14 @@ function renderTWSessionRow(s) {
       <button class="btn btn-outline" style="padding:4px 10px;font-size:12px" onclick="markTWCompleted('${s.id}')">✓ Done</button>
       <button class="btn btn-danger"  style="padding:4px 10px;font-size:12px" onclick="cancelTWSession('${s.id}', '${esc(s.candidateName)}')">Cancel</button>
     `;
+  } else if (s.status === 'completed') {
+    const recBtn = s.recordingDriveItemId
+      ? `<button class="btn btn-outline" style="padding:4px 10px;font-size:12px;color:var(--accent);border-color:var(--accent)" onclick="openTWRecording('${s.id}')">▶ Recording</button>`
+      : `<button class="btn btn-ghost"   style="padding:4px 10px;font-size:12px" title="Search OneDrive Recordings folder" onclick="fetchAndRefreshTWRecording('${s.id}')">⟳ Fetch Recording</button>`;
+    actions = `
+      ${recBtn}
+      <button class="btn btn-ghost" style="padding:4px 10px;font-size:12px;color:var(--muted)" onclick="deleteTWSession('${s.id}', '${esc(s.candidateName)}')">Delete</button>
+    `;
   } else {
     actions = `<button class="btn btn-ghost" style="padding:4px 10px;font-size:12px;color:var(--muted)" onclick="deleteTWSession('${s.id}', '${esc(s.candidateName)}')">Delete</button>`;
   }
@@ -410,8 +418,47 @@ async function markTWCompleted(id) {
   if (!confirm('Mark this session as completed?')) return;
   try {
     await apiJSON('PUT', `/api/tw-session/${id}`, { status: 'completed' });
-    toast('Marked as completed', 'success');
+    toast('Marked as completed — searching for recording…', 'info');
     await loadTWSessions();
+    // Auto-try to find the recording in OneDrive
+    try {
+      const result = await apiJSON('POST', `/api/tw-session/${id}/fetch-recording`);
+      if (result.ok) {
+        toast('Recording found and linked!', 'success');
+        await loadTWSessions();
+      } else {
+        toast(result.message || 'No recording found yet — use ⟳ Fetch Recording to retry later.', 'info');
+      }
+    } catch { /* recording not ready yet */ }
+  } catch (e) { toast(e.message, 'error'); }
+}
+
+async function fetchAndRefreshTWRecording(id) {
+  toast('Searching OneDrive Recordings…', 'info');
+  try {
+    const result = await apiJSON('POST', `/api/tw-session/${id}/fetch-recording`);
+    if (result.ok) {
+      toast('Recording found: ' + result.fileName, 'success');
+      await loadTWSessions();
+    } else {
+      toast(result.message || 'No recording found yet.', 'info');
+    }
+  } catch (e) { toast(e.message, 'error'); }
+}
+
+async function openTWRecording(id) {
+  toast('Loading recording…', 'info');
+  try {
+    const { downloadUrl, webUrl, fileName } = await apiJSON('GET', `/api/tw-session/${id}/recording-url`);
+    document.getElementById('review-candidate-name').textContent = fileName || 'Meeting Recording';
+    document.getElementById('review-interview-title').textContent = 'Two-Way Interview Recording';
+    document.getElementById('review-content').innerHTML = downloadUrl
+      ? `<video src="${downloadUrl}" controls style="width:100%;border-radius:6px;background:#000;display:block"></video>
+         <div class="mt-8" style="text-align:right">
+           <a href="${webUrl}" target="_blank" class="btn btn-ghost" style="font-size:11px">Open in OneDrive ↗</a>
+         </div>`
+      : `<div class="empty-state"><a href="${webUrl}" target="_blank" class="btn btn-primary">Open Recording in OneDrive ↗</a></div>`;
+    openModal('modal-review');
   } catch (e) { toast(e.message, 'error'); }
 }
 
