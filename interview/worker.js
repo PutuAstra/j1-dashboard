@@ -17,7 +17,7 @@
 
 const CORS = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Methods': 'GET, POST, DELETE, OPTIONS',
+  'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
   'Access-Control-Allow-Headers': 'Content-Type, X-Admin-Key',
 };
 
@@ -59,6 +59,9 @@ async function route(request) {
   }
   if (seg[0] === 'session' && seg.length === 2 && m === 'GET') {
     return getSession(seg[1]);
+  }
+  if (seg[0] === 'session' && seg.length === 2 && m === 'DELETE') {
+    return deleteSession(seg[1], request);
   }
   if (seg[0] === 'session' && seg[2] === 'send-email' && m === 'POST') {
     return sendInterviewEmail(seg[1], request);
@@ -353,6 +356,18 @@ async function uploadVideo(token, qIndex, request) {
   await kvPut(`session:${token}`, session);
 
   return jsonRes({ ok: true, webUrl });
+}
+
+async function deleteSession(token, request) {
+  requireAdmin(request);
+  const session = await kvGet(`session:${token}`);
+  if (!session) return jsonRes({ error: 'Session not found' }, 404);
+  if (session.status === 'completed') return jsonRes({ error: 'Cannot revoke a completed session' }, 400);
+
+  await INTERVIEW_DATA.delete(`session:${token}`);
+  const sessions = (await kvGet(`interview:${session.interviewId}:sessions`)) || [];
+  await kvPut(`interview:${session.interviewId}:sessions`, sessions.filter(t => t !== token));
+  return jsonRes({ ok: true });
 }
 
 async function completeSession(token) {

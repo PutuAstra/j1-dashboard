@@ -278,7 +278,7 @@ function renderSessionRow(s, interviewId, num) {
         <span class="badge badge-${s.status}">${s.status.replace('_', ' ')}</span>
         <span class="text-muted" style="font-size:12px;white-space:nowrap">${responseCount} vid${responseCount !== 1 ? 's' : ''}</span>
         <button class="btn btn-ghost" style="padding:2px 6px;font-size:13px" title="Copy link" onclick="copySessionLink('${s.token}')">🔗</button>
-        ${s.status !== 'pending' ? `<button class="btn btn-outline" style="padding:4px 12px;font-size:12px" onclick="openReview('${s.token}', '${esc(s.candidateName)}')">Review</button>` : ''}
+        ${s.status === 'pending' ? `<button class="btn btn-danger" style="padding:4px 12px;font-size:12px" onclick="revokeSession('${s.token}')">Revoke</button>` : `<button class="btn btn-outline" style="padding:4px 12px;font-size:12px" onclick="openReview('${s.token}', '${esc(s.candidateName)}')">Review</button>`}
       </div>
     </div>
   `;
@@ -343,6 +343,17 @@ async function sendLinkEmail(token, link, email) {
     toast('Failed to send: ' + e.message, 'error');
     btn.disabled = false;
     btn.textContent = '✉ Send Email';
+  }
+}
+
+async function revokeSession(token) {
+  if (!confirm('Revoke this invitation? The candidate link will stop working immediately.')) return;
+  try {
+    await apiJSON('DELETE', `/api/session/${token}`);
+    toast('Invitation revoked', 'success');
+    await loadSessions(currentInterviewId);
+  } catch (e) {
+    toast(e.message, 'error');
   }
 }
 
