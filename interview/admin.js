@@ -85,8 +85,9 @@ async function apiJSON(method, path, body = null) {
 
 function gotoPage(page) {
   history.replaceState(null, '', '#' + page);
+  const activeNav = ['ow-create', 'ow-list'].includes(page) ? 'ow-list' : 'tw-list';
   document.querySelectorAll('.sidebar-item').forEach(btn =>
-    btn.classList.toggle('active', btn.dataset.page === page)
+    btn.classList.toggle('active', btn.dataset.page === activeNav)
   );
   const main = document.getElementById('admin-main');
   main.innerHTML = '<div class="spinner" style="margin:auto;margin-top:80px"></div>';

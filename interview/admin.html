@@ -10,7 +10,7 @@
   <meta name="theme-color" content="#B01A18" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="style.css?v=20250522i" />
+  <link rel="stylesheet" href="style.css?v=20250522j" />
 </head>
 <body>
 
@@ -53,16 +53,8 @@
   <div class="admin-body">
 
     <aside class="admin-sidebar">
-      <div class="sidebar-group">
-        <div class="sidebar-group-label">One-Way Interview</div>
-        <button class="sidebar-item" data-page="ow-list"   onclick="gotoPage('ow-list')">All Interviews</button>
-        <button class="sidebar-item" data-page="ow-create" onclick="gotoPage('ow-create')">+ New Interview</button>
-      </div>
-      <div class="sidebar-group">
-        <div class="sidebar-group-label">Two-Way Interview</div>
-        <button class="sidebar-item" data-page="tw-list"     onclick="gotoPage('tw-list')">All Sessions</button>
-        <button class="sidebar-item" data-page="tw-schedule" onclick="gotoPage('tw-schedule')">+ Schedule</button>
-      </div>
+      <button class="sidebar-item" data-page="ow-list" onclick="gotoPage('ow-list')">One-Way Interview</button>
+      <button class="sidebar-item" data-page="tw-list" onclick="gotoPage('tw-list')">Two-Way Interview</button>
     </aside>
 
     <main class="admin-main" id="admin-main">
@@ -198,6 +190,6 @@
 
 <div id="toast"></div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-<script src="admin.js?v=20250522i"></script>
+<script src="admin.js?v=20250522j"></script>
 </body>
 </html>
