@@ -1677,6 +1677,7 @@ const App = (() => {
     const page = PAGES[pageName];
     if (!page) return;
     _currentPage = pageName;
+    if (updateHistory) location.hash = pageName;
 
     document.querySelectorAll('.nav-link').forEach(l =>
       l.classList.toggle('active', l.dataset.page === pageName)
@@ -1722,7 +1723,8 @@ const App = (() => {
     document.querySelectorAll('.nav-link').forEach(link =>
       link.addEventListener('click', e => { e.preventDefault(); navigate(link.dataset.page); closeSidebar(); })
     );
-    navigate('overview');
+    const initialPage = (location.hash.slice(1) || 'overview');
+    navigate(PAGES[initialPage] ? initialPage : 'overview');
 
     // Always start auto-refresh — auth is handled server-side
     startAutoRefresh();
