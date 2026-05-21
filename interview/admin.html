@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Interview Admin — CTI Group</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+<!-- Login Gate -->
+<div id="login-gate">
+  <div class="login-box card">
+    <div class="login-logo">
+      <div class="logo-ring">🎙️</div>
+      <h2>Interview Admin</h2>
+      <p class="text-muted mt-8">CTI Group Worldwide Services</p>
+    </div>
+    <div class="form-group">
+      <label>Admin Key</label>
+      <input type="password" id="key-input" placeholder="Enter your admin key" autocomplete="off" />
+    </div>
+    <button class="btn btn-primary" style="width:100%" onclick="doLogin()">Sign In</button>
+    <p id="login-err" class="text-sm" style="color:var(--red);margin-top:10px;display:none">Incorrect key. Try again.</p>
+  </div>
+</div>
+
+<!-- Main App (hidden until login) -->
+<div id="app" style="display:none">
+
+  <div class="topbar">
+    <div class="topbar-brand">
+      <span class="dot"></span>
+      CTI Interview Admin
+    </div>
+    <div class="flex gap-8">
+      <span id="topbar-info" class="text-muted text-sm"></span>
+      <button class="btn btn-ghost" onclick="doLogout()">Sign Out</button>
+    </div>
+  </div>
+
+  <div class="page-wide">
+
+    <div class="tabs">
+      <button class="tab-btn active" onclick="switchTab('interviews')">Interviews</button>
+      <button class="tab-btn" onclick="switchTab('create')">+ New Interview</button>
+    </div>
+
+    <!-- Tab: Interviews List -->
+    <div class="tab-pane active" id="tab-interviews">
+      <div class="flex justify-between items-center mb-16">
+        <h2>All Interviews</h2>
+        <button class="btn btn-outline" onclick="loadInterviews()">↻ Refresh</button>
+      </div>
+      <div id="interviews-list"></div>
+    </div>
+
+    <!-- Tab: Create Interview -->
+    <div class="tab-pane" id="tab-create">
+      <div class="card">
+        <h2 class="mb-16">Create New Interview</h2>
+
+        <div class="form-group">
+          <label>Interview Title *</label>
+          <input type="text" id="new-title" placeholder="e.g. J1 Intern Initial Screening" />
+        </div>
+
+        <div class="form-group">
+          <label>Description (shown to candidate)</label>
+          <textarea id="new-desc" placeholder="Brief instructions for the candidate..."></textarea>
+        </div>
+
+        <hr class="divider" />
+
+        <div class="flex justify-between items-center mb-16">
+          <h3>Questions</h3>
+          <button class="btn btn-outline" onclick="addQuestion()">+ Add Question</button>
+        </div>
+
+        <div id="questions-builder"></div>
+
+        <div class="mt-24 flex gap-8">
+          <button class="btn btn-primary" onclick="submitInterview()">Create Interview</button>
+          <button class="btn btn-outline" onclick="resetCreateForm()">Clear</button>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /page-wide -->
+</div><!-- /app -->
+
+<!-- Modal: Sessions -->
+<div class="modal-overlay" id="modal-sessions">
+  <div class="modal" style="max-width:720px">
+    <div class="modal-header">
+      <h2 id="modal-interview-title">Candidates</h2>
+      <button class="btn btn-ghost" onclick="closeModal('modal-sessions')">✕</button>
+    </div>
+
+    <div class="mb-16 flex gap-8 items-center">
+      <input type="text" id="new-cand-name" placeholder="Candidate name *" style="flex:1;background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:8px 12px;color:var(--text);font-size:13px" />
+      <input type="email" id="new-cand-email" placeholder="Email (optional)" style="flex:1;background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:8px 12px;color:var(--text);font-size:13px" />
+      <button class="btn btn-primary" onclick="generateLink()">Generate Link</button>
+    </div>
+
+    <div id="generated-link-box" style="display:none">
+      <p class="text-sm text-muted mb-4">Share this link with the candidate:</p>
+      <div class="link-box">
+        <span id="generated-link-text" style="flex:1"></span>
+        <button class="btn btn-ghost" style="padding:2px 8px;font-size:11px;flex-shrink:0" onclick="copyLink()">Copy</button>
+      </div>
+    </div>
+
+    <hr class="divider" />
+    <h3 class="mb-8">Submitted Responses</h3>
+
+    <div id="sessions-list"></div>
+  </div>
+</div>
+
+<!-- Modal: Review Videos -->
+<div class="modal-overlay" id="modal-review">
+  <div class="modal" style="max-width:860px">
+    <div class="modal-header">
+      <div>
+        <h2 id="review-candidate-name">Review</h2>
+        <p id="review-interview-title" class="text-muted text-sm"></p>
+      </div>
+      <button class="btn btn-ghost" onclick="closeModal('modal-review')">✕</button>
+    </div>
+    <div id="review-content"></div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script src="admin.js"></script>
+</body>
+</html>
