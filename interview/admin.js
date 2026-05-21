@@ -116,32 +116,18 @@ function renderInterviewCard(interview) {
   const qCount = interview.questions?.length || 0;
   const created = new Date(interview.createdAt).toLocaleDateString();
   return `
-    <div class="card mb-16" style="margin-bottom:14px">
+    <div class="card" style="margin-bottom:10px">
       <div class="flex justify-between items-center">
         <div>
           <h3>${esc(interview.title)}</h3>
           <p class="text-muted text-sm mt-8">${qCount} question${qCount !== 1 ? 's' : ''} &nbsp;·&nbsp; Created ${created}</p>
-          ${interview.description ? `<p class="text-sm mt-8" style="color:var(--text-2)">${esc(interview.description)}</p>` : ''}
         </div>
         <div class="flex gap-8">
-          <button class="btn btn-outline" onclick="openSessions('${interview.id}', '${esc(interview.title)}')">
-            Candidates
-          </button>
+          <button class="btn btn-outline" onclick="openSessions('${interview.id}', '${esc(interview.title)}')">Candidates</button>
           <button class="btn btn-outline" onclick="openEditInterview('${interview.id}')">Edit</button>
           <button class="btn btn-danger" onclick="deleteInterview('${interview.id}')">Delete</button>
         </div>
       </div>
-
-      <hr class="divider" style="margin:16px 0" />
-      <p class="text-sm text-muted mb-8">Questions:</p>
-      <ol style="padding-left:18px;display:flex;flex-direction:column;gap:6px">
-        ${interview.questions.map(q => `
-          <li style="color:var(--text-2);font-size:13px">
-            ${esc(q.text)}
-            <span class="text-muted"> — ${q.duration}s</span>
-          </li>
-        `).join('')}
-      </ol>
     </div>
   `;
 }
