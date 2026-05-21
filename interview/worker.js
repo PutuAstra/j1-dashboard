@@ -291,14 +291,16 @@ async function sendInterviewEmail(token, request) {
       </div>
     </div>`;
 
+  const sender = EMAIL_SENDER || ONEDRIVE_USER;
   const accessToken = await getAccessToken();
-  const res = await fetch(`https://graph.microsoft.com/v1.0/users/${ONEDRIVE_USER}/sendMail`, {
+  const res = await fetch(`https://graph.microsoft.com/v1.0/users/${sender}/sendMail`, {
     method: 'POST',
     headers: { 'Authorization': `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
     body: JSON.stringify({
       message: {
         subject: `Interview Invitation: ${interviewTitle} — CTI ClaudeHire`,
         body: { contentType: 'HTML', content: html },
+        from: { emailAddress: { name: 'CTI ClaudeHire', address: sender } },
         toRecipients: [{ emailAddress: { address: session.candidateEmail } }],
       },
       saveToSentItems: true,
