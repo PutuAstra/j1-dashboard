@@ -15,6 +15,7 @@ let _allSessions = [];
 let _sessionFilter = 'all';
 let _allTWSessions = [];
 let _twFilter = 'all';
+let _twSort = 'asc';
 let _bulkRows = [];
 let _bulkHeaders = [];
 let _bulkNameCol = null;
@@ -317,7 +318,7 @@ async function renderTWListPage() {
     <div class="tw-table-header">
       <span>Candidate</span>
       <span>Position</span>
-      <span>Scheduled</span>
+      <span style="cursor:pointer;user-select:none" onclick="toggleTWSort()">Scheduled <span id="tw-sort-indicator">↑</span></span>
       <span style="text-align:center">Status</span>
       <span style="text-align:right">Actions</span>
     </div>
@@ -340,6 +341,13 @@ async function loadTWSessions() {
   }
 }
 
+function toggleTWSort() {
+  _twSort = _twSort === 'asc' ? 'desc' : 'asc';
+  const ind = document.getElementById('tw-sort-indicator');
+  if (ind) ind.textContent = _twSort === 'asc' ? '↑' : '↓';
+  filterAndRenderTWSessions();
+}
+
 function setTWFilter(filter) {
   _twFilter = filter;
   ['all', 'scheduled', 'completed', 'cancelled'].forEach(f => {
@@ -357,6 +365,11 @@ function filterAndRenderTWSessions() {
         !(s.candidateEmail || '').toLowerCase().includes(query) &&
         !(s.position || '').toLowerCase().includes(query)) return false;
     return true;
+  });
+
+  list.sort((a, b) => {
+    const ta = a.scheduledAt || 0, tb = b.scheduledAt || 0;
+    return _twSort === 'asc' ? ta - tb : tb - ta;
   });
 
   const el = document.getElementById('tw-sessions-list');
