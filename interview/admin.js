@@ -482,6 +482,25 @@ async function deleteTWSession(id, name) {
 
 // ── Two-Way: Schedule page ────────────────────────────────────
 
+function buildTimeOptions() {
+  const now  = new Date();
+  const defH = now.getHours();
+  const defM = Math.ceil((now.getMinutes() + 1) / 15) * 15;
+  const snapH = defM >= 60 ? (defH + 1) % 24 : defH;
+  const snapM = defM % 60;
+  const defVal = `${String(snapH).padStart(2,'0')}:${String(snapM).padStart(2,'0')}`;
+
+  return Array.from({ length: 24 }, (_, h) =>
+    [0, 15, 30, 45].map(m => {
+      const val  = `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}`;
+      const ampm = h < 12 ? 'AM' : 'PM';
+      const h12  = h === 0 ? 12 : h > 12 ? h - 12 : h;
+      const lbl  = `${h12}:${String(m).padStart(2,'0')} ${ampm}`;
+      return `<option value="${val}"${val === defVal ? ' selected' : ''}>${lbl}</option>`;
+    }).join('')
+  ).join('');
+}
+
 function renderTWSchedulePage() {
   const main = document.getElementById('admin-main');
   main.innerHTML = `
@@ -505,11 +524,13 @@ function renderTWSchedulePage() {
         <div class="form-row mt-8" style="grid-template-columns:1fr 1fr 1fr;gap:16px">
           <div class="form-group" style="margin-bottom:0">
             <label>Date *</label>
-            <input type="date" id="tw-date" />
+            <input type="date" id="tw-date"
+              value="${(() => { const d = new Date(); d.setDate(d.getDate()+1); return d.toISOString().split('T')[0]; })()}"
+              min="${new Date().toISOString().split('T')[0]}" />
           </div>
           <div class="form-group" style="margin-bottom:0">
-            <label>Time *</label>
-            <input type="time" id="tw-time" />
+            <label>Time * &nbsp;<span style="font-size:10px;font-weight:400;text-transform:none;letter-spacing:0;color:var(--muted)">${(() => { try { return Intl.DateTimeFormat().resolvedOptions().timeZone; } catch(e){ return ''; } })()}</span></label>
+            <select id="tw-time">${buildTimeOptions()}</select>
           </div>
           <div class="form-group" style="margin-bottom:0">
             <label>Duration</label>
