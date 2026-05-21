@@ -167,14 +167,15 @@ const App = (() => {
     } catch(e) { /* job openings optional */ }
 
     // ── Visa stats — include any participant with visaAppointment filled ──
-    const visaPool     = participants.filter(p => p.visaAppointment && p.visaAppointment !== '—');
-    const visaTotal    = visaPool.length;
-    const visaApproved = visaPool.filter(p => /^approved$/i.test(p.visaStatus)).length;
-    const visaPending  = visaPool.filter(p => /^pending$/i.test(p.visaStatus)).length;
-    const visaRejected = visaPool.filter(p => !/^approved$/i.test(p.visaStatus) && !/^pending$/i.test(p.visaStatus) && p.visaStatus && p.visaStatus !== '—').length;
-    const _todayD      = new Date(); _todayD.setHours(0, 0, 0, 0);
-    const visaUpcoming = visaPool.filter(p => { const d = new Date(p.visaAppointment); return !isNaN(d) && d >= _todayD; }).length;
-    const visaPassPct  = visaTotal ? Math.round(visaApproved / visaTotal * 100) : 0;
+    const visaPool        = participants.filter(p => p.visaAppointment && p.visaAppointment !== '—');
+    const visaTotal       = visaPool.length;
+    const visaApproved    = visaPool.filter(p => /^approved$/i.test(p.visaStatus)).length;
+    const visaPending     = visaPool.filter(p => /^pending$/i.test(p.visaStatus)).length;
+    const visaRejected    = visaPool.filter(p => !/^approved$/i.test(p.visaStatus) && !/^pending$/i.test(p.visaStatus) && p.visaStatus && p.visaStatus !== '—').length;
+    const _todayD         = new Date(); _todayD.setHours(0, 0, 0, 0);
+    const visaUpcoming    = visaPool.filter(p => { const d = new Date(p.visaAppointment); return !isNaN(d) && d >= _todayD; }).length;
+    const visaSlRequested = visaPool.filter(p => /^requested$/i.test(p.refLetterStatus)).length;
+    const visaPassPct     = visaTotal ? Math.round(visaApproved / visaTotal * 100) : 0;
 
     mc.innerHTML = `
       <div class="page-header" style="margin-bottom:6px">
@@ -210,11 +211,12 @@ const App = (() => {
             <!-- Stat chips — equal width, fill height -->
             <div style="display:flex;gap:8px;flex:1;align-items:stretch;min-width:0">
               ${[
-                { label:'Total',          val: visaTotal,    color:'var(--text)' },
-                { label:'Approved',       val: visaApproved, color:'#16a34a' },
-                { label:'Rejected',       val: visaRejected, color:'var(--accent)' },
-                { label:'Pending',        val: visaPending,  color:'#d97706' },
-                { label:'Upcoming Appt.', val: visaUpcoming, color:'#2563eb' },
+                { label:'Total',          val: visaTotal,        color:'var(--text)'   },
+                { label:'Approved',       val: visaApproved,     color:'#16a34a'       },
+                { label:'Rejected',       val: visaRejected,     color:'var(--accent)' },
+                { label:'Pending',        val: visaPending,      color:'#d97706'       },
+                { label:'Upcoming Appt.', val: visaUpcoming,     color:'#2563eb'       },
+                { label:'SL Requested',   val: visaSlRequested,  color:'#7c3aed'       },
               ].map(c => `
                 <div style="background:var(--bg);border:1px solid var(--border);border-radius:8px;flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;overflow:hidden">
                   <div style="font-size:min(3rem,5vh);font-weight:800;line-height:1;color:${c.color}">${c.val}</div>
