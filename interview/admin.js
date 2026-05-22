@@ -1040,13 +1040,20 @@ function filterAndRenderSessions() {
       const sa = order[a.status] ?? 0, sb = order[b.status] ?? 0;
       return _sessionSortDir === 'desc' ? sb - sa : sa - sb;
     });
+  } else if (_sessionSortCol === 'date') {
+    list.sort((a, b) => {
+      const ta = a.createdAt || 0, tb = b.createdAt || 0;
+      return _sessionSortDir === 'desc' ? tb - ta : ta - tb;
+    });
   }
 
   // Sync sort indicators
   const rv = document.getElementById('sort-review-ind');
   const st = document.getElementById('sort-status-ind');
-  if (rv) rv.textContent = _sessionSortCol === 'review'  ? (_sessionSortDir === 'desc' ? '↓' : '↑') : '↕';
-  if (st) st.textContent = _sessionSortCol === 'status'  ? (_sessionSortDir === 'desc' ? '↓' : '↑') : '↕';
+  const dt = document.getElementById('sort-date-ind');
+  if (rv) rv.textContent = _sessionSortCol === 'review' ? (_sessionSortDir === 'desc' ? '↓' : '↑') : '↕';
+  if (st) st.textContent = _sessionSortCol === 'status' ? (_sessionSortDir === 'desc' ? '↓' : '↑') : '↕';
+  if (dt) dt.textContent = _sessionSortCol === 'date'   ? (_sessionSortDir === 'desc' ? '↓' : '↑') : '↕';
 
   const heading = document.getElementById('sessions-heading');
   if (heading) heading.textContent = `Candidates (${_allSessions.length})`;
@@ -1087,7 +1094,9 @@ const DECISION_LABEL = {
 };
 
 function renderSessionRow(s, num) {
-  const invitedDate   = s.createdAt ? new Date(s.createdAt).toLocaleDateString() : '—';
+  const invitedDate = s.createdAt
+    ? new Date(s.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })
+    : '—';
   const responseCount = s.responses?.length || 0;
 
   const avatarContent = s.profilePhotoItemId
@@ -1111,7 +1120,7 @@ function renderSessionRow(s, num) {
         <div id="av-${s.token}" class="candidate-avatar">${avatarContent}</div>
         <div style="min-width:0">
           <div style="font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(s.candidateName)}</div>
-          <div class="text-muted" style="font-size:11px;margin-top:1px">${s.candidateEmail ? esc(s.candidateEmail) + ' · ' : ''}Invited ${invitedDate}</div>
+          <div class="text-muted" style="font-size:11px;margin-top:1px">${s.candidateEmail ? esc(s.candidateEmail) : ''}</div>
         </div>
       </div>
       <div style="display:flex;flex-direction:column;gap:3px;justify-content:center">
@@ -1119,6 +1128,9 @@ function renderSessionRow(s, num) {
           ? `<div><span style="font-size:10px;padding:2px 7px;border-radius:10px;${DECISION_STYLE[s.reviewDecision]||''};white-space:nowrap">${DECISION_LABEL[s.reviewDecision]||s.reviewDecision}</span></div>
              ${s.reviewStars ? `<div style="font-size:13px;letter-spacing:0.5px;color:#f59e0b">${'★'.repeat(s.reviewStars)}<span style="color:var(--border)">${'★'.repeat(5-s.reviewStars)}</span></div>` : ''}`
           : `<span class="text-muted" style="font-size:12px">—</span>`}
+      </div>
+      <div style="display:flex;align-items:center">
+        <span style="font-size:12px;color:var(--text-2)">${invitedDate}</span>
       </div>
       <div style="display:flex;align-items:center;justify-content:center">
         <span class="badge badge-${s.status}">${s.status.replace('_', ' ')}</span>
