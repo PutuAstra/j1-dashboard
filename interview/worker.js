@@ -114,6 +114,28 @@ async function route(request) {
   if (seg[0] === 'session' && seg[2] === 'review' && m === 'POST') return saveSessionReview(seg[1], request);
   if (seg[0] === 'session' && seg[2] === 'review' && m === 'GET')  return getSessionReview(seg[1], request);
 
+  // Interview Script management
+  if (seg[0] === 'script' && seg[1] === 'clients' && seg.length === 2) {
+    if (m === 'GET')  return listScriptClients(request);
+    if (m === 'POST') return createScriptClient(request);
+  }
+  if (seg[0] === 'script' && seg[1] === 'client' && seg.length === 3 && m === 'DELETE') {
+    return deleteScriptClient(seg[2], request);
+  }
+  if (seg[0] === 'script' && seg[1] === 'client' && seg[3] === 'positions') {
+    if (m === 'GET')  return listScriptPositions(seg[2], request);
+    if (m === 'POST') return createScriptPosition(seg[2], request);
+  }
+  if (seg[0] === 'script' && seg[1] === 'position' && seg.length === 3 && m === 'DELETE') {
+    return deleteScriptPosition(seg[2], request);
+  }
+  if (seg[0] === 'script' && seg[1] === 'position' && seg[3] === 'upload' && m === 'POST') {
+    return uploadScriptDoc(seg[2], request);
+  }
+  if (seg[0] === 'script' && seg[1] === 'position' && seg[3] === 'doc-url' && m === 'GET') {
+    return getScriptDocUrl(seg[2], request);
+  }
+
   return jsonRes({ error: 'Not found' }, 404);
 }
 
@@ -1134,4 +1156,130 @@ async function getSessionReview(token, request) {
   const review = await kvGet(`session:${token}:review`);
   if (!review) return jsonRes({ notFound: true });
   return jsonRes(review);
+}
+
+// ── Interview Script handlers ─────────────────────────────────
+
+async function listScriptClients(request) {
+  requireAdmin(request);
+  const ids = (await kvGet('script:client:list')) || [];
+  const clients = await Promise.all(ids.map(id => kvGet(`script:client:${id}`)));
+  return jsonRes(clients.filter(Boolean));
+}
+
+async function createScriptClient(request) {
+  requireAdmin(request);
+  const { name } = await request.json();
+  if (!name) return jsonRes({ error: 'name required' }, 400);
+  const id = uid();
+  const client = { id, name, createdAt: Date.now() };
+  await kvPut(`script:client:${id}`, client);
+  const list = (await kvGet('script:client:list')) || [];
+  list.unshift(id);
+  await kvPut('script:client:list', list);
+  return jsonRes(client, 201);
+}
+
+async function deleteScriptClient(id, request) {
+  requireAdmin(request);
+  // Remove all positions belonging to this client
+  const posIds = (await kvGet(`script:client:${id}:positions`)) || [];
+  await Promise.all(posIds.map(pid => INTERVIEW_DATA.delete(`script:position:${pid}`)));
+  await INTERVIEW_DATA.delete(`script:client:${id}:positions`);
+  await INTERVIEW_DATA.delete(`script:client:${id}`);
+  const list = (await kvGet('script:client:list')) || [];
+  await kvPut('script:client:list', list.filter(i => i !== id));
+  return jsonRes({ ok: true });
+}
+
+async function listScriptPositions(clientId, request) {
+  requireAdmin(request);
+  const ids = (await kvGet(`script:client:${clientId}:positions`)) || [];
+  const positions = await Promise.all(ids.map(id => kvGet(`script:position:${id}`)));
+  return jsonRes(positions.filter(Boolean));
+}
+
+async function createScriptPosition(clientId, request) {
+  requireAdmin(request);
+  const client = await kvGet(`script:client:${clientId}`);
+  if (!client) return jsonRes({ error: 'Client not found' }, 404);
+  const { name } = await request.json();
+  if (!name) return jsonRes({ error: 'name required' }, 400);
+  const id = uid();
+  const position = { id, clientId, name, createdAt: Date.now() };
+  await kvPut(`script:position:${id}`, position);
+  const list = (await kvGet(`script:client:${clientId}:positions`)) || [];
+  list.push(id);
+  await kvPut(`script:client:${clientId}:positions`, list);
+  return jsonRes(position, 201);
+}
+
+async function deleteScriptPosition(id, request) {
+  requireAdmin(request);
+  const pos = await kvGet(`script:position:${id}`);
+  if (!pos) return jsonRes({ error: 'Not found' }, 404);
+  const list = (await kvGet(`script:client:${pos.clientId}:positions`)) || [];
+  await kvPut(`script:client:${pos.clientId}:positions`, list.filter(p => p !== id));
+  await INTERVIEW_DATA.delete(`script:position:${id}`);
+  return jsonRes({ ok: true });
+}
+
+async function uploadScriptDoc(id, request) {
+  requireAdmin(request);
+  const pos = await kvGet(`script:position:${id}`);
+  if (!pos) return jsonRes({ error: 'Position not found' }, 404);
+  try {
+    const formData    = await request.formData();
+    const file        = formData.get('file');
+    if (!file) return jsonRes({ error: 'No file in request' }, 400);
+
+    const fileName    = file.name || 'script.pdf';
+    const ext         = fileName.split('.').pop().toLowerCase() || 'pdf';
+    const mimeMap     = {
+      pdf:  'application/pdf',
+      doc:  'application/msword',
+      docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    };
+    const contentType = mimeMap[ext] || 'application/octet-stream';
+
+    const client      = await kvGet(`script:client:${pos.clientId}`);
+    const safeClient  = (client?.name  || 'Client')  .replace(/[^a-zA-Z0-9 _-]/g, '').trim();
+    const safePos     = pos.name.replace(/[^a-zA-Z0-9 _-]/g, '').trim();
+    const filePath    = `CTI Interviews/Scripts/${safeClient}/${safePos}.${ext}`;
+
+    const blob        = await file.arrayBuffer();
+    const accessToken = await getAccessToken();
+    const fileItem    = await uploadToOneDrive(filePath, blob, accessToken, contentType);
+
+    pos.driveItemId = fileItem.id;
+    pos.fileName    = fileName;
+    pos.ext         = ext;
+    pos.uploadedAt  = Date.now();
+    await kvPut(`script:position:${id}`, pos);
+    return jsonRes({ ok: true, fileName });
+  } catch (e) {
+    return jsonRes({ error: 'Upload failed: ' + e.message }, 500);
+  }
+}
+
+async function getScriptDocUrl(id, request) {
+  requireAdmin(request);
+  const pos = await kvGet(`script:position:${id}`);
+  if (!pos?.driveItemId) return jsonRes({ notFound: true });
+  try {
+    const accessToken = await getAccessToken();
+    const res  = await fetch(
+      `https://graph.microsoft.com/v1.0/users/${ONEDRIVE_USER}/drive/items/${pos.driveItemId}`,
+      { headers: { 'Authorization': `Bearer ${accessToken}` } }
+    );
+    const item = await res.json();
+    return jsonRes({
+      downloadUrl: item['@microsoft.graph.downloadUrl'] || null,
+      webUrl:      item.webUrl || null,
+      fileName:    pos.fileName,
+      ext:         pos.ext,
+    });
+  } catch (e) {
+    return jsonRes({ error: e.message }, 500);
+  }
 }

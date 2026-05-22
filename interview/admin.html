@@ -10,7 +10,7 @@
   <meta name="theme-color" content="#B01A18" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="style.css?v=20250522u" />
+  <link rel="stylesheet" href="style.css?v=20250522v" />
 </head>
 <body>
 
@@ -60,6 +60,13 @@
       <div class="sidebar-children">
         <button class="sidebar-item sidebar-child" data-page="ow-list" onclick="gotoPage('ow-list')">One-Way Interview</button>
         <button class="sidebar-item sidebar-child" data-page="tw-list" onclick="gotoPage('tw-list')">Two-Way Interview</button>
+      </div>
+      <button class="sidebar-parent-btn" onclick="toggleSidebarGroup(this)" aria-expanded="true">
+        Interview Script
+        <span class="sidebar-chevron">▾</span>
+      </button>
+      <div class="sidebar-children">
+        <button class="sidebar-item sidebar-child" data-page="scripts" onclick="gotoPage('scripts')">Manage Scripts</button>
       </div>
     </aside>
 
@@ -212,6 +219,6 @@
 
 <div id="toast"></div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-<script src="admin.js?v=20250522z2"></script>
+<script src="admin.js?v=20250522z3"></script>
 </body>
 </html>

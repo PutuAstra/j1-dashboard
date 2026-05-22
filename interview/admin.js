@@ -25,6 +25,7 @@ let _starFilter = 0;
 let _reviewStars = 0;
 let _sessionSortCol = null;
 let _sessionSortDir = 'desc';
+let _scriptClients = [];
 
 // ── Auth ──────────────────────────────────────────────────────
 
@@ -55,7 +56,7 @@ function doLogout() {
 function showApp() {
   document.getElementById('login-gate').style.display = 'none';
   document.getElementById('app').style.display = 'block';
-  const valid = ['ow-list', 'ow-create', 'tw-list', 'tw-schedule'];
+  const valid = ['ow-list', 'ow-create', 'tw-list', 'tw-schedule', 'scripts'];
   const hash  = window.location.hash.replace('#', '');
   gotoPage(valid.includes(hash) ? hash : 'ow-list');
 }
@@ -97,7 +98,9 @@ function toggleSidebarGroup(btn) {
 
 function gotoPage(page) {
   history.replaceState(null, '', '#' + page);
-  const activeNav = ['ow-create', 'ow-list'].includes(page) ? 'ow-list' : 'tw-list';
+  const activeNav = ['ow-create', 'ow-list'].includes(page) ? 'ow-list'
+                  : page === 'scripts' ? 'scripts'
+                  : 'tw-list';
   document.querySelectorAll('.sidebar-item').forEach(btn =>
     btn.classList.toggle('active', btn.dataset.page === activeNav)
   );
@@ -108,6 +111,7 @@ function gotoPage(page) {
   if (page === 'ow-create')   renderOWCreatePage();
   if (page === 'tw-list')     renderTWListPage();
   if (page === 'tw-schedule') renderTWSchedulePage();
+  if (page === 'scripts')     renderScriptPage();
 }
 
 // ── One-Way: List page ────────────────────────────────────────
@@ -1598,4 +1602,179 @@ function toast(msg, type = 'info') {
 
 function esc(str) {
   return String(str ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+// ── Interview Script ──────────────────────────────────────────
+
+async function renderScriptPage() {
+  const main = document.getElementById('admin-main');
+  main.innerHTML = `
+    <div style="max-width:860px">
+      <div class="flex justify-between items-center mb-16">
+        <h2>Interview Scripts</h2>
+        <button class="btn btn-primary" onclick="promptAddClient()">+ Add Client</button>
+      </div>
+      <div id="script-clients-list"><div class="empty-state">Loading…</div></div>
+    </div>
+  `;
+  await loadScriptPage();
+}
+
+async function loadScriptPage() {
+  const el = document.getElementById('script-clients-list');
+  if (!el) return;
+  try {
+    _scriptClients = await apiJSON('GET', '/api/script/clients');
+    if (!_scriptClients.length) {
+      el.innerHTML = `<div class="empty-state">No clients yet. Click "+ Add Client" to get started.</div>`;
+      return;
+    }
+    // Load all positions in parallel
+    const posMap = {};
+    await Promise.all(_scriptClients.map(async c => {
+      try { posMap[c.id] = await apiJSON('GET', `/api/script/client/${c.id}/positions`); }
+      catch { posMap[c.id] = []; }
+    }));
+    el.innerHTML = _scriptClients.map(c => renderScriptClientCard(c, posMap[c.id] || [])).join('');
+  } catch (e) {
+    if (el) el.innerHTML = `<div class="empty-state" style="color:var(--red)">${esc(e.message)}</div>`;
+  }
+}
+
+function renderScriptClientCard(client, positions) {
+  const posHTML = positions.length
+    ? positions.map(p => renderScriptPositionRow(p)).join('')
+    : `<div style="padding:12px 0;font-size:12px;color:var(--muted);text-align:center">No positions yet. Click "+ Add Position" to add one.</div>`;
+  return `
+    <div class="card" style="margin-bottom:16px">
+      <div style="display:flex;justify-content:space-between;align-items:center;padding-bottom:12px;border-bottom:1px solid var(--border);margin-bottom:12px">
+        <span style="font-size:15px;font-weight:700">${esc(client.name)}</span>
+        <div style="display:flex;gap:8px">
+          <button class="btn btn-outline" style="font-size:12px;padding:5px 14px"
+            onclick="promptAddPosition('${client.id}')">+ Add Position</button>
+          <button class="btn" style="font-size:12px;padding:5px 14px;color:var(--red);border:1px solid var(--red);background:transparent"
+            onclick="deleteScriptClient('${client.id}','${esc(client.name).replace(/'/g,'\\\'')}')">Delete Client</button>
+        </div>
+      </div>
+      <div id="sc-pos-${client.id}">${posHTML}</div>
+    </div>
+  `;
+}
+
+function renderScriptPositionRow(p) {
+  const hasDoc = !!p.driveItemId;
+  const uploadedDate = p.uploadedAt
+    ? new Date(p.uploadedAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })
+    : null;
+  return `
+    <div style="display:flex;align-items:center;gap:12px;padding:10px 14px;border:1px solid var(--border);border-radius:8px;margin-bottom:8px;background:var(--bg)">
+      <div style="flex:1;min-width:0">
+        <div style="font-size:13px;font-weight:600">${esc(p.name)}</div>
+        <div style="font-size:11px;color:var(--muted);margin-top:2px">
+          ${hasDoc
+            ? `📄 ${esc(p.fileName || 'Document')}${uploadedDate ? ' · ' + uploadedDate : ''}`
+            : 'No document uploaded'}
+        </div>
+      </div>
+      <div style="display:flex;gap:6px;flex-shrink:0;align-items:center">
+        ${hasDoc
+          ? `<button class="btn btn-outline" style="font-size:12px;padding:4px 12px"
+               onclick="viewScriptDoc('${p.id}','${esc(p.fileName||'document')}')">View</button>
+             <button class="btn btn-ghost" style="font-size:12px;padding:4px 10px" title="Download"
+               onclick="downloadScriptDoc('${p.id}')">↓</button>`
+          : ''}
+        <label class="btn btn-outline" style="font-size:12px;padding:4px 14px;cursor:pointer;font-weight:600">
+          ${hasDoc ? 'Replace' : 'Upload'}
+          <input type="file" accept=".pdf,.doc,.docx" style="display:none"
+            onchange="uploadScriptDoc('${p.id}', this)">
+        </label>
+        <button class="btn" style="font-size:12px;padding:4px 10px;color:var(--red);border:1px solid var(--red);background:transparent" title="Delete position"
+          onclick="deleteScriptPosition('${p.id}','${esc(p.name).replace(/'/g,'\\\'')}','${p.clientId}')">✕</button>
+      </div>
+    </div>
+  `;
+}
+
+async function promptAddClient() {
+  const name = prompt('Enter client name:');
+  if (!name?.trim()) return;
+  try {
+    await apiJSON('POST', '/api/script/clients', { name: name.trim() });
+    toast('Client added', 'success');
+    await loadScriptPage();
+  } catch (e) { toast(e.message, 'error'); }
+}
+
+async function deleteScriptClient(id, name) {
+  if (!confirm(`Delete client "${name}"?\n\nThis will also delete all its positions and uploaded documents.`)) return;
+  try {
+    await apiJSON('DELETE', `/api/script/client/${id}`);
+    toast('Client deleted', 'success');
+    await loadScriptPage();
+  } catch (e) { toast(e.message, 'error'); }
+}
+
+async function promptAddPosition(clientId) {
+  const name = prompt('Enter position / role name:');
+  if (!name?.trim()) return;
+  try {
+    await apiJSON('POST', `/api/script/client/${clientId}/positions`, { name: name.trim() });
+    toast('Position added', 'success');
+    await loadScriptPage();
+  } catch (e) { toast(e.message, 'error'); }
+}
+
+async function deleteScriptPosition(id, name, clientId) {
+  if (!confirm(`Delete position "${name}"?`)) return;
+  try {
+    await apiJSON('DELETE', `/api/script/position/${id}`);
+    toast('Position deleted', 'success');
+    await loadScriptPage();
+  } catch (e) { toast(e.message, 'error'); }
+}
+
+async function uploadScriptDoc(positionId, input) {
+  const file = input.files?.[0];
+  if (!file) return;
+  // Show inline loading on the label button
+  const label = input.closest('label');
+  const origText = label?.textContent?.trim();
+  if (label) { label.textContent = 'Uploading…'; label.style.pointerEvents = 'none'; label.style.opacity = '0.6'; }
+  try {
+    const form = new FormData();
+    form.append('file', file);
+    const res = await fetch(`${WORKER_URL}/api/script/position/${positionId}/upload`, {
+      method: 'POST',
+      headers: { 'X-Admin-Key': adminKey },
+      body: form,
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Upload failed');
+    toast('Document uploaded', 'success');
+    await loadScriptPage();
+  } catch (e) {
+    toast(e.message, 'error');
+    if (label) { label.textContent = origText || 'Upload'; label.style.pointerEvents = ''; label.style.opacity = ''; }
+  }
+}
+
+async function viewScriptDoc(positionId, fileName) {
+  try {
+    const data = await apiJSON('GET', `/api/script/position/${positionId}/doc-url`);
+    if (!data.downloadUrl) return toast('Document not available', 'error');
+    const ext = (data.ext || (fileName.split('.').pop()) || 'pdf').toLowerCase();
+    const enc = encodeURIComponent(data.downloadUrl);
+    const viewerSrc = (ext === 'doc' || ext === 'docx')
+      ? `https://view.officeapps.live.com/op/embed.aspx?src=${enc}`
+      : `https://docs.google.com/viewer?url=${enc}&embedded=true`;
+    window.open(viewerSrc, '_blank');
+  } catch (e) { toast(e.message, 'error'); }
+}
+
+async function downloadScriptDoc(positionId) {
+  try {
+    const data = await apiJSON('GET', `/api/script/position/${positionId}/doc-url`);
+    if (!data.downloadUrl) return toast('Document not available', 'error');
+    window.open(data.downloadUrl, '_blank');
+  } catch (e) { toast(e.message, 'error'); }
 }
