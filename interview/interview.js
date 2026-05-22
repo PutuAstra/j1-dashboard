@@ -99,7 +99,7 @@ function showIntro() {
 async function requestCamera() {
   try {
     mediaStream = await navigator.mediaDevices.getUserMedia({
-      video: { width: { ideal: 1280 }, height: { ideal: 720 }, frameRate: { ideal: 30 } },
+      video: { width: { ideal: 1280 }, height: { ideal: 720 }, frameRate: { ideal: 30 }, facingMode: 'user' },
       audio: { echoCancellation: true, noiseSuppression: true, sampleRate: 44100 }
     });
     showQuestion(0);
@@ -117,7 +117,7 @@ async function requestCamera() {
 async function showSetup() {
   try {
     mediaStream = await navigator.mediaDevices.getUserMedia({
-      video: { width: { ideal: 1280 }, height: { ideal: 720 }, frameRate: { ideal: 30 } },
+      video: { width: { ideal: 1280 }, height: { ideal: 720 }, frameRate: { ideal: 30 }, facingMode: 'user' },
       audio: { echoCancellation: true, noiseSuppression: true, sampleRate: 44100 }
     });
   } catch (e) {
