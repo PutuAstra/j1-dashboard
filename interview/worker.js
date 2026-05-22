@@ -1023,16 +1023,19 @@ async function uploadProfilePhoto(token, request) {
   const session = await kvGet(`session:${token}`);
   if (!session) return jsonRes({ error: 'Session not found' }, 404);
 
-  const contentType = request.headers.get('Content-Type') || 'image/jpeg';
-  const ext = contentType.includes('png') ? 'png' : contentType.includes('gif') ? 'gif' : 'jpg';
-
-  const interview  = await kvGet(`interview:${session.interviewId}`);
-  const safeName   = session.candidateName.replace(/[^a-zA-Z0-9 _-]/g, '').trim();
-  const shortToken = token.slice(0, 8);
-  const filePath   = `CTI Interviews/${interview?.title || 'Interview'}/${safeName} (${shortToken})/profile.${ext}`;
-
   try {
-    const blob        = await request.arrayBuffer();
+    const formData    = await request.formData();
+    const file        = formData.get('file');
+    if (!file) return jsonRes({ error: 'No file in request' }, 400);
+
+    const contentType = file.type || 'image/jpeg';
+    const ext         = contentType.includes('png') ? 'png' : contentType.includes('gif') ? 'gif' : 'jpg';
+    const interview   = await kvGet(`interview:${session.interviewId}`);
+    const safeName    = session.candidateName.replace(/[^a-zA-Z0-9 _-]/g, '').trim();
+    const shortToken  = token.slice(0, 8);
+    const filePath    = `CTI Interviews/${interview?.title || 'Interview'}/${safeName} (${shortToken})/profile.${ext}`;
+
+    const blob        = await file.arrayBuffer();
     const accessToken = await getAccessToken();
     const fileItem    = await uploadToOneDrive(filePath, blob, accessToken, contentType);
     session.profilePhotoItemId = fileItem.id;
@@ -1047,22 +1050,25 @@ async function uploadResume(token, request) {
   const session = await kvGet(`session:${token}`);
   if (!session) return jsonRes({ error: 'Session not found' }, 404);
 
-  const xFilename  = request.headers.get('X-Filename') || 'resume.pdf';
-  const ext        = xFilename.split('.').pop().toLowerCase() || 'pdf';
-  const mimeMap    = { pdf: 'application/pdf', doc: 'application/msword', docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' };
-  const contentType = mimeMap[ext] || 'application/octet-stream';
-
-  const interview  = await kvGet(`interview:${session.interviewId}`);
-  const safeName   = session.candidateName.replace(/[^a-zA-Z0-9 _-]/g, '').trim();
-  const shortToken = token.slice(0, 8);
-  const filePath   = `CTI Interviews/${interview?.title || 'Interview'}/${safeName} (${shortToken})/resume.${ext}`;
-
   try {
-    const blob        = await request.arrayBuffer();
+    const formData    = await request.formData();
+    const file        = formData.get('file');
+    if (!file) return jsonRes({ error: 'No file in request' }, 400);
+
+    const fileName    = file.name || 'resume.pdf';
+    const ext         = fileName.split('.').pop().toLowerCase() || 'pdf';
+    const mimeMap     = { pdf: 'application/pdf', doc: 'application/msword', docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' };
+    const contentType = mimeMap[ext] || 'application/octet-stream';
+    const interview   = await kvGet(`interview:${session.interviewId}`);
+    const safeName    = session.candidateName.replace(/[^a-zA-Z0-9 _-]/g, '').trim();
+    const shortToken  = token.slice(0, 8);
+    const filePath    = `CTI Interviews/${interview?.title || 'Interview'}/${safeName} (${shortToken})/resume.${ext}`;
+
+    const blob        = await file.arrayBuffer();
     const accessToken = await getAccessToken();
     const fileItem    = await uploadToOneDrive(filePath, blob, accessToken, contentType);
     session.resumeItemId   = fileItem.id;
-    session.resumeFileName = xFilename;
+    session.resumeFileName = fileName;
     session.resumeExt      = ext;
     await kvPut(`session:${token}`, session);
     return jsonRes({ ok: true });

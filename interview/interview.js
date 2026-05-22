@@ -338,22 +338,24 @@ async function submitProfileUpload() {
     </div>`;
 
   try {
-    // Upload cropped photo (always JPEG from canvas)
+    // Upload cropped photo via FormData (avoids CORS preflight)
+    const photoForm = new FormData();
+    photoForm.append('file', photoBlob, 'profile.jpg');
     const photoRes = await fetch(`${WORKER_URL}/api/session/${token}/upload-photo`, {
       method: 'POST',
-      headers: { 'Content-Type': 'image/jpeg' },
-      body: photoBlob,
+      body: photoForm,
     });
     if (!photoRes.ok) {
       const err = await photoRes.json().catch(() => ({}));
       throw new Error(err.error || `Photo upload failed (${photoRes.status})`);
     }
 
-    // Upload resume
+    // Upload resume via FormData
+    const resumeForm = new FormData();
+    resumeForm.append('file', resumeFile, resumeFile.name);
     const resumeRes = await fetch(`${WORKER_URL}/api/session/${token}/upload-resume`, {
       method: 'POST',
-      headers: { 'Content-Type': resumeFile.type || 'application/octet-stream', 'X-Filename': resumeFile.name },
-      body: resumeFile,
+      body: resumeForm,
     });
     if (!resumeRes.ok) {
       const err = await resumeRes.json().catch(() => ({}));
