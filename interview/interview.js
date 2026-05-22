@@ -107,7 +107,12 @@ function showQuestion(index) {
           <div class="progress-bar-fill" style="width:${((index) / total) * 100}%"></div>
         </div>
 
-        <p class="question-text">${esc(q.text)}</p>
+        <p class="question-text" id="question-text" style="filter:blur(7px);user-select:none;transition:filter 0.4s ease">
+          Question ${index + 1}: ${esc(q.text)}
+        </p>
+        <p id="question-hint" class="text-sm text-muted" style="margin-top:-4px;margin-bottom:4px">
+          🔒 Question will be revealed when you press Record
+        </p>
 
         <div class="camera-wrap" id="camera-wrap">
           <video id="preview" autoplay muted playsinline></video>
@@ -116,7 +121,7 @@ function showQuestion(index) {
         </div>
 
         <div id="controls" class="flex gap-12 justify-between items-center mt-16">
-          <p class="text-muted text-sm">When you're ready, press record. You have ${formatTime(q.duration)}.</p>
+          <p class="text-muted text-sm">Press Record when you're ready. You have ${formatTime(q.duration)}.</p>
           <button class="btn btn-primary btn-lg" id="record-btn" onclick="startCountdown()">
             ● Record
           </button>
@@ -136,6 +141,12 @@ function updateProgress(index, total) {
 // ── Recording flow ────────────────────────────────────────────
 
 function startCountdown() {
+  // Reveal the question now that candidate has committed to record
+  const qText = document.getElementById('question-text');
+  if (qText) { qText.style.filter = 'none'; qText.style.userSelect = ''; }
+  const hint = document.getElementById('question-hint');
+  if (hint) hint.style.display = 'none';
+
   document.getElementById('record-btn').disabled = true;
   let count = 3;
 
