@@ -411,10 +411,10 @@ function renderTWSessionRow(s) {
       : `<button class="btn btn-ghost"   style="padding:4px 10px;font-size:12px" title="Search OneDrive Recordings folder" onclick="fetchAndRefreshTWRecording('${s.id}')">⟳ Fetch Recording</button>`;
     actions = `
       ${recBtn}
-      <button class="btn btn-ghost" style="padding:4px 10px;font-size:12px;color:var(--muted)" onclick="deleteTWSession('${s.id}', '${esc(s.candidateName)}')">Delete</button>
+      <button class="btn btn-ghost" style="padding:4px 8px;font-size:15px;color:var(--muted);line-height:1" title="Delete session" onclick="deleteTWSession('${s.id}', '${esc(s.candidateName)}')">🗑</button>
     `;
   } else {
-    actions = `<button class="btn btn-ghost" style="padding:4px 10px;font-size:12px;color:var(--muted)" onclick="deleteTWSession('${s.id}', '${esc(s.candidateName)}')">Delete</button>`;
+    actions = `<button class="btn btn-ghost" style="padding:4px 8px;font-size:15px;color:var(--muted);line-height:1" title="Delete session" onclick="deleteTWSession('${s.id}', '${esc(s.candidateName)}')">🗑</button>`;
   }
 
   return `
