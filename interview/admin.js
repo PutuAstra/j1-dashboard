@@ -1054,8 +1054,14 @@ async function generateLink() {
 }
 
 function buildTakeUrl(token) {
-  const base = window.location.href.replace('admin.html', 'take.html');
-  return `${base.split('?')[0].split('#')[0]}?token=${token}`;
+  const origin = window.location.origin;
+  let path = window.location.pathname; // e.g. /j1-dashboard/interview/admin.html
+  if (path.includes('admin.html')) {
+    path = path.replace('admin.html', 'take.html');
+  } else {
+    path = path.replace(/\/?$/, '/') + 'take.html';
+  }
+  return `${origin}${path}?token=${token}`;
 }
 
 function copySessionLink(token) {
