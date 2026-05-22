@@ -302,25 +302,30 @@ function applySimpleBlur(vid, w, h) {
   bgCtx.drawImage(tmpCanvas, 0, 0, w, h);
 }
 
-// Draw frame using the stored AI segmentation mask
+// Draw frame using the stored AI segmentation mask (handles both blur and solid BG)
 function drawWithMask(vid, w, h) {
   if (!lastSegMask) {
-    // Mask not yet available — use blur fallback for blur mode, raw video otherwise
+    // Mask not yet arrived — blur fallback for blur mode, raw video for solid colours
     if (bgMode === 'blur') { applySimpleBlur(vid, w, h); }
     else { bgCtx.drawImage(vid, 0, 0, w, h); }
     return;
   }
-  // Draw background
-  if (BG_FILLS[bgMode]) {
+  // ── Background layer ─────────────────────────────────────────
+  if (bgMode === 'blur') {
+    // Blur the full frame — AI mask will cut out the sharp person on top
+    bgCtx.save();
+    bgCtx.filter = 'blur(28px)';
+    bgCtx.drawImage(vid, -36, -36, w + 72, h + 72);
+    bgCtx.restore();
+  } else if (BG_FILLS[bgMode]) {
     bgCtx.fillStyle = BG_FILLS[bgMode];
     bgCtx.fillRect(0, 0, w, h);
   }
-  // Cut out person using AI mask — minimal 2px blur just for natural edge softening
-  // No scaling/erosion: aggressive erosion was making the person look transparent/blurry
+  // ── Sharp person cutout via AI mask ──────────────────────────
   const { tc } = ensureTmp(w, h);
   tc.clearRect(0, 0, w, h);
   tc.save();
-  tc.filter = 'blur(2px)';
+  tc.filter = 'blur(2px)';          // minimal feather — no body ghosting
   tc.drawImage(lastSegMask, 0, 0, w, h);
   tc.restore();
   tc.globalCompositeOperation = 'source-in';
@@ -337,18 +342,17 @@ function startBgLoop(vid) {
 
     if (bgMode === 'none') {
       bgCtx.drawImage(vid, 0, 0, w, h);
-    } else if (bgMode === 'blur') {
-      // Portrait-mode oval blur — always reliable, hides chair regardless of AI
+    } else if (bgMode === 'blur' && !segReady) {
+      // AI not ready — portrait-oval fallback so blur option isn't completely dead
       applySimpleBlur(vid, w, h);
     } else if (segReady) {
-      // Solid colour backgrounds: use AI segmentation mask
+      // AI ready — handles both Blur and solid colours with proper person/BG separation
       if (ts - lastSendTs >= 66 && segModel) {
         lastSendTs = ts;
         segModel.send({ image: vid }).catch(() => {});
       }
       drawWithMask(vid, w, h);
     } else {
-      // AI not yet ready + solid colour selected — show raw video temporarily
       bgCtx.drawImage(vid, 0, 0, w, h);
     }
     drawWatermark();
@@ -389,44 +393,35 @@ function startMicMeter() {
   } catch (e) {}
 }
 
-// Build a WAV blob for a single tone
-// Uses incremental phase to avoid floating-point drift (no "breaking up")
-function _makeTone(freq, secs) {
-  const SR = 44100;
-  const n  = Math.floor(SR * secs);
-  const ab = new ArrayBuffer(44 + n * 2);
-  const dv = new DataView(ab);
-  const ws = (o, s) => { for (let i = 0; i < s.length; i++) dv.setUint8(o + i, s.charCodeAt(i)); };
-  ws(0,'RIFF'); dv.setUint32(4, 36 + n * 2, true);
-  ws(8,'WAVE'); ws(12,'fmt ');
-  dv.setUint32(16, 16, true); dv.setUint16(20, 1, true); dv.setUint16(22, 1, true);
-  dv.setUint32(24, SR, true); dv.setUint32(28, SR * 2, true);
-  dv.setUint16(32, 2, true);  dv.setUint16(34, 16, true);
-  ws(36,'data'); dv.setUint32(40, n * 2, true);
-  const FADE = Math.floor(SR * 0.022); // 22 ms fade in/out — removes clicks
-  const inc  = 2 * Math.PI * freq / SR;
-  let ph = 0;
-  for (let i = 0; i < n; i++) {
-    const fade = Math.min(i, FADE, n - 1 - i) / FADE; // 0→1→1→0
-    dv.setInt16(44 + i * 2, Math.round(0.88 * Math.min(fade, 1) * 32767 * Math.sin(ph)), true);
-    ph += inc;
-    if (ph > 2 * Math.PI) ph -= 2 * Math.PI;
-  }
-  return URL.createObjectURL(new Blob([ab], { type: 'audio/wav' }));
-}
-
 function testSpeakers() {
-  // Play 3 tones (A4 → C#5 → E5) sequentially; chain via onended (no setTimeout gaps)
-  const tones = [440, 554, 659];
-  let i = 0;
-  (function next() {
-    if (i >= tones.length) return;
-    const url = _makeTone(tones[i], 0.35);
-    const a = new Audio(url);
-    a.onended = () => { URL.revokeObjectURL(url); i++; next(); };
-    a.onerror  = () => { URL.revokeObjectURL(url); i++; next(); };
-    a.play().catch(() => {});
-  })();
+  // Use a FRESH AudioContext created directly in this click handler.
+  // Chrome starts it in 'running' state when called from a user gesture.
+  // Tones are scheduled via the AudioContext clock — zero gaps, no WAV artifacts.
+  try {
+    const ctx = new AudioContext();
+    const play = () => {
+      const now = ctx.currentTime;
+      [440, 554, 659].forEach((freq, i) => {
+        const osc  = ctx.createOscillator();
+        const gain = ctx.createGain();
+        const t    = now + i * 0.42;          // 420 ms per tone
+        gain.gain.setValueAtTime(0,    t);
+        gain.gain.linearRampToValueAtTime(0.55, t + 0.025);  // 25 ms fade-in
+        gain.gain.setValueAtTime(0.55, t + 0.36);
+        gain.gain.linearRampToValueAtTime(0,    t + 0.40);   // 40 ms fade-out
+        osc.frequency.value = freq;
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start(t);
+        osc.stop(t + 0.42);
+      });
+      setTimeout(() => ctx.close().catch(() => {}), 2200);
+    };
+    // Always call resume() first — harmless if already running, required if suspended
+    ctx.resume().then(play).catch(() => {});
+  } catch (e) {
+    console.warn('testSpeakers:', e);
+  }
 }
 
 function continueToInterview() {
