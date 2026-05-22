@@ -717,12 +717,25 @@ tr:hover td { background: var(--card-2); }
   transition: all 0.15s;
 }
 
-.sidebar-item.sidebar-module {
+.sidebar-parent-label {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--text);
+  padding: 18px 16px 6px;
+}
+
+.sidebar-item.sidebar-child {
   font-size: 10px;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.07em;
-  padding: 14px 16px 10px;
+  padding: 7px 16px 7px 28px;
+}
+
+.sidebar-item.sidebar-child.active {
+  padding-left: 25px;
 }
 
 .sidebar-item:hover { background: rgba(255,255,255,0.04); color: var(--text); }
