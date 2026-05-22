@@ -433,15 +433,12 @@ function continueToInterview() {
   if (micAnalyser) { micAnalyser.disconnect(); micAnalyser = null; }
   if (setupAudioCtx) { setupAudioCtx.close().catch(() => {}); setupAudioCtx = null; }
 
-  if (bgMode !== 'none' && bgCanvas) {
-    // Canvas stream: video from bgCanvas (with bg applied) + audio from mediaStream
-    canvasStream = bgCanvas.captureStream(30);
-    mediaStream.getAudioTracks().forEach(t => canvasStream.addTrack(t));
-  } else {
-    // No virtual bg — stop canvas loop, use raw stream
-    cancelAnimationFrame(segLoopId); segLoopId = null;
-    bgMode = 'none';
-  }
+  // ALWAYS capture from bgCanvas so the CTI logo watermark is baked into every
+  // recording regardless of which virtual background (including None) is selected.
+  // The canvas loop is already running for all bg modes and calls drawWatermark()
+  // every frame — we just need to use its output stream instead of the raw feed.
+  canvasStream = bgCanvas.captureStream(30);
+  mediaStream.getAudioTracks().forEach(t => canvasStream.addTrack(t));
 
   showQuestion(0);
 }
