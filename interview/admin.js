@@ -23,6 +23,8 @@ let _bulkEmailCol = null;
 let _decisionFilter = 'all';
 let _starFilter = 0;
 let _reviewStars = 0;
+let _sessionSortCol = null;
+let _sessionSortDir = 'desc';
 
 // ── Auth ──────────────────────────────────────────────────────
 
@@ -947,9 +949,11 @@ async function openSessions(interviewId, title, tab = 'invite') {
   currentInterviewId = interviewId;
   document.getElementById('modal-interview-title').textContent = title;
   resetInviteForm();
-  // Reset decision + star filters to defaults
+  // Reset all filters + sort to defaults
   _decisionFilter = 'all';
   _starFilter = 0;
+  _sessionSortCol = null;
+  _sessionSortDir = 'desc';
   [['fd-all','all'],['fd-fwd','move_forward'],['fd-rej','not_moving_forward']].forEach(([id, val]) => {
     const c = document.getElementById(id);
     if (c) c.classList.toggle('active', val === 'all');
@@ -1003,6 +1007,16 @@ function setStarFilter(n) {
   filterAndRenderSessions();
 }
 
+function toggleSessionSort(col) {
+  if (_sessionSortCol === col) {
+    _sessionSortDir = _sessionSortDir === 'asc' ? 'desc' : 'asc';
+  } else {
+    _sessionSortCol = col;
+    _sessionSortDir = 'desc';
+  }
+  filterAndRenderSessions();
+}
+
 function filterAndRenderSessions() {
   const query = (document.getElementById('search-candidates')?.value || '').trim().toLowerCase();
   let list = _allSessions.filter(s => {
@@ -1013,6 +1027,26 @@ function filterAndRenderSessions() {
     if (_starFilter > 0 && (s.reviewStars || 0) < _starFilter) return false;
     return true;
   });
+
+  // Sort
+  if (_sessionSortCol === 'review') {
+    list.sort((a, b) => {
+      const sa = a.reviewStars || 0, sb = b.reviewStars || 0;
+      return _sessionSortDir === 'desc' ? sb - sa : sa - sb;
+    });
+  } else if (_sessionSortCol === 'status') {
+    const order = { completed: 2, in_progress: 1, pending: 0 };
+    list.sort((a, b) => {
+      const sa = order[a.status] ?? 0, sb = order[b.status] ?? 0;
+      return _sessionSortDir === 'desc' ? sb - sa : sa - sb;
+    });
+  }
+
+  // Sync sort indicators
+  const rv = document.getElementById('sort-review-ind');
+  const st = document.getElementById('sort-status-ind');
+  if (rv) rv.textContent = _sessionSortCol === 'review'  ? (_sessionSortDir === 'desc' ? '↓' : '↑') : '↕';
+  if (st) st.textContent = _sessionSortCol === 'status'  ? (_sessionSortDir === 'desc' ? '↓' : '↑') : '↕';
 
   const heading = document.getElementById('sessions-heading');
   if (heading) heading.textContent = `Candidates (${_allSessions.length})`;
@@ -1072,6 +1106,7 @@ function renderSessionRow(s, num) {
 
   return `
     <div class="session-row">
+      <div style="font-size:11px;color:var(--muted);font-weight:600;text-align:center;align-self:center">${num}</div>
       <div style="display:flex;align-items:center;gap:10px;min-width:0">
         <div id="av-${s.token}" class="candidate-avatar">${avatarContent}</div>
         <div style="min-width:0">
