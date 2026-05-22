@@ -104,7 +104,7 @@ function showQuestion(index) {
 
       <div class="question-body">
         <div class="progress-bar-wrap">
-          <div class="progress-bar-fill" style="width:${((index) / total) * 100}%"></div>
+          <div class="progress-bar-fill" id="progress-fill" style="width:${((index) / total) * 100}%"></div>
         </div>
 
         <p class="question-text" id="question-text" style="filter:blur(7px);user-select:none;transition:filter 0.4s ease">
@@ -181,6 +181,8 @@ function startRecording() {
 
   // Show timer
   timeLeft = q.duration;
+  const fill = document.getElementById('progress-fill');
+  if (fill) fill.style.width = '0%';
   const timerEl = document.getElementById('timer-overlay');
   timerEl.style.display = 'block';
   updateTimerDisplay();
@@ -209,6 +211,14 @@ function updateTimerDisplay() {
   el.textContent = formatTime(timeLeft);
   el.className = 'timer-overlay' +
     (timeLeft <= 10 ? ' danger' : timeLeft <= 30 ? ' warning' : '');
+
+  // Drive the recording progress bar
+  const q = interview.questions[currentQ];
+  const fill = document.getElementById('progress-fill');
+  if (fill && q) {
+    const elapsed = q.duration - timeLeft;
+    fill.style.width = `${(elapsed / q.duration) * 100}%`;
+  }
 }
 
 function stopRecording() {
