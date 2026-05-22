@@ -816,6 +816,43 @@ tr:hover td { background: var(--card-2); }
 .tw-session-row:last-child { border-bottom: none; }
 .tw-session-row:hover { background: var(--card-2); }
 
+/* ── Setup screen ── */
+.bg-opt {
+  padding: 5px 12px;
+  font-size: 12px;
+  font-weight: 500;
+  border: 1.5px solid var(--border);
+  border-radius: 6px;
+  background: none;
+  color: var(--muted);
+  cursor: pointer;
+  font-family: inherit;
+  transition: all 0.15s;
+}
+.bg-opt:hover { border-color: var(--accent); color: var(--text); }
+.bg-opt.active { border-color: var(--accent); background: rgba(176,26,24,0.12); color: var(--accent); font-weight: 600; }
+
+.bg-swatch {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 2.5px solid transparent;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: border-color 0.15s, transform 0.1s;
+}
+.bg-swatch:hover { transform: scale(1.1); }
+.bg-swatch.active { border-color: var(--accent); }
+
+.setup-section-label {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+  margin-bottom: 10px;
+}
+
 /* ── Invite mode toggle ── */
 .invite-mode-btn {
   padding: 5px 14px;

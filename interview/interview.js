@@ -15,6 +15,20 @@ let chunks = [];
 let recordingTimer = null;
 let timeLeft = 0;
 
+// ── Setup / virtual bg state ───────────────────────────────────
+let bgMode = 'none';
+let bgCanvas = null;
+let bgCtx = null;
+let segReady = false;
+let segModel = null;
+let segLoopId = null;
+let lastSendTs = 0;
+let canvasStream = null;
+let micAnalyser = null;
+let micMeterFrameId = null;
+let setupAudioCtx = null;
+const BG_FILLS = { white: '#f0ede8', navy: '#1a2744', slate: '#374151' };
+
 const token = new URLSearchParams(location.search).get('token');
 const main = () => document.getElementById('take-main');
 
@@ -70,7 +84,7 @@ function showIntro() {
         </ul>
       </div>
 
-      <button class="btn btn-primary btn-lg mt-24" onclick="requestCamera()">
+      <button class="btn btn-primary btn-lg mt-24" onclick="showSetup()">
         Start Interview
       </button>
     </div>`;
@@ -87,6 +101,202 @@ async function requestCamera() {
       showError('Could not access your camera or microphone: ' + e.message);
     }
   }
+}
+
+// ── Setup screen ──────────────────────────────────────────────
+
+async function showSetup() {
+  try {
+    mediaStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+  } catch (e) {
+    return showError(e.name === 'NotAllowedError'
+      ? 'Camera and microphone access was denied. Please allow access in your browser settings and reload the page.'
+      : 'Could not access your camera or microphone: ' + e.message);
+  }
+
+  main().innerHTML = `
+    <div style="max-width:820px;width:100%">
+      <div style="text-align:center;margin-bottom:20px">
+        <h2>Setup &amp; Preview</h2>
+        <p class="text-muted text-sm mt-4">Check your camera, microphone, and background before starting</p>
+      </div>
+      <div style="display:grid;grid-template-columns:1.4fr 1fr;gap:20px;align-items:start">
+        <div style="position:relative">
+          <canvas id="bg-canvas" style="width:100%;border-radius:12px;background:#111;display:block"></canvas>
+          <video id="setup-vid" autoplay muted playsinline style="display:none"></video>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:14px">
+
+          <div class="card" style="padding:16px">
+            <p class="setup-section-label">🖼 Virtual Background</p>
+            <div id="bg-opts" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px">
+              <button class="bg-opt active" data-bg="none" onclick="setBg('none')">None</button>
+              <button class="bg-opt"        data-bg="blur" onclick="setBg('blur')">Blur</button>
+              <button class="bg-swatch" data-bg="white" onclick="setBg('white')" style="background:#f0ede8" title="Light"></button>
+              <button class="bg-swatch" data-bg="navy"  onclick="setBg('navy')"  style="background:#1a2744" title="Navy"></button>
+              <button class="bg-swatch" data-bg="slate" onclick="setBg('slate')" style="background:#374151" title="Slate"></button>
+            </div>
+            <p id="seg-status" style="font-size:11px;color:var(--muted)">Loading AI segmentation…</p>
+          </div>
+
+          <div class="card" style="padding:16px">
+            <p class="setup-section-label">🎤 Microphone</p>
+            <div style="height:8px;background:var(--bg);border-radius:4px;overflow:hidden;margin-bottom:6px">
+              <div id="mic-bar" style="height:100%;width:0%;background:var(--accent);border-radius:4px;transition:width 0.07s linear"></div>
+            </div>
+            <p style="font-size:12px;color:var(--muted)">Speak to test your microphone</p>
+          </div>
+
+          <div class="card" style="padding:16px">
+            <p class="setup-section-label">🔊 Speakers</p>
+            <button class="btn btn-outline" style="width:100%;font-size:13px" onclick="testSpeakers()">▶ Play Test Sound</button>
+          </div>
+
+        </div>
+      </div>
+      <div style="text-align:center;margin-top:24px">
+        <button class="btn btn-primary btn-lg" onclick="continueToInterview()">Continue to Interview →</button>
+      </div>
+    </div>`;
+
+  const vid = document.getElementById('setup-vid');
+  vid.srcObject = mediaStream;
+  await vid.play();
+
+  bgCanvas = document.getElementById('bg-canvas');
+  bgCtx = bgCanvas.getContext('2d');
+  // Set canvas resolution once video has dimensions
+  vid.addEventListener('loadedmetadata', () => {
+    bgCanvas.width  = vid.videoWidth  || 640;
+    bgCanvas.height = vid.videoHeight || 360;
+  }, { once: true });
+  bgCanvas.width = 640; bgCanvas.height = 360; // default until metadata fires
+
+  startBgLoop(vid);
+  startMicMeter();
+  loadSegmentation(vid);
+}
+
+async function loadSegmentation(vid) {
+  const status = document.getElementById('seg-status');
+  try {
+    if (typeof SelfieSegmentation === 'undefined') throw new Error('not available');
+    segModel = new SelfieSegmentation({
+      locateFile: f => `https://cdn.jsdelivr.net/npm/@mediapipe/selfie_segmentation@0.1.1675465578/${f}`
+    });
+    segModel.setOptions({ modelSelection: 1 });
+    segModel.onResults(handleSegResults);
+    await segModel.initialize();
+    segReady = true;
+    if (status) { status.textContent = '✓ AI ready — select a background above'; status.style.color = '#22c55e'; }
+  } catch {
+    if (status) status.textContent = 'AI background not available in this browser';
+    document.querySelectorAll('.bg-opt:not([data-bg="none"]), .bg-swatch').forEach(b => {
+      b.style.opacity = '0.35'; b.style.pointerEvents = 'none';
+    });
+  }
+}
+
+function startBgLoop(vid) {
+  function loop(ts) {
+    if (!bgCanvas || !bgCtx) return;
+    const w = bgCanvas.width, h = bgCanvas.height;
+    if (!vid.videoWidth) { segLoopId = requestAnimationFrame(loop); return; }
+    if (bgMode === 'none' || !segReady) {
+      bgCtx.drawImage(vid, 0, 0, w, h);
+    } else if (ts - lastSendTs >= 66 && segModel) {
+      lastSendTs = ts;
+      segModel.send({ image: vid }).catch(() => {});
+    }
+    segLoopId = requestAnimationFrame(loop);
+  }
+  segLoopId = requestAnimationFrame(loop);
+}
+
+function handleSegResults(results) {
+  if (!bgCanvas || !bgCtx || bgMode === 'none') return;
+  const w = bgCanvas.width, h = bgCanvas.height;
+  // Cut out person using segmentation mask
+  const tmp = document.createElement('canvas');
+  tmp.width = w; tmp.height = h;
+  const tc = tmp.getContext('2d');
+  tc.drawImage(results.segmentationMask, 0, 0, w, h);
+  tc.globalCompositeOperation = 'source-in';
+  tc.drawImage(results.image, 0, 0, w, h);
+  // Draw background
+  if (bgMode === 'blur') {
+    bgCtx.save();
+    bgCtx.filter = 'blur(18px)';
+    bgCtx.drawImage(results.image, -24, -24, w + 48, h + 48);
+    bgCtx.restore();
+  } else if (BG_FILLS[bgMode]) {
+    bgCtx.fillStyle = BG_FILLS[bgMode];
+    bgCtx.fillRect(0, 0, w, h);
+  }
+  // Draw person on top
+  bgCtx.drawImage(tmp, 0, 0, w, h);
+}
+
+function setBg(mode) {
+  bgMode = mode;
+  document.querySelectorAll('.bg-opt, .bg-swatch').forEach(b =>
+    b.classList.toggle('active', b.dataset.bg === mode)
+  );
+}
+
+function startMicMeter() {
+  try {
+    setupAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    micAnalyser = setupAudioCtx.createAnalyser();
+    micAnalyser.fftSize = 512;
+    setupAudioCtx.createMediaStreamSource(mediaStream).connect(micAnalyser);
+    const buf = new Uint8Array(micAnalyser.frequencyBinCount);
+    function tick() {
+      if (!micAnalyser) return;
+      micAnalyser.getByteFrequencyData(buf);
+      const avg = buf.reduce((s, v) => s + v, 0) / buf.length;
+      const bar = document.getElementById('mic-bar');
+      if (!bar) return;
+      bar.style.width = Math.min(100, avg * 3) + '%';
+      micMeterFrameId = requestAnimationFrame(tick);
+    }
+    micMeterFrameId = requestAnimationFrame(tick);
+  } catch (e) {}
+}
+
+function testSpeakers() {
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    [440, 554, 659].forEach((freq, i) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain); gain.connect(ctx.destination);
+      osc.frequency.value = freq;
+      gain.gain.setValueAtTime(0.25, ctx.currentTime + i * 0.22);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + i * 0.22 + 0.2);
+      osc.start(ctx.currentTime + i * 0.22);
+      osc.stop(ctx.currentTime + i * 0.22 + 0.22);
+    });
+  } catch (e) {}
+}
+
+function continueToInterview() {
+  // Stop mic meter
+  cancelAnimationFrame(micMeterFrameId); micMeterFrameId = null;
+  if (micAnalyser) { micAnalyser.disconnect(); micAnalyser = null; }
+  if (setupAudioCtx) { setupAudioCtx.close().catch(() => {}); setupAudioCtx = null; }
+
+  if (bgMode !== 'none' && bgCanvas && segReady) {
+    // Canvas stream: video from bgCanvas + audio from mediaStream
+    canvasStream = bgCanvas.captureStream(30);
+    mediaStream.getAudioTracks().forEach(t => canvasStream.addTrack(t));
+  } else {
+    // No virtual bg — stop canvas loop, use raw stream
+    cancelAnimationFrame(segLoopId); segLoopId = null;
+    bgMode = 'none';
+  }
+
+  showQuestion(0);
 }
 
 function showQuestion(index) {
@@ -131,7 +341,7 @@ function showQuestion(index) {
     </div>`;
 
   const preview = document.getElementById('preview');
-  preview.srcObject = mediaStream;
+  preview.srcObject = canvasStream || mediaStream;
 }
 
 function updateProgress(index, total) {
@@ -175,7 +385,7 @@ function startRecording() {
   const q = interview.questions[currentQ];
   chunks = [];
 
-  recorder = new MediaRecorder(mediaStream, { mimeType: getSupportedMimeType() });
+  recorder = new MediaRecorder(canvasStream || mediaStream, { mimeType: getSupportedMimeType() });
   recorder.ondataavailable = e => { if (e.data.size > 0) chunks.push(e.data); };
   recorder.onstop = handleRecordingStop;
   recorder.start(1000);
@@ -334,6 +544,9 @@ function clearOverlay() {
 // ── Utilities ─────────────────────────────────────────────────
 
 function stopStream() {
+  if (segLoopId) { cancelAnimationFrame(segLoopId); segLoopId = null; }
+  if (segModel) { try { segModel.close(); } catch (e) {} segModel = null; }
+  bgCanvas = null; bgCtx = null; canvasStream = null;
   mediaStream?.getTracks().forEach(t => t.stop());
 }
 
