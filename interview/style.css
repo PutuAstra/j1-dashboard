@@ -893,3 +893,21 @@ tr:hover td { background: var(--card-2); }
   border-color: var(--accent);
   background: rgba(176,26,24,0.05);
 }
+
+/* ── Candidate avatar (circular photo / initials) ── */
+.candidate-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: var(--card-2);
+  border: 1px solid var(--border);
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+/* ── Profile upload step (take page) ── */
+#photo-circle:hover { border-color: var(--accent) !important; }
+#resume-drop:hover  { border-color: var(--accent) !important; }

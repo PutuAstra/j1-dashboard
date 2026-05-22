@@ -989,11 +989,46 @@ function filterAndRenderSessions() {
     return;
   }
   el.innerHTML = list.map((s, i) => renderSessionRow(s, i + 1)).join('');
+  // Lazy-load profile photos for candidates who uploaded one
+  list.filter(s => s.profilePhotoItemId).forEach(s => loadAvatarPhoto(s.token));
 }
 
+function candidateInitials(name) {
+  const w = name.trim().split(/\s+/);
+  return (w.length >= 2 ? w[0][0] + w[w.length - 1][0] : w[0].slice(0, 2)).toUpperCase();
+}
+
+async function loadAvatarPhoto(token) {
+  const el = document.getElementById(`av-${token}`);
+  if (!el) return;
+  try {
+    const data = await apiJSON('GET', `/api/session/${token}/profile-photo`);
+    if (data.downloadUrl) {
+      el.innerHTML = `<img src="${data.downloadUrl}" style="width:100%;height:100%;object-fit:cover;border-radius:50%">`;
+    }
+  } catch { /* silently skip */ }
+}
+
+const DECISION_STYLE = {
+  move_forward:       'background:#16a34a;color:#fff',
+  not_moving_forward: 'background:#dc2626;color:#fff',
+};
+const DECISION_LABEL = {
+  move_forward:       '✓ Moving Forward',
+  not_moving_forward: '✗ Not Moving Forward',
+};
+
 function renderSessionRow(s, num) {
-  const invitedDate = s.createdAt ? new Date(s.createdAt).toLocaleDateString() : '—';
+  const invitedDate   = s.createdAt ? new Date(s.createdAt).toLocaleDateString() : '—';
   const responseCount = s.responses?.length || 0;
+
+  const avatarContent = s.profilePhotoItemId
+    ? `<img src="" style="display:none">` // replaced by loadAvatarPhoto
+    : `<span style="font-size:11px;font-weight:700;color:var(--muted)">${candidateInitials(s.candidateName)}</span>`;
+
+  const decisionBadge = s.reviewDecision
+    ? `<span style="font-size:10px;padding:2px 7px;border-radius:10px;${DECISION_STYLE[s.reviewDecision]||''};white-space:nowrap">${DECISION_LABEL[s.reviewDecision]||s.reviewDecision}</span>`
+    : '';
 
   const videosCell = responseCount > 0
     ? `<button class="btn btn-ghost" style="padding:3px 8px;font-size:12px;color:var(--accent);white-space:nowrap" onclick="openReview('${s.token}', '${esc(s.candidateName)}')">🎥 View ${responseCount}</button>`
@@ -1007,10 +1042,13 @@ function renderSessionRow(s, num) {
 
   return `
     <div class="session-row">
-      <div style="display:flex;align-items:center;gap:8px;min-width:0">
-        <span class="text-muted" style="font-size:12px;min-width:18px;flex-shrink:0">${num}.</span>
+      <div style="display:flex;align-items:center;gap:10px;min-width:0">
+        <div id="av-${s.token}" class="candidate-avatar">${avatarContent}</div>
         <div style="min-width:0">
-          <div style="font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(s.candidateName)}</div>
+          <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
+            <span style="font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(s.candidateName)}</span>
+            ${decisionBadge}
+          </div>
           <div class="text-muted" style="font-size:11px">${s.candidateEmail ? esc(s.candidateEmail) + ' · ' : ''}Invited ${invitedDate}</div>
         </div>
       </div>
@@ -1167,74 +1205,146 @@ function renderAnalysisPanel(analysis, token) {
     </div>`;
 }
 
+let _reviewDecision = null;
+
 async function openReview(token, candidateName) {
   document.getElementById('review-candidate-name').textContent = candidateName;
   openModal('modal-review');
   const content = document.getElementById('review-content');
-  content.innerHTML = '<div class="empty-state">Loading…</div>';
+  content.style.cssText = 'flex:1;min-height:0;display:flex';
+  content.innerHTML = '<div style="margin:auto" class="spinner"></div>';
+  _reviewDecision = null;
 
   try {
-    const res = await fetch(`${WORKER_URL}/api/session/${token}`, {
-      headers: { 'X-Admin-Key': adminKey }
-    });
-    const { session, interview } = await res.json();
-    document.getElementById('review-interview-title').textContent = interview?.title || '';
-
-    if (!session.responses?.length) {
-      content.innerHTML = '<div class="empty-state">No recordings found for this session.</div>';
-      return;
-    }
-
-    // Load video URLs + cached analysis in parallel
-    const [items, cachedAnalysis] = await Promise.all([
-      Promise.all(session.responses.map(async r => {
-        const q = interview?.questions?.[r.questionIndex];
-        const urlRes = await fetch(
-          `${WORKER_URL}/api/session/${token}/video/${r.questionIndex}`,
-          { headers: { 'X-Admin-Key': adminKey } }
-        );
-        const { downloadUrl, webUrl } = await urlRes.json();
-        return { q, downloadUrl, webUrl, questionIndex: r.questionIndex };
-      })),
-      fetch(`${WORKER_URL}/api/session/${token}/analysis`, {
-        headers: { 'X-Admin-Key': adminKey }
-      }).then(r => r.json()).catch(() => ({ notFound: true })),
+    const [{ session, interview }, cachedAnalysis, resumeData, reviewData] = await Promise.all([
+      fetch(`${WORKER_URL}/api/session/${token}`, { headers: { 'X-Admin-Key': adminKey } }).then(r => r.json()),
+      fetch(`${WORKER_URL}/api/session/${token}/analysis`,    { headers: { 'X-Admin-Key': adminKey } }).then(r => r.json()).catch(() => ({ notFound: true })),
+      fetch(`${WORKER_URL}/api/session/${token}/resume-url`,  { headers: { 'X-Admin-Key': adminKey } }).then(r => r.json()).catch(() => ({ notFound: true })),
+      fetch(`${WORKER_URL}/api/session/${token}/review`,      { headers: { 'X-Admin-Key': adminKey } }).then(r => r.json()).catch(() => ({ notFound: true })),
     ]);
 
-    const videoGrid = `<div class="review-grid">
-      ${items.map(({ q, downloadUrl, webUrl, questionIndex }) => `
-        <div class="review-item">
-          ${downloadUrl
-            ? `<video src="${downloadUrl}" controls preload="metadata"></video>`
-            : `<div style="aspect-ratio:16/9;background:#000;display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:13px">Video unavailable</div>`
-          }
-          <div class="review-item-label" style="display:flex;justify-content:space-between;align-items:center">
-            <span><strong>Q${questionIndex + 1}:</strong> ${q ? esc(q.text) : 'Question ' + (questionIndex + 1)}</span>
-            ${webUrl ? `<a href="${webUrl}" target="_blank" class="btn btn-ghost" style="font-size:11px;padding:2px 8px">Open in OneDrive ↗</a>` : ''}
-          </div>
-        </div>
-      `).join('')}
-    </div>`;
+    document.getElementById('review-interview-title').textContent = interview?.title || '';
 
-    // Analyze button (shown when no cached analysis yet)
-    const analyzeBtn = `
-      <div style="margin-top:20px;border-top:1px solid var(--border);padding-top:20px;text-align:center">
-        <button class="btn btn-primary" onclick="runAnalysis('${token}')" id="analyze-btn">
-          🤖 Analyze English Proficiency
-        </button>
-        <p class="text-muted text-sm" style="margin-top:8px">
-          Transcribes all recordings and rates English skill with AI (takes ~20–40 s)
-        </p>
-      </div>`;
+    // ── Load video URLs ──
+    const videoItems = session.responses?.length
+      ? await Promise.all(session.responses.map(async r => {
+          const q = interview?.questions?.[r.questionIndex];
+          const { downloadUrl, webUrl } = await fetch(
+            `${WORKER_URL}/api/session/${token}/video/${r.questionIndex}`,
+            { headers: { 'X-Admin-Key': adminKey } }
+          ).then(r => r.json()).catch(() => ({}));
+          return { q, downloadUrl, webUrl, questionIndex: r.questionIndex };
+        }))
+      : [];
 
-    const analysisPart = cachedAnalysis?.notFound
-      ? analyzeBtn
+    // ── LEFT column: videos + English analysis ──
+    const videosHTML = videoItems.length
+      ? videoItems.map(({ q, downloadUrl, webUrl, questionIndex }) => `
+          <div class="review-item" style="margin-bottom:12px">
+            ${downloadUrl
+              ? `<video src="${downloadUrl}" controls preload="metadata" style="width:100%;border-radius:8px;background:#000;display:block"></video>`
+              : `<div style="aspect-ratio:16/9;background:#111;border-radius:8px;display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:13px">Video unavailable</div>`
+            }
+            <div style="display:flex;justify-content:space-between;align-items:center;padding:6px 2px">
+              <span style="font-size:12px"><strong>Q${questionIndex + 1}:</strong> ${q ? esc(q.text) : 'Question ' + (questionIndex + 1)}</span>
+              ${webUrl ? `<a href="${webUrl}" target="_blank" class="btn btn-ghost" style="font-size:11px;padding:2px 6px">↗</a>` : ''}
+            </div>
+          </div>`).join('')
+      : `<div class="empty-state">No recordings yet</div>`;
+
+    const analysisSection = cachedAnalysis?.notFound
+      ? `<div style="margin-top:8px;text-align:center">
+           <button class="btn btn-primary" onclick="runAnalysis('${token}')" id="analyze-btn">🤖 Analyze English Proficiency</button>
+           <p class="text-muted text-sm" style="margin-top:6px">~20–40 s · transcribes &amp; rates all answers</p>
+         </div>`
       : renderAnalysisPanel(cachedAnalysis, token);
 
-    content.innerHTML = videoGrid + analysisPart;
+    // ── RIGHT column: resume + review outcome ──
+    let resumeSection = '';
+    if (resumeData?.downloadUrl) {
+      const ext = resumeData.ext || 'pdf';
+      const src = ext === 'pdf'
+        ? resumeData.downloadUrl
+        : `https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(resumeData.downloadUrl)}`;
+      resumeSection = `
+        <div style="flex:1;min-height:0;display:flex;flex-direction:column;gap:4px">
+          <div style="display:flex;justify-content:space-between;align-items:center">
+            <h3 style="margin:0;font-size:14px">Resume</h3>
+            <a href="${resumeData.downloadUrl}" target="_blank" class="btn btn-ghost" style="font-size:11px;padding:2px 8px">Download ↗</a>
+          </div>
+          <iframe src="${src}" style="flex:1;min-height:380px;border:1px solid var(--border);border-radius:8px" frameborder="0"></iframe>
+        </div>`;
+    } else {
+      resumeSection = `<div class="empty-state" style="flex:none">No resume uploaded</div>`;
+    }
+
+    // Restore saved decision
+    if (reviewData && !reviewData.notFound) {
+      _reviewDecision = reviewData.decision;
+    }
+
+    const decisionFwd = _reviewDecision === 'move_forward';
+    const decisionRej = _reviewDecision === 'not_moving_forward';
+
+    const reviewOutcome = `
+      <div style="border-top:1px solid var(--border);padding-top:16px;flex-shrink:0">
+        <h3 style="margin:0 0 12px;font-size:14px">Review Outcome</h3>
+        <div style="display:flex;gap:8px;margin-bottom:12px">
+          <button id="btn-fwd" onclick="setReviewDecision('move_forward')"
+            class="btn" style="flex:1;font-size:12px;padding:7px 10px;transition:all 0.15s;
+            ${decisionFwd ? 'background:#16a34a;color:#fff;border-color:#16a34a' : 'border:1px solid var(--border);color:var(--text)'}">
+            ✓ Move Forward
+          </button>
+          <button id="btn-rej" onclick="setReviewDecision('not_moving_forward')"
+            class="btn" style="flex:1;font-size:12px;padding:7px 10px;transition:all 0.15s;
+            ${decisionRej ? 'background:#dc2626;color:#fff;border-color:#dc2626' : 'border:1px solid var(--border);color:var(--text)'}">
+            ✗ Not Moving Forward
+          </button>
+        </div>
+        <textarea id="review-notes" placeholder="Notes about this candidate…"
+          style="width:100%;min-height:90px;background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:10px 12px;color:var(--text);font-size:13px;resize:vertical;box-sizing:border-box"
+        >${reviewData?.notes ? esc(reviewData.notes) : ''}</textarea>
+        <button class="btn btn-primary" style="width:100%;margin-top:10px;font-size:13px" onclick="saveReviewOutcome('${token}')">
+          💾 Save Review
+        </button>
+      </div>`;
+
+    content.innerHTML = `
+      <div style="flex:1;min-width:0;overflow-y:auto;padding:20px;display:flex;flex-direction:column;gap:4px;border-right:1px solid var(--border)">
+        <h3 style="margin:0 0 12px;font-size:14px">Recordings</h3>
+        ${videosHTML}
+        ${analysisSection}
+      </div>
+      <div style="flex:1;min-width:0;overflow-y:auto;padding:20px;display:flex;flex-direction:column;gap:16px">
+        ${resumeSection}
+        ${reviewOutcome}
+      </div>`;
+
   } catch (e) {
-    content.innerHTML = `<div class="empty-state" style="color:var(--red)">${e.message}</div>`;
+    content.innerHTML = `<div style="margin:auto;color:var(--red);font-size:13px">${e.message}</div>`;
   }
+}
+
+function setReviewDecision(decision) {
+  _reviewDecision = decision;
+  const fwd = document.getElementById('btn-fwd');
+  const rej = document.getElementById('btn-rej');
+  if (fwd) fwd.style.cssText = fwd.style.cssText.replace(/background:[^;]+;color:[^;]+;border-color:[^;]+/, '')
+    + (decision === 'move_forward' ? ';background:#16a34a;color:#fff;border-color:#16a34a' : ';background:none;color:var(--text);border-color:var(--border)');
+  if (rej) rej.style.cssText = rej.style.cssText.replace(/background:[^;]+;color:[^;]+;border-color:[^;]+/, '')
+    + (decision === 'not_moving_forward' ? ';background:#dc2626;color:#fff;border-color:#dc2626' : ';background:none;color:var(--text);border-color:var(--border)');
+}
+
+async function saveReviewOutcome(token) {
+  const notes    = document.getElementById('review-notes')?.value || '';
+  const decision = _reviewDecision;
+  if (!decision) return toast('Please select a decision first', 'error');
+  try {
+    await apiJSON('POST', `/api/session/${token}/review`, { notes, decision });
+    toast('Review saved', 'success');
+    // Refresh session list so decision badge shows
+    if (currentInterviewId) await loadSessions(currentInterviewId);
+  } catch (e) { toast(e.message, 'error'); }
 }
 
 async function runAnalysis(token) {

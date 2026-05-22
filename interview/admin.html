@@ -10,7 +10,7 @@
   <meta name="theme-color" content="#B01A18" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="style.css?v=20250522r" />
+  <link rel="stylesheet" href="style.css?v=20250522s" />
 </head>
 <body>
 
@@ -182,20 +182,20 @@
 
 <!-- Modal: Review Videos -->
 <div class="modal-overlay" id="modal-review">
-  <div class="modal" style="max-width:860px">
-    <div class="modal-header">
+  <div class="modal" style="max-width:calc(100vw - 20px);width:calc(100vw - 20px);height:calc(100vh - 20px);padding:0;overflow:hidden;display:flex;flex-direction:column">
+    <div class="modal-header" style="padding:14px 20px;flex-shrink:0;border-bottom:1px solid var(--border)">
       <div>
-        <h2 id="review-candidate-name">Review</h2>
-        <p id="review-interview-title" class="text-muted text-sm"></p>
+        <h2 id="review-candidate-name" style="margin:0;font-size:17px">Review</h2>
+        <p id="review-interview-title" class="text-muted text-sm" style="margin:2px 0 0"></p>
       </div>
       <button class="btn btn-ghost" onclick="closeModal('modal-review')">✕</button>
     </div>
-    <div id="review-content"></div>
+    <div id="review-content" style="flex:1;min-height:0;display:flex"></div>
   </div>
 </div>
 
 <div id="toast"></div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-<script src="admin.js?v=20250522v"></script>
+<script src="admin.js?v=20250522w"></script>
 </body>
 </html>

@@ -90,10 +90,137 @@ function showIntro() {
         </ul>
       </div>
 
-      <button class="btn btn-primary btn-lg mt-24" onclick="showSetup()">
-        Setup &amp; Preview
+      <button class="btn btn-primary btn-lg mt-24"
+        onclick="${session.profilePhotoItemId && session.resumeItemId ? 'showSetup()' : 'showProfileUpload()'}">
+        ${session.profilePhotoItemId && session.resumeItemId ? 'Setup &amp; Preview' : 'Continue →'}
       </button>
     </div>`;
+}
+
+// ── Profile Upload Step ───────────────────────────────────────
+
+function showProfileUpload() {
+  document.getElementById('topbar-progress').textContent = 'Step 1 of 2 — Your Profile';
+  main().innerHTML = `
+    <div class="card" style="max-width:520px;width:100%">
+      <div style="text-align:center;margin-bottom:24px">
+        <div style="font-size:36px;margin-bottom:8px">📋</div>
+        <h2 style="margin:0">Your Profile</h2>
+        <p class="text-muted text-sm mt-8">Upload your photo and resume before starting the interview</p>
+      </div>
+
+      <!-- Profile photo -->
+      <div style="margin-bottom:24px;text-align:center">
+        <p style="font-size:13px;font-weight:600;margin-bottom:12px">Profile Photo <span style="color:var(--red)">*</span></p>
+        <div id="photo-circle"
+          onclick="document.getElementById('photo-file-input').click()"
+          style="width:110px;height:110px;border-radius:50%;border:2px dashed var(--border);background:var(--bg);margin:0 auto;cursor:pointer;display:flex;align-items:center;justify-content:center;overflow:hidden;transition:border-color 0.2s;font-size:13px;color:var(--muted)">
+          📷 Add Photo
+        </div>
+        <input type="file" id="photo-file-input" accept="image/*" style="display:none"
+          onchange="previewPhoto(this)" />
+        <p class="text-muted" style="font-size:11px;margin-top:8px">JPG, PNG · max 5 MB</p>
+      </div>
+
+      <!-- Resume -->
+      <div style="margin-bottom:28px">
+        <p style="font-size:13px;font-weight:600;margin-bottom:10px">Resume / CV <span style="color:var(--red)">*</span></p>
+        <div id="resume-drop"
+          onclick="document.getElementById('resume-file-input').click()"
+          style="border:2px dashed var(--border);border-radius:10px;padding:20px;text-align:center;cursor:pointer;transition:border-color 0.2s;background:var(--bg)"
+          ondragover="event.preventDefault();this.style.borderColor='var(--accent)'"
+          ondragleave="this.style.borderColor='var(--border)'"
+          ondrop="event.preventDefault();this.style.borderColor='var(--border)';handleResumeFile(event.dataTransfer.files[0])">
+          <div id="resume-drop-label" style="color:var(--muted);font-size:13px">
+            📄 Click or drag your resume here<br>
+            <span style="font-size:11px">PDF, DOC, DOCX · max 10 MB</span>
+          </div>
+        </div>
+        <input type="file" id="resume-file-input" accept=".pdf,.doc,.docx" style="display:none"
+          onchange="handleResumeFile(this.files[0])" />
+      </div>
+
+      <button class="btn btn-primary btn-lg" style="width:100%" onclick="submitProfileUpload()">
+        Continue to Setup →
+      </button>
+    </div>`;
+}
+
+function previewPhoto(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    const circle = document.getElementById('photo-circle');
+    circle.innerHTML = `<img src="${e.target.result}" style="width:100%;height:100%;object-fit:cover;border-radius:50%">`;
+    circle.style.border = '2px solid var(--accent)';
+  };
+  reader.readAsDataURL(file);
+}
+
+function handleResumeFile(file) {
+  if (!file) return;
+  const label = document.getElementById('resume-drop-label');
+  if (label) label.innerHTML = `✅ <strong>${esc(file.name)}</strong> (${(file.size/1024).toFixed(0)} KB)`;
+  // Store file reference on input element for later use
+  const input = document.getElementById('resume-file-input');
+  if (input && !input.files.length) {
+    // Was a drag-drop — create a DataTransfer to assign
+    const dt = new DataTransfer();
+    dt.items.add(file);
+    input.files = dt.files;
+  }
+}
+
+async function submitProfileUpload() {
+  const photoInput  = document.getElementById('photo-file-input');
+  const resumeInput = document.getElementById('resume-file-input');
+  const photoFile   = photoInput?.files?.[0];
+  const resumeFile  = resumeInput?.files?.[0];
+
+  if (!photoFile)  return toast('Please upload your profile photo', 'error');
+  if (!resumeFile) return toast('Please upload your resume', 'error');
+  if (photoFile.size  > 5  * 1024 * 1024) return toast('Photo must be under 5 MB', 'error');
+  if (resumeFile.size > 10 * 1024 * 1024) return toast('Resume must be under 10 MB', 'error');
+
+  // Show uploading state
+  main().innerHTML = `
+    <div class="card" style="max-width:400px;width:100%;text-align:center;padding:48px 32px">
+      <div class="spinner" style="margin:0 auto 16px"></div>
+      <p style="font-weight:600">Uploading your profile…</p>
+      <p class="text-muted text-sm mt-8">This only takes a moment</p>
+    </div>`;
+
+  try {
+    // Upload photo
+    const photoRes = await fetch(`${WORKER_URL}/api/session/${token}/upload-photo`, {
+      method: 'POST',
+      headers: { 'Content-Type': photoFile.type },
+      body: photoFile,
+    });
+    if (!photoRes.ok) throw new Error('Photo upload failed');
+
+    // Upload resume
+    const resumeRes = await fetch(`${WORKER_URL}/api/session/${token}/upload-resume`, {
+      method: 'POST',
+      headers: { 'Content-Type': resumeFile.type, 'X-Filename': resumeFile.name },
+      body: resumeFile,
+    });
+    if (!resumeRes.ok) throw new Error('Resume upload failed');
+
+    // Mark on local session object so the intro button updates if candidate goes back
+    session.profilePhotoItemId = true;
+    session.resumeItemId = true;
+
+    showSetup();
+  } catch (e) {
+    main().innerHTML = `
+      <div class="card" style="max-width:400px;width:100%;text-align:center;padding:48px 32px">
+        <p style="color:var(--red);font-weight:600">Upload failed</p>
+        <p class="text-muted text-sm mt-8">${e.message}</p>
+        <button class="btn btn-primary mt-16" onclick="showProfileUpload()">Try Again</button>
+      </div>`;
+  }
 }
 
 async function requestCamera() {

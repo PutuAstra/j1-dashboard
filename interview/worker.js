@@ -104,6 +104,16 @@ async function route(request) {
     return getAnalysis(seg[1], request);
   }
 
+  // One-way: profile photo + resume upload (candidate-facing, no admin key)
+  if (seg[0] === 'session' && seg[2] === 'upload-photo'  && m === 'POST') return uploadProfilePhoto(seg[1], request);
+  if (seg[0] === 'session' && seg[2] === 'upload-resume' && m === 'POST') return uploadResume(seg[1], request);
+  // One-way: profile photo + resume fetch (admin-facing)
+  if (seg[0] === 'session' && seg[2] === 'profile-photo' && m === 'GET')  return getProfilePhotoUrl(seg[1], request);
+  if (seg[0] === 'session' && seg[2] === 'resume-url'    && m === 'GET')  return getResumeUrl(seg[1], request);
+  // One-way: recruiter review outcome
+  if (seg[0] === 'session' && seg[2] === 'review' && m === 'POST') return saveSessionReview(seg[1], request);
+  if (seg[0] === 'session' && seg[2] === 'review' && m === 'GET')  return getSessionReview(seg[1], request);
+
   return jsonRes({ error: 'Not found' }, 404);
 }
 
@@ -154,7 +164,7 @@ async function getAccessToken() {
   return data.access_token;
 }
 
-async function uploadToOneDrive(filePath, blob, accessToken) {
+async function uploadToOneDrive(filePath, blob, accessToken, contentType) {
   const encodedPath = filePath.split('/').map(encodeURIComponent).join('/');
   const sessionUrl = `https://graph.microsoft.com/v1.0/users/${ONEDRIVE_USER}/drive/root:/${encodedPath}:/createUploadSession`;
 
@@ -180,7 +190,7 @@ async function uploadToOneDrive(filePath, blob, accessToken) {
     headers: {
       'Content-Length': String(size),
       'Content-Range': `bytes 0-${size - 1}/${size}`,
-      'Content-Type': 'video/webm',
+      'Content-Type': contentType || 'video/webm',
     },
     body: blob,
   });
@@ -405,7 +415,8 @@ async function deleteSession(token, request) {
   if (session.status === 'completed') return jsonRes({ error: 'Cannot revoke a completed session' }, 400);
 
   await INTERVIEW_DATA.delete(`session:${token}`);
-  await INTERVIEW_DATA.delete(`session:${token}:analysis`); // clean up cached analysis
+  await INTERVIEW_DATA.delete(`session:${token}:analysis`);
+  await INTERVIEW_DATA.delete(`session:${token}:review`);
   const sessions = (await kvGet(`interview:${session.interviewId}:sessions`)) || [];
   await kvPut(`interview:${session.interviewId}:sessions`, sessions.filter(t => t !== token));
   return jsonRes({ ok: true });
@@ -1004,4 +1015,116 @@ async function getAnalysis(token, request) {
   const analysis = await kvGet(`session:${token}:analysis`);
   if (!analysis) return jsonRes({ notFound: true });
   return jsonRes(analysis);
+}
+
+// ── Profile Photo & Resume Upload ─────────────────────────────
+
+async function uploadProfilePhoto(token, request) {
+  const session = await kvGet(`session:${token}`);
+  if (!session) return jsonRes({ error: 'Session not found' }, 404);
+
+  const contentType = request.headers.get('Content-Type') || 'image/jpeg';
+  const ext = contentType.includes('png') ? 'png' : contentType.includes('gif') ? 'gif' : 'jpg';
+
+  const interview  = await kvGet(`interview:${session.interviewId}`);
+  const safeName   = session.candidateName.replace(/[^a-zA-Z0-9 _-]/g, '').trim();
+  const shortToken = token.slice(0, 8);
+  const filePath   = `CTI Interviews/${interview?.title || 'Interview'}/${safeName} (${shortToken})/profile.${ext}`;
+
+  try {
+    const blob        = await request.arrayBuffer();
+    const accessToken = await getAccessToken();
+    const fileItem    = await uploadToOneDrive(filePath, blob, accessToken, contentType);
+    session.profilePhotoItemId = fileItem.id;
+    await kvPut(`session:${token}`, session);
+    return jsonRes({ ok: true });
+  } catch (e) {
+    return jsonRes({ error: 'Photo upload failed: ' + e.message }, 500);
+  }
+}
+
+async function uploadResume(token, request) {
+  const session = await kvGet(`session:${token}`);
+  if (!session) return jsonRes({ error: 'Session not found' }, 404);
+
+  const xFilename  = request.headers.get('X-Filename') || 'resume.pdf';
+  const ext        = xFilename.split('.').pop().toLowerCase() || 'pdf';
+  const mimeMap    = { pdf: 'application/pdf', doc: 'application/msword', docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' };
+  const contentType = mimeMap[ext] || 'application/octet-stream';
+
+  const interview  = await kvGet(`interview:${session.interviewId}`);
+  const safeName   = session.candidateName.replace(/[^a-zA-Z0-9 _-]/g, '').trim();
+  const shortToken = token.slice(0, 8);
+  const filePath   = `CTI Interviews/${interview?.title || 'Interview'}/${safeName} (${shortToken})/resume.${ext}`;
+
+  try {
+    const blob        = await request.arrayBuffer();
+    const accessToken = await getAccessToken();
+    const fileItem    = await uploadToOneDrive(filePath, blob, accessToken, contentType);
+    session.resumeItemId   = fileItem.id;
+    session.resumeFileName = xFilename;
+    session.resumeExt      = ext;
+    await kvPut(`session:${token}`, session);
+    return jsonRes({ ok: true });
+  } catch (e) {
+    return jsonRes({ error: 'Resume upload failed: ' + e.message }, 500);
+  }
+}
+
+async function getProfilePhotoUrl(token, request) {
+  requireAdmin(request);
+  const session = await kvGet(`session:${token}`);
+  if (!session?.profilePhotoItemId) return jsonRes({ notFound: true });
+  try {
+    const accessToken = await getAccessToken();
+    const res  = await fetch(
+      `https://graph.microsoft.com/v1.0/users/${ONEDRIVE_USER}/drive/items/${session.profilePhotoItemId}`,
+      { headers: { 'Authorization': `Bearer ${accessToken}` } }
+    );
+    const item = await res.json();
+    return jsonRes({ downloadUrl: item['@microsoft.graph.downloadUrl'] || null });
+  } catch (e) {
+    return jsonRes({ error: e.message }, 500);
+  }
+}
+
+async function getResumeUrl(token, request) {
+  requireAdmin(request);
+  const session = await kvGet(`session:${token}`);
+  if (!session?.resumeItemId) return jsonRes({ notFound: true });
+  try {
+    const accessToken = await getAccessToken();
+    const res  = await fetch(
+      `https://graph.microsoft.com/v1.0/users/${ONEDRIVE_USER}/drive/items/${session.resumeItemId}`,
+      { headers: { 'Authorization': `Bearer ${accessToken}` } }
+    );
+    const item = await res.json();
+    return jsonRes({
+      downloadUrl: item['@microsoft.graph.downloadUrl'] || null,
+      fileName:    session.resumeFileName || 'resume.pdf',
+      ext:         session.resumeExt      || 'pdf',
+    });
+  } catch (e) {
+    return jsonRes({ error: e.message }, 500);
+  }
+}
+
+async function saveSessionReview(token, request) {
+  requireAdmin(request);
+  const { notes, decision } = await request.json();
+  await kvPut(`session:${token}:review`, { notes, decision, reviewedAt: Date.now() });
+  // Mirror decision onto the session for fast list rendering
+  const session = await kvGet(`session:${token}`);
+  if (session) {
+    session.reviewDecision = decision;
+    await kvPut(`session:${token}`, session);
+  }
+  return jsonRes({ ok: true });
+}
+
+async function getSessionReview(token, request) {
+  requireAdmin(request);
+  const review = await kvGet(`session:${token}:review`);
+  if (!review) return jsonRes({ notFound: true });
+  return jsonRes(review);
 }
