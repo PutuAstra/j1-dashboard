@@ -577,18 +577,31 @@ function startCountdown() {
       return null;
     }
 
-    // Speak with a short professional preamble then the question.
-    // A comma in the text creates a natural half-second pause between sentences.
+    // Two chained utterances: preamble → question text.
+    // Splitting avoids browsers that fire onend at sentence boundaries
+    // (period triggers sentence-end in some TTS engines).
     function doSpeak(voice) {
-      const text = `Here is your question. ${q.text}`;
-      const utt  = new SpeechSynthesisUtterance(text);
-      if (voice) utt.voice = voice;
-      utt.rate   = 0.88;   // deliberate, unhurried — interviewer pace
-      utt.pitch  = 0.95;   // slightly lower = more authority
-      utt.volume = 1;
-      utt.onend   = () => beginCountdown();
-      utt.onerror = () => beginCountdown();
-      window.speechSynthesis.speak(utt);
+      function makeUtt(text) {
+        const u = new SpeechSynthesisUtterance(text);
+        if (voice) u.voice = voice;
+        u.rate   = 0.88;
+        u.pitch  = 0.95;
+        u.volume = 1;
+        return u;
+      }
+
+      const utt1 = makeUtt('Here is your question.');
+      const utt2 = makeUtt(q.text || '');
+
+      // Only start countdown after the QUESTION (utt2) finishes
+      utt2.onend   = () => beginCountdown();
+      utt2.onerror = () => beginCountdown();
+
+      // When preamble ends, speak the question
+      utt1.onend   = () => window.speechSynthesis.speak(utt2);
+      utt1.onerror = () => window.speechSynthesis.speak(utt2);
+
+      window.speechSynthesis.speak(utt1);
     }
 
     // Voices may not be loaded yet on first call — wait if needed
