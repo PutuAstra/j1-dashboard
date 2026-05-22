@@ -1082,11 +1082,9 @@ function renderSessionRow(s, num) {
       <div style="display:flex;align-items:center;gap:10px;min-width:0">
         <div id="av-${s.token}" class="candidate-avatar">${avatarContent}</div>
         <div style="min-width:0">
-          <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
-            <span style="font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(s.candidateName)}</span>
-            ${decisionBadge}
-          </div>
-          <div class="text-muted" style="font-size:11px">${s.candidateEmail ? esc(s.candidateEmail) + ' · ' : ''}Invited ${invitedDate}</div>
+          <div style="font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(s.candidateName)}</div>
+          ${decisionBadge ? `<div style="display:flex;align-items:center;gap:5px;margin-top:3px;flex-wrap:nowrap">${decisionBadge}</div>` : ''}
+          <div class="text-muted" style="font-size:11px;margin-top:2px">${s.candidateEmail ? esc(s.candidateEmail) + ' · ' : ''}Invited ${invitedDate}</div>
         </div>
       </div>
       <div style="display:flex;align-items:center;justify-content:center">
