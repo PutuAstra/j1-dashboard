@@ -403,33 +403,66 @@ function startMicMeter() {
 }
 
 function testSpeakers() {
-  // Use a FRESH AudioContext created directly in this click handler.
-  // Chrome starts it in 'running' state when called from a user gesture.
-  // Tones are scheduled via the AudioContext clock — zero gaps, no WAV artifacts.
-  try {
-    const ctx = new AudioContext();
-    const play = () => {
-      const now = ctx.currentTime;
-      [440, 554, 659].forEach((freq, i) => {
-        const osc  = ctx.createOscillator();
+  // Use TTS for the speaker test — same audio path as the real interview,
+  // sounds natural on all speakers, and lets the candidate hear the actual voice.
+  if (!('speechSynthesis' in window)) {
+    // Fallback: oscillator beep if TTS not available
+    try {
+      const ctx = new AudioContext();
+      ctx.resume().then(() => {
+        const osc = ctx.createOscillator();
         const gain = ctx.createGain();
-        const t    = now + i * 0.42;          // 420 ms per tone
-        gain.gain.setValueAtTime(0,    t);
-        gain.gain.linearRampToValueAtTime(0.55, t + 0.025);  // 25 ms fade-in
-        gain.gain.setValueAtTime(0.55, t + 0.36);
-        gain.gain.linearRampToValueAtTime(0,    t + 0.40);   // 40 ms fade-out
-        osc.frequency.value = freq;
+        gain.gain.setValueAtTime(0, ctx.currentTime);
+        gain.gain.linearRampToValueAtTime(0.4, ctx.currentTime + 0.02);
+        gain.gain.setValueAtTime(0.4, ctx.currentTime + 0.3);
+        gain.gain.linearRampToValueAtTime(0, ctx.currentTime + 0.35);
+        osc.frequency.value = 523;
         osc.connect(gain);
         gain.connect(ctx.destination);
-        osc.start(t);
-        osc.stop(t + 0.42);
-      });
-      setTimeout(() => ctx.close().catch(() => {}), 2200);
+        osc.start();
+        osc.stop(ctx.currentTime + 0.4);
+        setTimeout(() => ctx.close().catch(() => {}), 600);
+      }).catch(() => {});
+    } catch (e) { console.warn('testSpeakers:', e); }
+    return;
+  }
+
+  window.speechSynthesis.cancel();
+
+  // Pick the same recruiter voice used during the interview
+  function pickVoice(voices) {
+    const tests = [
+      v => /\bonline\b/i.test(v.name) && /en[-_]US/i.test(v.lang),
+      v => /\bonline\b/i.test(v.name) && v.lang.startsWith('en'),
+      v => /google.*us.*english|google.*english.*us/i.test(v.name),
+      v => /google/i.test(v.name) && v.lang.startsWith('en'),
+      v => /\b(samantha|alex|karen|daniel)\b/i.test(v.name),
+      v => /en[-_]US/i.test(v.lang),
+      v => v.lang.startsWith('en'),
+    ];
+    for (const t of tests) { const m = voices.find(t); if (m) return m; }
+    return null;
+  }
+
+  function doTest(voice) {
+    const utt = new SpeechSynthesisUtterance(
+      'Speaker test. If you can hear this clearly, your audio is working correctly.'
+    );
+    if (voice) utt.voice = voice;
+    utt.rate   = 0.88;
+    utt.pitch  = 0.95;
+    utt.volume = 1;
+    window.speechSynthesis.speak(utt);
+  }
+
+  const voices = window.speechSynthesis.getVoices();
+  if (voices.length) {
+    doTest(pickVoice(voices));
+  } else {
+    window.speechSynthesis.onvoiceschanged = () => {
+      window.speechSynthesis.onvoiceschanged = null;
+      doTest(pickVoice(window.speechSynthesis.getVoices()));
     };
-    // Always call resume() first — harmless if already running, required if suspended
-    ctx.resume().then(play).catch(() => {});
-  } catch (e) {
-    console.warn('testSpeakers:', e);
   }
 }
 
