@@ -1262,17 +1262,20 @@ async function openReview(token, candidateName) {
     // ── RIGHT column: resume + review outcome ──
     let resumeSection = '';
     if (resumeData?.downloadUrl) {
-      const ext = resumeData.ext || 'pdf';
-      const src = ext === 'pdf'
-        ? resumeData.downloadUrl
-        : `https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(resumeData.downloadUrl)}`;
+      const ext = (resumeData.ext || 'pdf').toLowerCase();
+      // OneDrive download URLs serve with Content-Disposition: attachment, which forces
+      // download instead of inline display. Route through a viewer service instead.
+      const enc = encodeURIComponent(resumeData.downloadUrl);
+      const viewerSrc = (ext === 'doc' || ext === 'docx')
+        ? `https://view.officeapps.live.com/op/embed.aspx?src=${enc}`
+        : `https://docs.google.com/viewer?url=${enc}&embedded=true`;
       resumeSection = `
-        <div style="flex:1;min-height:0;display:flex;flex-direction:column;gap:4px">
+        <div style="flex:1;min-height:0;display:flex;flex-direction:column;gap:6px">
           <div style="display:flex;justify-content:space-between;align-items:center">
             <h3 style="margin:0;font-size:14px">Resume</h3>
             <a href="${resumeData.downloadUrl}" target="_blank" class="btn btn-ghost" style="font-size:11px;padding:2px 8px">Download ↗</a>
           </div>
-          <iframe src="${src}" style="flex:1;min-height:380px;border:1px solid var(--border);border-radius:8px" frameborder="0"></iframe>
+          <iframe src="${viewerSrc}" style="flex:1;min-height:400px;border:1px solid var(--border);border-radius:8px;width:100%" frameborder="0" allowfullscreen></iframe>
         </div>`;
     } else {
       resumeSection = `<div class="empty-state" style="flex:none">No resume uploaded</div>`;
@@ -1289,14 +1292,14 @@ async function openReview(token, candidateName) {
     const reviewOutcome = `
       <div style="border-top:1px solid var(--border);padding-top:16px;flex-shrink:0">
         <h3 style="margin:0 0 12px;font-size:14px">Review Outcome</h3>
-        <div style="display:flex;gap:8px;margin-bottom:12px">
+        <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap">
           <button id="btn-fwd" onclick="setReviewDecision('move_forward')"
-            class="btn" style="flex:1;font-size:12px;padding:7px 10px;transition:all 0.15s;
+            class="btn" style="font-size:12px;padding:7px 16px;transition:all 0.15s;
             ${decisionFwd ? 'background:#16a34a;color:#fff;border-color:#16a34a' : 'border:1px solid var(--border);color:var(--text)'}">
             ✓ Move Forward
           </button>
           <button id="btn-rej" onclick="setReviewDecision('not_moving_forward')"
-            class="btn" style="flex:1;font-size:12px;padding:7px 10px;transition:all 0.15s;
+            class="btn" style="font-size:12px;padding:7px 16px;transition:all 0.15s;
             ${decisionRej ? 'background:#dc2626;color:#fff;border-color:#dc2626' : 'border:1px solid var(--border);color:var(--text)'}">
             ✗ Not Moving Forward
           </button>
@@ -1304,9 +1307,11 @@ async function openReview(token, candidateName) {
         <textarea id="review-notes" placeholder="Notes about this candidate…"
           style="width:100%;min-height:90px;background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:10px 12px;color:var(--text);font-size:13px;resize:vertical;box-sizing:border-box"
         >${reviewData?.notes ? esc(reviewData.notes) : ''}</textarea>
-        <button class="btn btn-primary" style="width:100%;margin-top:10px;font-size:13px" onclick="saveReviewOutcome('${token}')">
-          💾 Save Review
-        </button>
+        <div style="margin-top:10px;text-align:right">
+          <button class="btn btn-primary" style="padding:8px 20px;font-size:13px" onclick="saveReviewOutcome('${token}')">
+            💾 Save Review
+          </button>
+        </div>
       </div>`;
 
     content.innerHTML = `
