@@ -1317,19 +1317,24 @@ async function openReview(token, candidateName) {
         }))
       : [];
 
-    // ── LEFT column: videos + English analysis ──
+    // ── LEFT column: videos (4-column grid) + English analysis ──
     const videosHTML = videoItems.length
-      ? videoItems.map(({ q, downloadUrl, webUrl, questionIndex }) => `
-          <div class="review-item" style="margin-bottom:12px">
-            ${downloadUrl
-              ? `<video src="${downloadUrl}" controls preload="metadata" style="width:100%;border-radius:8px;background:#000;display:block"></video>`
-              : `<div style="aspect-ratio:16/9;background:#111;border-radius:8px;display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:13px">Video unavailable</div>`
-            }
-            <div style="display:flex;justify-content:space-between;align-items:center;padding:6px 2px">
-              <span style="font-size:12px"><strong>Q${questionIndex + 1}:</strong> ${q ? esc(q.text) : 'Question ' + (questionIndex + 1)}</span>
-              ${webUrl ? `<a href="${webUrl}" target="_blank" class="btn btn-ghost" style="font-size:11px;padding:2px 6px">↗</a>` : ''}
-            </div>
-          </div>`).join('')
+      ? `<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px">
+          ${videoItems.map(({ q, downloadUrl, webUrl, questionIndex }) => `
+            <div style="display:flex;flex-direction:column;border:1px solid var(--border);border-radius:10px;overflow:hidden;background:var(--bg)">
+              ${downloadUrl
+                ? `<video src="${downloadUrl}" controls preload="metadata" style="width:100%;aspect-ratio:16/9;background:#000;display:block;flex-shrink:0"></video>`
+                : `<div style="aspect-ratio:16/9;background:#111;display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:12px">Unavailable</div>`
+              }
+              <div style="padding:8px 10px;display:flex;justify-content:space-between;align-items:flex-start;gap:4px">
+                <div>
+                  <div style="font-size:11px;font-weight:700;color:var(--accent);margin-bottom:2px">Q${questionIndex + 1}</div>
+                  <div style="font-size:11px;color:var(--text);line-height:1.4">${q ? esc(q.text) : 'Question ' + (questionIndex + 1)}</div>
+                </div>
+                ${webUrl ? `<a href="${webUrl}" target="_blank" class="btn btn-ghost" style="font-size:10px;padding:2px 5px;flex-shrink:0">↗</a>` : ''}
+              </div>
+            </div>`).join('')}
+        </div>`
       : `<div class="empty-state">No recordings yet</div>`;
 
     const analysisSection = cachedAnalysis?.notFound
