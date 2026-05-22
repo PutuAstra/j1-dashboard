@@ -823,7 +823,7 @@ tr:hover td { background: var(--card-2); }
 }
 
 .tw-session-row:last-child { border-bottom: none; }
-.tw-session-row:hover { background: var(--card-2); }
+.tw-session-row:hover:not(:has(button:hover, a:hover)) { background: var(--card-2); }
 
 /* ── Setup screen ── */
 .bg-opt {
