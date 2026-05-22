@@ -326,7 +326,10 @@ function drawWithMask(vid, w, h) {
   tc.clearRect(0, 0, w, h);
   tc.save();
   tc.filter = 'blur(2px)';          // minimal feather — no body ghosting
-  tc.drawImage(lastSegMask, 0, 0, w, h);
+  // Draw mask 4px oversize on all sides so the blur kernel blends with real mask
+  // content rather than the transparent canvas boundary — this eliminates the
+  // faint bright halo/line that appears at canvas edges (most visible over white bg)
+  tc.drawImage(lastSegMask, -4, -4, w + 8, h + 8);
   tc.restore();
   tc.globalCompositeOperation = 'source-in';
   tc.drawImage(vid, 0, 0, w, h);
