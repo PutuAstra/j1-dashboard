@@ -272,23 +272,17 @@ function drawWithMask(vid, w, h) {
     return;
   }
   // Draw background
-  if (bgMode === 'blur') {
-    bgCtx.save();
-    bgCtx.filter = 'blur(18px)';
-    bgCtx.drawImage(vid, -24, -24, w + 48, h + 48);
-    bgCtx.restore();
-  } else if (BG_FILLS[bgMode]) {
+  if (BG_FILLS[bgMode]) {
     bgCtx.fillStyle = BG_FILLS[bgMode];
     bgCtx.fillRect(0, 0, w, h);
   }
-  // Cut out person — erode mask slightly inward (4% each side) + feather with blur
-  // This removes chair arms / near-body objects from the foreground region
+  // Cut out person using AI mask — minimal 2px blur just for natural edge softening
+  // No scaling/erosion: aggressive erosion was making the person look transparent/blurry
   const { tc } = ensureTmp(w, h);
   tc.clearRect(0, 0, w, h);
-  const ex = w * 0.04, ey = h * 0.04;
   tc.save();
-  tc.filter = 'blur(8px)';
-  tc.drawImage(lastSegMask, ex, ey, w - ex * 2, h - ey * 2);
+  tc.filter = 'blur(2px)';
+  tc.drawImage(lastSegMask, 0, 0, w, h);
   tc.restore();
   tc.globalCompositeOperation = 'source-in';
   tc.drawImage(vid, 0, 0, w, h);
@@ -304,15 +298,19 @@ function startBgLoop(vid) {
 
     if (bgMode === 'none') {
       bgCtx.drawImage(vid, 0, 0, w, h);
-    } else if (bgMode === 'blur' && !segReady) {
+    } else if (bgMode === 'blur') {
+      // Portrait-mode oval blur — always reliable, hides chair regardless of AI
       applySimpleBlur(vid, w, h);
     } else if (segReady) {
-      // Throttle segmentation sends; draw every frame using stored mask
+      // Solid colour backgrounds: use AI segmentation mask
       if (ts - lastSendTs >= 66 && segModel) {
         lastSendTs = ts;
         segModel.send({ image: vid }).catch(() => {});
       }
       drawWithMask(vid, w, h);
+    } else {
+      // AI not yet ready + solid colour selected — show raw video temporarily
+      bgCtx.drawImage(vid, 0, 0, w, h);
     }
     drawWatermark();
     segLoopId = requestAnimationFrame(loop);
@@ -352,62 +350,44 @@ function startMicMeter() {
   } catch (e) {}
 }
 
-// Build a single WAV blob containing all 3 test tones in sequence
-// Uses incremental phase accumulator to avoid floating-point drift / breakup
-function _makeTestChimeWav() {
+// Build a WAV blob for a single tone
+// Uses incremental phase to avoid floating-point drift (no "breaking up")
+function _makeTone(freq, secs) {
   const SR = 44100;
-  const TONES = [440, 554, 659];
-  const NOTE_DUR = 0.38;   // seconds per tone
-  const GAP_DUR  = 0.06;   // silence between tones
-  const FADE     = 0.025;  // 25 ms fade in/out to remove clicks
-  const AMP      = 0.88;   // amplitude (0–1) — loud but not clipping
-
-  const noteSamples = Math.floor(SR * NOTE_DUR);
-  const gapSamples  = Math.floor(SR * GAP_DUR);
-  const totalSamples = TONES.length * noteSamples + (TONES.length - 1) * gapSamples;
-
-  const buf = new ArrayBuffer(44 + totalSamples * 2);
-  const v   = new DataView(buf);
-  const str = (off, s) => { for (let i = 0; i < s.length; i++) v.setUint8(off + i, s.charCodeAt(i)); };
-
-  // WAV header
-  str(0, 'RIFF'); v.setUint32(4, 36 + totalSamples * 2, true);
-  str(8, 'WAVE'); str(12, 'fmt ');
-  v.setUint32(16, 16, true); v.setUint16(20, 1, true); v.setUint16(22, 1, true);
-  v.setUint32(24, SR, true); v.setUint32(28, SR * 2, true);
-  v.setUint16(32, 2, true);  v.setUint16(34, 16, true);
-  str(36, 'data'); v.setUint32(40, totalSamples * 2, true);
-
-  let offset = 0;
-  const fadeSamples = Math.floor(SR * FADE);
-
-  TONES.forEach((freq, ti) => {
-    const phaseInc = (2 * Math.PI * freq) / SR;
-    let phase = 0;
-    for (let i = 0; i < noteSamples; i++) {
-      // Linear fade in/out to prevent clicks at note boundaries
-      const fade = Math.min(i / fadeSamples, 1, (noteSamples - i) / fadeSamples);
-      v.setInt16(44 + (offset + i) * 2, Math.round(AMP * fade * 32767 * Math.sin(phase)), true);
-      phase += phaseInc;
-      if (phase > 2 * Math.PI) phase -= 2 * Math.PI;
-    }
-    offset += noteSamples;
-    if (ti < TONES.length - 1) {
-      // Write silence gap
-      for (let i = 0; i < gapSamples; i++) v.setInt16(44 + (offset + i) * 2, 0, true);
-      offset += gapSamples;
-    }
-  });
-
-  return URL.createObjectURL(new Blob([buf], { type: 'audio/wav' }));
+  const n  = Math.floor(SR * secs);
+  const ab = new ArrayBuffer(44 + n * 2);
+  const dv = new DataView(ab);
+  const ws = (o, s) => { for (let i = 0; i < s.length; i++) dv.setUint8(o + i, s.charCodeAt(i)); };
+  ws(0,'RIFF'); dv.setUint32(4, 36 + n * 2, true);
+  ws(8,'WAVE'); ws(12,'fmt ');
+  dv.setUint32(16, 16, true); dv.setUint16(20, 1, true); dv.setUint16(22, 1, true);
+  dv.setUint32(24, SR, true); dv.setUint32(28, SR * 2, true);
+  dv.setUint16(32, 2, true);  dv.setUint16(34, 16, true);
+  ws(36,'data'); dv.setUint32(40, n * 2, true);
+  const FADE = Math.floor(SR * 0.022); // 22 ms fade in/out — removes clicks
+  const inc  = 2 * Math.PI * freq / SR;
+  let ph = 0;
+  for (let i = 0; i < n; i++) {
+    const fade = Math.min(i, FADE, n - 1 - i) / FADE; // 0→1→1→0
+    dv.setInt16(44 + i * 2, Math.round(0.88 * Math.min(fade, 1) * 32767 * Math.sin(ph)), true);
+    ph += inc;
+    if (ph > 2 * Math.PI) ph -= 2 * Math.PI;
+  }
+  return URL.createObjectURL(new Blob([ab], { type: 'audio/wav' }));
 }
 
 function testSpeakers() {
-  const url = _makeTestChimeWav();
-  const a = new Audio(url);
-  a.onended = () => URL.revokeObjectURL(url);
-  a.onerror = () => URL.revokeObjectURL(url);
-  a.play().catch(() => {});
+  // Play 3 tones (A4 → C#5 → E5) sequentially; chain via onended (no setTimeout gaps)
+  const tones = [440, 554, 659];
+  let i = 0;
+  (function next() {
+    if (i >= tones.length) return;
+    const url = _makeTone(tones[i], 0.35);
+    const a = new Audio(url);
+    a.onended = () => { URL.revokeObjectURL(url); i++; next(); };
+    a.onerror  = () => { URL.revokeObjectURL(url); i++; next(); };
+    a.play().catch(() => {});
+  })();
 }
 
 function continueToInterview() {
