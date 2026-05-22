@@ -1665,7 +1665,8 @@ async function loadClientLogoAvatar(clientId, elId) {
   try {
     const data = await apiJSON('GET', `/api/script/client/${clientId}/logo-url`);
     if (data.downloadUrl) {
-      el.innerHTML = `<img src="${data.downloadUrl}" style="width:100%;height:100%;object-fit:cover;border-radius:50%">`;
+      el.style.background = 'transparent';
+      el.innerHTML = `<img src="${data.downloadUrl}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;display:block">`;
     }
   } catch { /* silently skip */ }
 }
@@ -1693,7 +1694,8 @@ function updateClientLogo(clientId, input) {
       if (c) c.logoItemId = 'updated';
       if (avEl) {
         avEl.style.opacity = '1';
-        avEl.innerHTML = `<img src="${URL.createObjectURL(blob)}" style="width:100%;height:100%;object-fit:cover;border-radius:50%">`;
+        avEl.style.background = 'transparent';
+        avEl.innerHTML = `<img src="${URL.createObjectURL(blob)}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;display:block">`;
       }
     } catch (e) {
       toast(e.message, 'error');
