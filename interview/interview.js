@@ -33,6 +33,7 @@ let setupAudioCtx = null;
 const BG_FILLS = { white: '#f0ede8', navy: '#1a2744', slate: '#374151' };
 let logoImg = null;
 let blurMaskCanvas = null;  // cached ellipse mask for applySimpleBlur
+let bgVid = null;           // persistent hidden video — lives on document.body, survives DOM swaps
 
 const token = new URLSearchParams(location.search).get('token');
 const main = () => document.getElementById('take-main');
@@ -119,6 +120,22 @@ async function showSetup() {
       : 'Could not access your camera or microphone: ' + e.message);
   }
 
+  // Create a persistent hidden video element attached directly to document.body.
+  // This is the KEY fix for the frozen camera bug: when showQuestion() replaces
+  // main().innerHTML, any <video> inside that div is removed from the DOM and
+  // Chrome suspends its playback, freezing the canvas loop. By living on body
+  // it survives all DOM swaps inside #take-main.
+  if (!bgVid) {
+    bgVid = document.createElement('video');
+    bgVid.autoplay = true;
+    bgVid.muted    = true;
+    bgVid.setAttribute('playsinline', '');
+    bgVid.style.cssText = 'position:fixed;top:-9999px;left:-9999px;width:1px;height:1px;pointer-events:none';
+    document.body.appendChild(bgVid);
+  }
+  bgVid.srcObject = mediaStream;
+  await bgVid.play();
+
   main().innerHTML = `
     <div style="max-width:820px;width:100%">
       <div style="text-align:center;margin-bottom:20px">
@@ -128,7 +145,6 @@ async function showSetup() {
       <div style="display:grid;grid-template-columns:1.4fr 1fr;gap:20px;align-items:start">
         <div style="position:relative">
           <canvas id="bg-canvas" style="width:100%;border-radius:12px;background:#111;display:block"></canvas>
-          <video id="setup-vid" autoplay muted playsinline style="display:none"></video>
         </div>
         <div style="display:flex;flex-direction:column;gap:14px">
 
@@ -164,18 +180,16 @@ async function showSetup() {
       </div>
     </div>`;
 
-  const vid = document.getElementById('setup-vid');
-  vid.srcObject = mediaStream;
-  await vid.play();
-
   bgCanvas = document.getElementById('bg-canvas');
   bgCtx = bgCanvas.getContext('2d');
-  // Set canvas resolution once video has dimensions
-  vid.addEventListener('loadedmetadata', () => {
-    bgCanvas.width  = vid.videoWidth  || 640;
-    bgCanvas.height = vid.videoHeight || 360;
+  // Set canvas resolution from live video dimensions
+  bgVid.addEventListener('loadedmetadata', () => {
+    bgCanvas.width  = bgVid.videoWidth  || 640;
+    bgCanvas.height = bgVid.videoHeight || 360;
+    blurMaskCanvas  = null; // invalidate cached mask when resolution changes
   }, { once: true });
-  bgCanvas.width = 640; bgCanvas.height = 360; // default until metadata fires
+  bgCanvas.width  = bgVid.videoWidth  || 640;
+  bgCanvas.height = bgVid.videoHeight || 360;
 
   // Preload CTI logo for watermark
   if (!logoImg) {
@@ -183,9 +197,9 @@ async function showSetup() {
     logoImg.src = 'cti-logo.png';
   }
 
-  startBgLoop(vid);
+  startBgLoop(bgVid);
   startMicMeter();
-  loadSegmentation(vid);
+  loadSegmentation(bgVid);
 }
 
 async function loadSegmentation(vid) {
@@ -251,20 +265,18 @@ function ensureBlurMask(w, h) {
   const mc = blurMaskCanvas.getContext('2d');
   mc.clearRect(0, 0, w, h);
   // Ellipse strategy:
-  //   Vertical (ry=0.58h, cy=0.48h): bottom reaches 1.06h → 22px below canvas so
-  //     hands are fully inside the opaque zone (no fade-off at the bottom).
-  //     Top reaches -0.10h → head always covered.
-  //   Horizontal (rx=0.42w): stops at 8% from each canvas edge → that outer 8%
-  //     (~51px) stays transparent, letting the blurred background show through.
-  //     This is what makes the blur effect actually visible on the sides.
-  //   blur(14px): smooth ~28px transition at the left/right edges.
+  //   Vertical (ry=0.62h, cy=0.48h): bottom at 1.10h, top at -0.14h → head and
+  //     hands are always inside the opaque zone regardless of camera distance.
+  //   Horizontal (rx=0.44w): stops at 6% from each edge (~38px at 640px canvas).
+  //     That 6% strip stays transparent → blurred background is visible at sides.
+  //   blur(12px): smooth ~24px transition. Less blur = less inward shrinkage.
   mc.save();
-  mc.filter = 'blur(14px)';
+  mc.filter = 'blur(12px)';
   mc.fillStyle = 'black';
   mc.beginPath();
   mc.ellipse(
-    w * 0.50, h * 0.48,  // center (slightly above midpoint — face is in the top half)
-    w * 0.42, h * 0.58,  // rx stays inside canvas; ry extends past top/bottom
+    w * 0.50, h * 0.48,  // center slightly above midpoint
+    w * 0.44, h * 0.62,  // rx inside canvas edges; ry well past top/bottom
     0, 0, 2 * Math.PI
   );
   mc.fill();
@@ -274,10 +286,10 @@ function ensureBlurMask(w, h) {
 
 // Portrait-mode blur — no AI required; uses proper ellipse (not a circle)
 function applySimpleBlur(vid, w, h) {
-  // 1. Draw strongly blurred background (overscan to avoid dark border artifacts)
+  // 1. Draw strongly blurred background (overscan avoids dark border artifacts)
   bgCtx.save();
-  bgCtx.filter = 'blur(22px)';
-  bgCtx.drawImage(vid, -28, -28, w + 56, h + 56);
+  bgCtx.filter = 'blur(28px)';
+  bgCtx.drawImage(vid, -36, -36, w + 72, h + 72);
   bgCtx.restore();
 
   // 2. Composite sharp person through the pre-built elliptical mask
@@ -685,6 +697,7 @@ function stopStream() {
   if (segModel) { try { segModel.close(); } catch (e) {} segModel = null; }
   bgCanvas = null; bgCtx = null; canvasStream = null;
   blurMaskCanvas = null;
+  if (bgVid) { bgVid.srcObject = null; bgVid.remove(); bgVid = null; }
   mediaStream?.getTracks().forEach(t => t.stop());
 }
 
