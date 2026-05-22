@@ -237,7 +237,7 @@ function renderInterviewCard(interview) {
           <button class="btn btn-primary" onclick="openSessions('${interview.id}', '${esc(interview.title)}', 'candidates')">Candidates</button>
           <button class="btn btn-outline" onclick="openSessions('${interview.id}', '${esc(interview.title)}', 'invite')">Invite</button>
           <button class="btn btn-ghost" style="padding:6px 10px;font-size:15px" title="Edit" onclick="openEditInterview('${interview.id}')"><span style="display:inline-block;transform:rotate(45deg)">✏</span></button>
-          <button class="btn btn-ghost" style="padding:6px 10px;font-size:16px;color:var(--red)" title="Delete" onclick="deleteInterview('${interview.id}')">🗑️</button>
+          <button class="btn btn-ghost" style="padding:6px 10px;font-size:16px;color:var(--red)" title="Delete" onclick="deleteInterview('${interview.id}')">🗑</button>
         </div>
       </div>
     </div>
@@ -420,10 +420,10 @@ function renderTWSessionRow(s) {
       : `<button class="btn btn-ghost"   style="padding:4px 10px;font-size:12px" title="Search OneDrive Recordings folder" onclick="fetchAndRefreshTWRecording('${s.id}')">⟳ Fetch Recording</button>`;
     actions = `
       ${recBtn}
-      <button class="btn btn-ghost" style="padding:4px 8px;font-size:16px;color:var(--red);line-height:1" title="Delete session" onclick="deleteTWSession('${s.id}', '${esc(s.candidateName)}')">🗑️</button>
+      <button class="btn btn-ghost" style="padding:4px 8px;font-size:16px;color:var(--red);line-height:1" title="Delete session" onclick="deleteTWSession('${s.id}', '${esc(s.candidateName)}')">🗑</button>
     `;
   } else {
-    actions = `<button class="btn btn-ghost" style="padding:4px 8px;font-size:16px;color:var(--red);line-height:1" title="Delete session" onclick="deleteTWSession('${s.id}', '${esc(s.candidateName)}')">🗑️</button>`;
+    actions = `<button class="btn btn-ghost" style="padding:4px 8px;font-size:16px;color:var(--red);line-height:1" title="Delete session" onclick="deleteTWSession('${s.id}', '${esc(s.candidateName)}')">🗑</button>`;
   }
 
   return `
@@ -1669,7 +1669,7 @@ async function openScriptClient(clientId) {
         <div style="display:flex;gap:8px;align-items:center">
           <button class="btn btn-outline" onclick="promptAddPosition('${clientId}')">+ Add Position</button>
           <button class="btn btn-ghost" style="font-size:16px;padding:4px 10px;color:var(--red)" title="Delete this client"
-            onclick="deleteScriptClient('${clientId}','${esc(client?.name || '').replace(/'/g, "\\'")}')">🗑️</button>
+            onclick="deleteScriptClient('${clientId}','${esc(client?.name || '').replace(/'/g, "\\'")}')">🗑</button>
         </div>
       </div>
       <div id="sc-positions-${clientId}"><div class="empty-state">Loading…</div></div>
@@ -1724,7 +1724,7 @@ function renderScriptPositionRow(p, idx, total) {
             onchange="uploadScriptDoc('${p.id}', this)">
         </label>
         <button class="btn btn-ghost" style="font-size:16px;padding:4px 8px;color:var(--red)" title="Delete position"
-          onclick="deleteScriptPosition('${p.id}','${esc(p.name).replace(/'/g, "\\'")}','${p.clientId}')">🗑️</button>
+          onclick="deleteScriptPosition('${p.id}','${esc(p.name).replace(/'/g, "\\'")}','${p.clientId}')">🗑</button>
       </div>
     </div>
   `;
