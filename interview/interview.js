@@ -28,6 +28,7 @@ let micAnalyser = null;
 let micMeterFrameId = null;
 let setupAudioCtx = null;
 const BG_FILLS = { white: '#f0ede8', navy: '#1a2744', slate: '#374151' };
+let logoImg = null;
 
 const token = new URLSearchParams(location.search).get('token');
 const main = () => document.getElementById('take-main');
@@ -172,6 +173,12 @@ async function showSetup() {
   }, { once: true });
   bgCanvas.width = 640; bgCanvas.height = 360; // default until metadata fires
 
+  // Preload CTI logo for watermark
+  if (!logoImg) {
+    logoImg = new Image();
+    logoImg.src = 'cti-logo.png';
+  }
+
   startBgLoop(vid);
   startMicMeter();
   loadSegmentation(vid);
@@ -208,6 +215,17 @@ async function loadSegmentation(vid) {
   }
 }
 
+function drawWatermark() {
+  if (!logoImg || !logoImg.complete || !bgCtx || !bgCanvas) return;
+  const logoH = Math.round(bgCanvas.height * 0.07); // ~7% of canvas height
+  const logoW = Math.round(logoImg.naturalWidth * (logoH / logoImg.naturalHeight));
+  const pad = Math.round(bgCanvas.width * 0.02);
+  bgCtx.save();
+  bgCtx.globalAlpha = 0.72;
+  bgCtx.drawImage(logoImg, bgCanvas.width - logoW - pad, pad, logoW, logoH);
+  bgCtx.restore();
+}
+
 function startBgLoop(vid) {
   function loop(ts) {
     if (!bgCanvas || !bgCtx) return;
@@ -215,6 +233,7 @@ function startBgLoop(vid) {
     if (!vid.videoWidth) { segLoopId = requestAnimationFrame(loop); return; }
     if (bgMode === 'none' || !segReady) {
       bgCtx.drawImage(vid, 0, 0, w, h);
+      drawWatermark();
     } else if (ts - lastSendTs >= 66 && segModel) {
       lastSendTs = ts;
       segModel.send({ image: vid }).catch(() => {});
@@ -246,6 +265,7 @@ function handleSegResults(results) {
   }
   // Draw person on top
   bgCtx.drawImage(tmp, 0, 0, w, h);
+  drawWatermark();
 }
 
 function setBg(mode) {
