@@ -572,7 +572,7 @@ tr:hover td { background: var(--card-2); }
 /* ── Session list ── */
 .sessions-table-header {
   display: grid;
-  grid-template-columns: 1fr 120px 100px 160px;
+  grid-template-columns: 1fr 190px 120px 100px 160px;
   gap: 12px;
   padding: 6px 16px;
   font-size: 11px;
@@ -586,7 +586,7 @@ tr:hover td { background: var(--card-2); }
 
 .session-row {
   display: grid;
-  grid-template-columns: 1fr 120px 100px 160px;
+  grid-template-columns: 1fr 190px 120px 100px 160px;
   gap: 12px;
   align-items: center;
   padding: 10px 16px;

@@ -1060,12 +1060,6 @@ function renderSessionRow(s, num) {
     ? `<img src="" style="display:none">` // replaced by loadAvatarPhoto
     : `<span style="font-size:11px;font-weight:700;color:var(--muted)">${candidateInitials(s.candidateName)}</span>`;
 
-  const starsBadge = s.reviewStars
-    ? `<span style="font-size:12px;letter-spacing:0.5px;color:#f59e0b;white-space:nowrap">${'★'.repeat(s.reviewStars)}<span style="color:var(--border)">${'★'.repeat(5 - s.reviewStars)}</span></span>`
-    : '';
-  const decisionBadge = s.reviewDecision
-    ? `<span style="font-size:10px;padding:2px 7px;border-radius:10px;${DECISION_STYLE[s.reviewDecision]||''};white-space:nowrap">${DECISION_LABEL[s.reviewDecision]||s.reviewDecision}</span>${starsBadge}`
-    : '';
 
   const videosCell = responseCount > 0
     ? `<button class="btn btn-ghost" style="padding:3px 8px;font-size:12px;color:var(--accent);white-space:nowrap" onclick="openReview('${s.token}', '${esc(s.candidateName)}')">🎥 View ${responseCount}</button>`
@@ -1083,9 +1077,14 @@ function renderSessionRow(s, num) {
         <div id="av-${s.token}" class="candidate-avatar">${avatarContent}</div>
         <div style="min-width:0">
           <div style="font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(s.candidateName)}</div>
-          ${decisionBadge ? `<div style="display:flex;align-items:center;gap:5px;margin-top:3px;flex-wrap:nowrap">${decisionBadge}</div>` : ''}
-          <div class="text-muted" style="font-size:11px;margin-top:2px">${s.candidateEmail ? esc(s.candidateEmail) + ' · ' : ''}Invited ${invitedDate}</div>
+          <div class="text-muted" style="font-size:11px;margin-top:1px">${s.candidateEmail ? esc(s.candidateEmail) + ' · ' : ''}Invited ${invitedDate}</div>
         </div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:3px;justify-content:center">
+        ${s.reviewDecision
+          ? `<div><span style="font-size:10px;padding:2px 7px;border-radius:10px;${DECISION_STYLE[s.reviewDecision]||''};white-space:nowrap">${DECISION_LABEL[s.reviewDecision]||s.reviewDecision}</span></div>
+             ${s.reviewStars ? `<div style="font-size:13px;letter-spacing:0.5px;color:#f59e0b">${'★'.repeat(s.reviewStars)}<span style="color:var(--border)">${'★'.repeat(5-s.reviewStars)}</span></div>` : ''}`
+          : `<span class="text-muted" style="font-size:12px">—</span>`}
       </div>
       <div style="display:flex;align-items:center;justify-content:center">
         <span class="badge badge-${s.status}">${s.status.replace('_', ' ')}</span>
