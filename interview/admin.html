@@ -10,7 +10,7 @@
   <meta name="theme-color" content="#B01A18" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="style.css?v=20250522m" />
+  <link rel="stylesheet" href="style.css?v=20250522n" />
 </head>
 <body>
 
@@ -53,9 +53,14 @@
   <div class="admin-body">
 
     <aside class="admin-sidebar">
-      <div class="sidebar-parent-label">Interview</div>
-      <button class="sidebar-item sidebar-child" data-page="ow-list" onclick="gotoPage('ow-list')">One-Way Interview</button>
-      <button class="sidebar-item sidebar-child" data-page="tw-list" onclick="gotoPage('tw-list')">Two-Way Interview</button>
+      <button class="sidebar-parent-btn" onclick="toggleSidebarGroup(this)" aria-expanded="true">
+        Interview
+        <span class="sidebar-chevron">▾</span>
+      </button>
+      <div class="sidebar-children">
+        <button class="sidebar-item sidebar-child" data-page="ow-list" onclick="gotoPage('ow-list')">One-Way Interview</button>
+        <button class="sidebar-item sidebar-child" data-page="tw-list" onclick="gotoPage('tw-list')">Two-Way Interview</button>
+      </div>
     </aside>
 
     <main class="admin-main" id="admin-main">
@@ -191,6 +196,6 @@
 
 <div id="toast"></div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-<script src="admin.js?v=20250522m"></script>
+<script src="admin.js?v=20250522n"></script>
 </body>
 </html>

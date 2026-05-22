@@ -717,13 +717,46 @@ tr:hover td { background: var(--card-2); }
   transition: all 0.15s;
 }
 
-.sidebar-parent-label {
+.sidebar-parent-btn {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  justify-content: space-between;
   font-size: 11px;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.07em;
   color: var(--text);
-  padding: 18px 16px 6px;
+  padding: 18px 16px 8px;
+  border: none;
+  background: none;
+  cursor: pointer;
+  font-family: inherit;
+  transition: color 0.15s;
+}
+
+.sidebar-parent-btn:hover { color: var(--accent); }
+
+.sidebar-chevron {
+  font-size: 11px;
+  transition: transform 0.2s ease;
+  color: var(--muted);
+}
+
+.sidebar-parent-btn[aria-expanded="false"] .sidebar-chevron {
+  transform: rotate(-90deg);
+}
+
+.sidebar-children {
+  overflow: hidden;
+  max-height: 200px;
+  transition: max-height 0.25s ease, opacity 0.2s ease;
+  opacity: 1;
+}
+
+.sidebar-children.collapsed {
+  max-height: 0;
+  opacity: 0;
 }
 
 .sidebar-item.sidebar-child {

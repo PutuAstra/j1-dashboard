@@ -84,6 +84,12 @@ async function apiJSON(method, path, body = null) {
 
 // ── Navigation ────────────────────────────────────────────────
 
+function toggleSidebarGroup(btn) {
+  const expanded = btn.getAttribute('aria-expanded') === 'true';
+  btn.setAttribute('aria-expanded', expanded ? 'false' : 'true');
+  btn.nextElementSibling.classList.toggle('collapsed', expanded);
+}
+
 function gotoPage(page) {
   history.replaceState(null, '', '#' + page);
   const activeNav = ['ow-create', 'ow-list'].includes(page) ? 'ow-list' : 'tw-list';
