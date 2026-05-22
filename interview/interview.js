@@ -281,10 +281,15 @@ function drawWithMask(vid, w, h) {
     bgCtx.fillStyle = BG_FILLS[bgMode];
     bgCtx.fillRect(0, 0, w, h);
   }
-  // Cut out person using stored mask + current video frame
+  // Cut out person — erode mask slightly inward (4% each side) + feather with blur
+  // This removes chair arms / near-body objects from the foreground region
   const { tc } = ensureTmp(w, h);
   tc.clearRect(0, 0, w, h);
-  tc.drawImage(lastSegMask, 0, 0, w, h);
+  const ex = w * 0.04, ey = h * 0.04;
+  tc.save();
+  tc.filter = 'blur(8px)';
+  tc.drawImage(lastSegMask, ex, ey, w - ex * 2, h - ey * 2);
+  tc.restore();
   tc.globalCompositeOperation = 'source-in';
   tc.drawImage(vid, 0, 0, w, h);
   tc.globalCompositeOperation = 'source-over';
@@ -347,39 +352,62 @@ function startMicMeter() {
   } catch (e) {}
 }
 
-// Build a WAV blob for a single tone — no AudioContext needed, bypasses autoplay policy
-function _makeBeepWav(freq, duration) {
+// Build a single WAV blob containing all 3 test tones in sequence
+// Uses incremental phase accumulator to avoid floating-point drift / breakup
+function _makeTestChimeWav() {
   const SR = 44100;
-  const n = Math.floor(SR * duration);
-  const buf = new ArrayBuffer(44 + n * 2);
-  const v = new DataView(buf);
+  const TONES = [440, 554, 659];
+  const NOTE_DUR = 0.38;   // seconds per tone
+  const GAP_DUR  = 0.06;   // silence between tones
+  const FADE     = 0.025;  // 25 ms fade in/out to remove clicks
+  const AMP      = 0.88;   // amplitude (0–1) — loud but not clipping
+
+  const noteSamples = Math.floor(SR * NOTE_DUR);
+  const gapSamples  = Math.floor(SR * GAP_DUR);
+  const totalSamples = TONES.length * noteSamples + (TONES.length - 1) * gapSamples;
+
+  const buf = new ArrayBuffer(44 + totalSamples * 2);
+  const v   = new DataView(buf);
   const str = (off, s) => { for (let i = 0; i < s.length; i++) v.setUint8(off + i, s.charCodeAt(i)); };
-  str(0, 'RIFF'); v.setUint32(4, 36 + n * 2, true);
+
+  // WAV header
+  str(0, 'RIFF'); v.setUint32(4, 36 + totalSamples * 2, true);
   str(8, 'WAVE'); str(12, 'fmt ');
   v.setUint32(16, 16, true); v.setUint16(20, 1, true); v.setUint16(22, 1, true);
   v.setUint32(24, SR, true); v.setUint32(28, SR * 2, true);
-  v.setUint16(32, 2, true); v.setUint16(34, 16, true);
-  str(36, 'data'); v.setUint32(40, n * 2, true);
-  for (let i = 0; i < n; i++) {
-    const t = i / SR;
-    const fade = Math.min(t * 40, 1, (duration - t) * 40); // fast fade in/out to avoid clicks
-    v.setInt16(44 + i * 2, Math.round(0.6 * fade * 32767 * Math.sin(2 * Math.PI * freq * t)), true);
-  }
+  v.setUint16(32, 2, true);  v.setUint16(34, 16, true);
+  str(36, 'data'); v.setUint32(40, totalSamples * 2, true);
+
+  let offset = 0;
+  const fadeSamples = Math.floor(SR * FADE);
+
+  TONES.forEach((freq, ti) => {
+    const phaseInc = (2 * Math.PI * freq) / SR;
+    let phase = 0;
+    for (let i = 0; i < noteSamples; i++) {
+      // Linear fade in/out to prevent clicks at note boundaries
+      const fade = Math.min(i / fadeSamples, 1, (noteSamples - i) / fadeSamples);
+      v.setInt16(44 + (offset + i) * 2, Math.round(AMP * fade * 32767 * Math.sin(phase)), true);
+      phase += phaseInc;
+      if (phase > 2 * Math.PI) phase -= 2 * Math.PI;
+    }
+    offset += noteSamples;
+    if (ti < TONES.length - 1) {
+      // Write silence gap
+      for (let i = 0; i < gapSamples; i++) v.setInt16(44 + (offset + i) * 2, 0, true);
+      offset += gapSamples;
+    }
+  });
+
   return URL.createObjectURL(new Blob([buf], { type: 'audio/wav' }));
 }
 
 function testSpeakers() {
-  const tones = [440, 554, 659];
-  let i = 0;
-  function next() {
-    if (i >= tones.length) return;
-    const url = _makeBeepWav(tones[i], 0.28);
-    const a = new Audio(url);
-    a.onended = () => { URL.revokeObjectURL(url); i++; setTimeout(next, 60); };
-    a.onerror  = () => { URL.revokeObjectURL(url); i++; setTimeout(next, 60); };
-    a.play().catch(() => {});
-  }
-  next();
+  const url = _makeTestChimeWav();
+  const a = new Audio(url);
+  a.onended = () => URL.revokeObjectURL(url);
+  a.onerror = () => URL.revokeObjectURL(url);
+  a.play().catch(() => {});
 }
 
 function continueToInterview() {
