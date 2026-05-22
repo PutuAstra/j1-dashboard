@@ -1295,12 +1295,12 @@ async function openReview(token, candidateName) {
         <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap">
           <button id="btn-fwd" onclick="setReviewDecision('move_forward')"
             class="btn" style="font-size:12px;padding:7px 16px;transition:all 0.15s;
-            ${decisionFwd ? 'background:#16a34a;color:#fff;border-color:#16a34a' : 'border:1px solid var(--border);color:var(--text)'}">
+            ${decisionFwd ? 'background:#16a34a;color:#fff;border:1px solid #16a34a' : 'background:transparent;border:1px solid transparent;color:var(--muted)'}">
             ✓ Move Forward
           </button>
           <button id="btn-rej" onclick="setReviewDecision('not_moving_forward')"
             class="btn" style="font-size:12px;padding:7px 16px;transition:all 0.15s;
-            ${decisionRej ? 'background:#dc2626;color:#fff;border-color:#dc2626' : 'border:1px solid var(--border);color:var(--text)'}">
+            ${decisionRej ? 'background:#dc2626;color:#fff;border:1px solid #dc2626' : 'background:transparent;border:1px solid transparent;color:var(--muted)'}">
             ✗ Not Moving Forward
           </button>
         </div>
@@ -1308,7 +1308,7 @@ async function openReview(token, candidateName) {
           style="width:100%;min-height:90px;background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:10px 12px;color:var(--text);font-size:13px;resize:vertical;box-sizing:border-box"
         >${reviewData?.notes ? esc(reviewData.notes) : ''}</textarea>
         <div style="margin-top:10px;text-align:right">
-          <button class="btn btn-primary" style="padding:8px 20px;font-size:13px" onclick="saveReviewOutcome('${token}')">
+          <button class="btn btn-outline" style="padding:8px 20px;font-size:13px" onclick="saveReviewOutcome('${token}')">
             💾 Save Review
           </button>
         </div>
@@ -1334,10 +1334,10 @@ function setReviewDecision(decision) {
   _reviewDecision = decision;
   const fwd = document.getElementById('btn-fwd');
   const rej = document.getElementById('btn-rej');
-  if (fwd) fwd.style.cssText = fwd.style.cssText.replace(/background:[^;]+;color:[^;]+;border-color:[^;]+/, '')
-    + (decision === 'move_forward' ? ';background:#16a34a;color:#fff;border-color:#16a34a' : ';background:none;color:var(--text);border-color:var(--border)');
-  if (rej) rej.style.cssText = rej.style.cssText.replace(/background:[^;]+;color:[^;]+;border-color:[^;]+/, '')
-    + (decision === 'not_moving_forward' ? ';background:#dc2626;color:#fff;border-color:#dc2626' : ';background:none;color:var(--text);border-color:var(--border)');
+  if (fwd) fwd.style.cssText = fwd.style.cssText.replace(/background:[^;]+;color:[^;]+;border:[^;]+/, '')
+    + (decision === 'move_forward' ? ';background:#16a34a;color:#fff;border:1px solid #16a34a' : ';background:transparent;color:var(--muted);border:1px solid transparent');
+  if (rej) rej.style.cssText = rej.style.cssText.replace(/background:[^;]+;color:[^;]+;border:[^;]+/, '')
+    + (decision === 'not_moving_forward' ? ';background:#dc2626;color:#fff;border:1px solid #dc2626' : ';background:transparent;color:var(--muted);border:1px solid transparent');
 }
 
 async function saveReviewOutcome(token) {
