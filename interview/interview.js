@@ -118,7 +118,7 @@ function showProfileUpload() {
           📷 Add Photo
         </div>
         <input type="file" id="photo-file-input" accept="image/*" style="display:none"
-          onchange="previewPhoto(this)" />
+          onchange="if(this.files[0]) showCropUI(this.files[0])" />
         <p class="text-muted" style="font-size:11px;margin-top:8px">JPG, PNG · max 5 MB</p>
       </div>
 
@@ -146,16 +146,165 @@ function showProfileUpload() {
     </div>`;
 }
 
-function previewPhoto(input) {
-  const file = input.files[0];
-  if (!file) return;
-  const reader = new FileReader();
-  reader.onload = e => {
-    const circle = document.getElementById('photo-circle');
-    circle.innerHTML = `<img src="${e.target.result}" style="width:100%;height:100%;object-fit:cover;border-radius:50%">`;
-    circle.style.border = '2px solid var(--accent)';
+// ── Photo crop UI ─────────────────────────────────────────────
+
+let _crop = null; // { img, objUrl, tx, ty, zoom, minZoom, size, blob }
+let _cropMouseHandlers = null;
+
+function showCropUI(file) {
+  const img = new Image();
+  const objUrl = URL.createObjectURL(file);
+  img.onload = () => {
+    const size = 280;
+    const minZoom = Math.max(size / img.naturalWidth, size / img.naturalHeight);
+    _crop = { img, objUrl, size, minZoom, zoom: minZoom, blob: null,
+      tx: (size - img.naturalWidth * minZoom) / 2,
+      ty: (size - img.naturalHeight * minZoom) / 2 };
+    _buildCropOverlay();
+    _drawCrop();
   };
-  reader.readAsDataURL(file);
+  img.src = objUrl;
+}
+
+function _buildCropOverlay() {
+  const existing = document.getElementById('crop-overlay');
+  if (existing) existing.remove();
+
+  const ov = document.createElement('div');
+  ov.id = 'crop-overlay';
+  ov.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.88);z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;padding:20px';
+  ov.innerHTML = `
+    <p style="color:#fff;font-weight:700;font-size:15px;margin:0">Crop your photo</p>
+    <p style="color:rgba(255,255,255,0.5);font-size:12px;margin:-12px 0 0">Drag to reposition · use the slider to zoom</p>
+    <div style="position:relative;flex-shrink:0">
+      <canvas id="crop-canvas" width="280" height="280"
+        style="display:block;border-radius:50%;cursor:grab;touch-action:none"></canvas>
+      <div style="position:absolute;inset:0;border-radius:50%;
+        box-shadow:0 0 0 2000px rgba(0,0,0,0.55);pointer-events:none"></div>
+    </div>
+    <div style="display:flex;align-items:center;gap:10px">
+      <span style="font-size:18px">🔍</span>
+      <input type="range" id="crop-zoom-slider" min="0" max="3" step="0.01" value="0"
+        style="width:200px;accent-color:#B01A18"
+        oninput="_onCropZoom(+this.value)" />
+    </div>
+    <div style="display:flex;gap:10px">
+      <button id="crop-confirm-btn"
+        style="background:#B01A18;color:#fff;border:none;border-radius:8px;padding:11px 28px;font-size:14px;font-weight:600;cursor:pointer">
+        ✓ Use Photo
+      </button>
+      <button onclick="_cancelCrop()"
+        style="background:rgba(255,255,255,0.08);color:#fff;border:1px solid rgba(255,255,255,0.2);border-radius:8px;padding:11px 20px;font-size:14px;cursor:pointer">
+        Choose Different
+      </button>
+    </div>`;
+  document.body.appendChild(ov);
+
+  document.getElementById('crop-confirm-btn').onclick = _confirmCrop;
+
+  // Mouse drag
+  const canvas = document.getElementById('crop-canvas');
+  let dragging = false, lx = 0, ly = 0;
+  const onDown = e => { dragging = true; lx = e.clientX; ly = e.clientY; canvas.style.cursor = 'grabbing'; e.preventDefault(); };
+  const onMove = e => { if (!dragging) return; _moveCrop(e.clientX - lx, e.clientY - ly); lx = e.clientX; ly = e.clientY; };
+  const onUp   = () => { dragging = false; canvas.style.cursor = 'grab'; };
+  canvas.addEventListener('mousedown', onDown);
+  window.addEventListener('mousemove', onMove);
+  window.addEventListener('mouseup',   onUp);
+
+  // Touch drag
+  canvas.addEventListener('touchstart', e => { const t = e.touches[0]; lx = t.clientX; ly = t.clientY; }, { passive: true });
+  canvas.addEventListener('touchmove',  e => {
+    const t = e.touches[0];
+    _moveCrop(t.clientX - lx, t.clientY - ly);
+    lx = t.clientX; ly = t.clientY;
+    e.preventDefault();
+  }, { passive: false });
+
+  // Store handlers for cleanup
+  _cropMouseHandlers = { onMove, onUp };
+}
+
+function _drawCrop() {
+  const canvas = document.getElementById('crop-canvas');
+  if (!canvas || !_crop) return;
+  const { img, tx, ty, zoom, size } = _crop;
+  const ctx = canvas.getContext('2d');
+  ctx.clearRect(0, 0, size, size);
+  ctx.drawImage(img, tx, ty, img.naturalWidth * zoom, img.naturalHeight * zoom);
+}
+
+function _moveCrop(dx, dy) {
+  if (!_crop) return;
+  const { img, zoom, size } = _crop;
+  const iw = img.naturalWidth  * zoom;
+  const ih = img.naturalHeight * zoom;
+  let tx = _crop.tx + dx;
+  let ty = _crop.ty + dy;
+  if (iw >= size) { tx = Math.min(tx, 0); tx = Math.max(tx, size - iw); } else { tx = (size - iw) / 2; }
+  if (ih >= size) { ty = Math.min(ty, 0); ty = Math.max(ty, size - ih); } else { ty = (size - ih) / 2; }
+  _crop.tx = tx;
+  _crop.ty = ty;
+  _drawCrop();
+}
+
+function _onCropZoom(val) {
+  if (!_crop) return;
+  const newZoom = _crop.minZoom * (1 + val);
+  // Keep center point stable
+  const { size, zoom, tx, ty } = _crop;
+  const cx = (size / 2 - tx) / zoom;
+  const cy = (size / 2 - ty) / zoom;
+  _crop.zoom = newZoom;
+  _crop.tx = size / 2 - cx * newZoom;
+  _crop.ty = size / 2 - cy * newZoom;
+  _moveCrop(0, 0); // re-clamp
+  _drawCrop();
+}
+
+function _cancelCrop() {
+  _cleanupCropOverlay();
+  window._croppedPhotoBlob = null;
+  // Reset and re-open file picker
+  const inp = document.getElementById('photo-file-input');
+  if (inp) { inp.value = ''; inp.click(); }
+}
+
+function _confirmCrop() {
+  if (!_crop) return;
+  const outSize = 400;
+  const out = document.createElement('canvas');
+  out.width = out.height = outSize;
+  const scale = outSize / _crop.size;
+  out.getContext('2d').drawImage(
+    _crop.img,
+    _crop.tx * scale, _crop.ty * scale,
+    _crop.img.naturalWidth * _crop.zoom * scale,
+    _crop.img.naturalHeight * _crop.zoom * scale
+  );
+  out.toBlob(blob => {
+    window._croppedPhotoBlob = blob;
+    // Update circle preview
+    const circle = document.getElementById('photo-circle');
+    if (circle) {
+      const url = URL.createObjectURL(blob);
+      circle.innerHTML = `<img src="${url}" style="width:100%;height:100%;object-fit:cover;border-radius:50%">`;
+      circle.style.border = '2px solid var(--accent)';
+    }
+    _cleanupCropOverlay();
+  }, 'image/jpeg', 0.92);
+}
+
+function _cleanupCropOverlay() {
+  if (_cropMouseHandlers) {
+    window.removeEventListener('mousemove', _cropMouseHandlers.onMove);
+    window.removeEventListener('mouseup',   _cropMouseHandlers.onUp);
+    _cropMouseHandlers = null;
+  }
+  if (_crop?.objUrl) URL.revokeObjectURL(_crop.objUrl);
+  _crop = null;
+  const ov = document.getElementById('crop-overlay');
+  if (ov) ov.remove();
 }
 
 function handleResumeFile(file) {
@@ -173,17 +322,14 @@ function handleResumeFile(file) {
 }
 
 async function submitProfileUpload() {
-  const photoInput  = document.getElementById('photo-file-input');
+  const photoBlob   = window._croppedPhotoBlob;   // set by crop confirm
   const resumeInput = document.getElementById('resume-file-input');
-  const photoFile   = photoInput?.files?.[0];
   const resumeFile  = resumeInput?.files?.[0];
 
-  if (!photoFile)  return toast('Please upload your profile photo', 'error');
+  if (!photoBlob)  return toast('Please upload and crop your profile photo', 'error');
   if (!resumeFile) return toast('Please upload your resume', 'error');
-  if (photoFile.size  > 5  * 1024 * 1024) return toast('Photo must be under 5 MB', 'error');
   if (resumeFile.size > 10 * 1024 * 1024) return toast('Resume must be under 10 MB', 'error');
 
-  // Show uploading state
   main().innerHTML = `
     <div class="card" style="max-width:400px;width:100%;text-align:center;padding:48px 32px">
       <div class="spinner" style="margin:0 auto 16px"></div>
@@ -192,25 +338,31 @@ async function submitProfileUpload() {
     </div>`;
 
   try {
-    // Upload photo
+    // Upload cropped photo (always JPEG from canvas)
     const photoRes = await fetch(`${WORKER_URL}/api/session/${token}/upload-photo`, {
       method: 'POST',
-      headers: { 'Content-Type': photoFile.type },
-      body: photoFile,
+      headers: { 'Content-Type': 'image/jpeg' },
+      body: photoBlob,
     });
-    if (!photoRes.ok) throw new Error('Photo upload failed');
+    if (!photoRes.ok) {
+      const err = await photoRes.json().catch(() => ({}));
+      throw new Error(err.error || `Photo upload failed (${photoRes.status})`);
+    }
 
     // Upload resume
     const resumeRes = await fetch(`${WORKER_URL}/api/session/${token}/upload-resume`, {
       method: 'POST',
-      headers: { 'Content-Type': resumeFile.type, 'X-Filename': resumeFile.name },
+      headers: { 'Content-Type': resumeFile.type || 'application/octet-stream', 'X-Filename': resumeFile.name },
       body: resumeFile,
     });
-    if (!resumeRes.ok) throw new Error('Resume upload failed');
+    if (!resumeRes.ok) {
+      const err = await resumeRes.json().catch(() => ({}));
+      throw new Error(err.error || `Resume upload failed (${resumeRes.status})`);
+    }
 
-    // Mark on local session object so the intro button updates if candidate goes back
     session.profilePhotoItemId = true;
     session.resumeItemId = true;
+    window._croppedPhotoBlob = null;
 
     showSetup();
   } catch (e) {
