@@ -250,14 +250,18 @@ function ensureBlurMask(w, h) {
   blurMaskCanvas.height = h;
   const mc = blurMaskCanvas.getContext('2d');
   mc.clearRect(0, 0, w, h);
-  // Draw a feathered ellipse that covers the full person:
-  //   horizontal: ±44% of width  → shoulders to shoulders, comfortable margin
-  //   vertical:   ±52% of height → head to mid-torso (clips slightly above top, fine)
+  // Draw a feathered ellipse that covers the entire person incl. hands at the bottom.
+  // The ellipse intentionally extends 15% beyond all four canvas edges so that the
+  // blur(16px) feathering only appears at the sides — never cutting off the body.
   mc.save();
-  mc.filter = 'blur(20px)';   // feather edges; also slightly shrinks visible zone
+  mc.filter = 'blur(16px)';
   mc.fillStyle = 'black';
   mc.beginPath();
-  mc.ellipse(w * 0.50, h * 0.48, w * 0.44, h * 0.52, 0, 0, 2 * Math.PI);
+  mc.ellipse(
+    w * 0.50, h * 0.50,   // center of frame
+    w * 0.63, h * 0.65,   // rx/ry both extend ~15% beyond the canvas edges
+    0, 0, 2 * Math.PI
+  );
   mc.fill();
   mc.restore();
   return blurMaskCanvas;
