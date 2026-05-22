@@ -546,7 +546,7 @@ function startCountdown() {
 
   // ── Step 1: read question aloud, then countdown ───────────────
   if ('speechSynthesis' in window) {
-    window.speechSynthesis.cancel(); // clear any queued speech first
+    window.speechSynthesis.cancel();
 
     showOverlay(`
       <div class="countdown-overlay" id="countdown-overlay">
@@ -554,15 +554,61 @@ function startCountdown() {
         <div class="countdown-label">Reading question…</div>
       </div>`);
 
-    const utterance = new SpeechSynthesisUtterance(q.text);
-    utterance.rate  = 0.92;  // slightly slower for clarity
-    utterance.pitch = 1;
-    utterance.volume = 1;
-    utterance.onend   = () => beginCountdown();
-    utterance.onerror = () => beginCountdown(); // fallback if TTS fails
-    window.speechSynthesis.speak(utterance);
+    // Pick the best available recruiter-style voice.
+    // Preference order: Windows Neural Online → Google Neural → macOS natural → any en-US
+    function pickVoice(voices) {
+      const tests = [
+        // Windows/Edge neural online voices (highest quality)
+        v => /\bonline\b/i.test(v.name) && /en[-_]US/i.test(v.lang),
+        v => /\bonline\b/i.test(v.name) && v.lang.startsWith('en'),
+        // Chrome Google voices
+        v => /google.*us.*english|google.*english.*us/i.test(v.name),
+        v => /google/i.test(v.name) && v.lang.startsWith('en'),
+        // macOS / iOS natural voices
+        v => /\b(samantha|alex|karen|daniel|moira|kate|victoria)\b/i.test(v.name),
+        // Any en-US fallback
+        v => /en[-_]US/i.test(v.lang),
+        v => v.lang.startsWith('en'),
+      ];
+      for (const t of tests) {
+        const m = voices.find(t);
+        if (m) return m;
+      }
+      return null;
+    }
+
+    // Speak with a short professional preamble then the question.
+    // A comma in the text creates a natural half-second pause between sentences.
+    function doSpeak(voice) {
+      const text = `Here is your question. ${q.text}`;
+      const utt  = new SpeechSynthesisUtterance(text);
+      if (voice) utt.voice = voice;
+      utt.rate   = 0.88;   // deliberate, unhurried — interviewer pace
+      utt.pitch  = 0.95;   // slightly lower = more authority
+      utt.volume = 1;
+      utt.onend   = () => beginCountdown();
+      utt.onerror = () => beginCountdown();
+      window.speechSynthesis.speak(utt);
+    }
+
+    // Voices may not be loaded yet on first call — wait if needed
+    const voices = window.speechSynthesis.getVoices();
+    if (voices.length) {
+      doSpeak(pickVoice(voices));
+    } else {
+      window.speechSynthesis.onvoiceschanged = () => {
+        window.speechSynthesis.onvoiceschanged = null;
+        doSpeak(pickVoice(window.speechSynthesis.getVoices()));
+      };
+      // Safety timeout — if voices never load, go straight to countdown
+      setTimeout(() => {
+        if (document.getElementById('countdown-num')) return; // already counting
+        window.speechSynthesis.cancel();
+        beginCountdown();
+      }, 2000);
+    }
   } else {
-    // Browser doesn't support TTS — go straight to countdown
+    // Browser doesn't support TTS — skip straight to countdown
     beginCountdown();
   }
 }
