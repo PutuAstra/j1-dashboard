@@ -1055,7 +1055,7 @@ async function generateLink() {
 
 function buildTakeUrl(token) {
   const base = window.location.href.replace('admin.html', 'take.html');
-  return `${base.split('?')[0]}?token=${token}`;
+  return `${base.split('?')[0].split('#')[0]}?token=${token}`;
 }
 
 function copySessionLink(token) {
