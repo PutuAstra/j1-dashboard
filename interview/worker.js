@@ -848,9 +848,6 @@ async function analyzeSession(token, request) {
   if (typeof OPENAI_API_KEY === 'undefined' || !OPENAI_API_KEY) {
     return jsonRes({ error: 'OPENAI_API_KEY is not configured in Worker secrets.' }, 500);
   }
-  if (typeof ANTHROPIC_API_KEY === 'undefined' || !ANTHROPIC_API_KEY) {
-    return jsonRes({ error: 'ANTHROPIC_API_KEY is not configured in Worker secrets.' }, 500);
-  }
 
   const session = await kvGet(`session:${token}`);
   if (!session) return jsonRes({ error: 'Session not found' }, 404);
@@ -957,28 +954,28 @@ Respond with ONLY a valid JSON object — no commentary before or after:
   }
 }`;
 
-  const claudeRes = await fetch('https://api.anthropic.com/v1/messages', {
+  // Use OpenAI GPT-4o-mini for analysis (same key already used for Whisper)
+  const gptRes = await fetch('https://api.openai.com/v1/chat/completions', {
     method: 'POST',
     headers: {
-      'Content-Type':      'application/json',
-      'x-api-key':         ANTHROPIC_API_KEY,
-      'anthropic-version': '2023-06-01',
+      'Content-Type':  'application/json',
+      'Authorization': `Bearer ${OPENAI_API_KEY}`,
     },
     body: JSON.stringify({
-      model:      'claude-3-haiku-20240307',
+      model:      'gpt-4o-mini',
       max_tokens: 1024,
       messages:   [{ role: 'user', content: prompt }],
     }),
   });
 
-  if (!claudeRes.ok) {
-    const e = await claudeRes.json().catch(() => ({}));
-    console.error('[analyze] Claude error:', JSON.stringify(e));
-    return jsonRes({ error: 'Analysis failed: ' + (e.error?.message || claudeRes.status) }, 500);
+  if (!gptRes.ok) {
+    const e = await gptRes.json().catch(() => ({}));
+    console.error('[analyze] GPT error:', JSON.stringify(e));
+    return jsonRes({ error: 'Analysis failed: ' + (e.error?.message || gptRes.status) }, 500);
   }
 
-  const claudeData = await claudeRes.json();
-  const rawText = claudeData.content?.[0]?.text || '{}';
+  const gptData = await gptRes.json();
+  const rawText = gptData.choices?.[0]?.message?.content || '{}';
 
   let analysis;
   try {
