@@ -10,7 +10,7 @@
   <meta name="theme-color" content="#B01A18" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="style.css?v=20250522v" />
+  <link rel="stylesheet" href="style.css?v=20250522w" />
 </head>
 <body>
 
@@ -217,8 +217,44 @@
   </div>
 </div>
 
+<!-- Modal: Add Script Client -->
+<div class="modal-overlay" id="modal-add-client">
+  <div class="modal" style="max-width:460px">
+    <div class="modal-header">
+      <h2>Add Client</h2>
+      <button class="btn btn-ghost" onclick="closeModal('modal-add-client')">✕</button>
+    </div>
+    <div class="form-group">
+      <label>Client Name *</label>
+      <input type="text" id="new-client-name" placeholder="e.g. P&amp;O Cruises" autocomplete="off"
+        onkeydown="if(event.key==='Enter')submitAddClient()" />
+    </div>
+    <div class="form-group">
+      <label>Logo <span style="font-weight:400;color:var(--muted)">(optional)</span></label>
+      <div style="display:flex;align-items:center;gap:16px;margin-top:8px">
+        <div id="client-logo-preview"
+          style="width:72px;height:72px;border-radius:50%;background:var(--bg);border:2px dashed var(--border);display:flex;align-items:center;justify-content:center;overflow:hidden;flex-shrink:0;cursor:pointer"
+          onclick="document.getElementById('client-logo-input').click()">
+          <span style="font-size:26px">🏢</span>
+        </div>
+        <div>
+          <button class="btn btn-outline" style="font-size:12px;padding:5px 14px"
+            onclick="document.getElementById('client-logo-input').click()">Choose Image</button>
+          <p class="text-sm" style="color:var(--muted);margin-top:6px;line-height:1.4">PNG, JPG, SVG<br>Shown as avatar next to client name</p>
+          <input type="file" id="client-logo-input" accept="image/*" style="display:none"
+            onchange="previewClientLogo(this)" />
+        </div>
+      </div>
+    </div>
+    <div class="mt-24 flex gap-8">
+      <button class="btn btn-primary" id="add-client-btn" onclick="submitAddClient()">Add Client</button>
+      <button class="btn btn-outline" onclick="closeModal('modal-add-client')">Cancel</button>
+    </div>
+  </div>
+</div>
+
 <div id="toast"></div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-<script src="admin.js?v=20250522z7"></script>
+<script src="admin.js?v=20250522z8"></script>
 </body>
 </html>

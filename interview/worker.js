@@ -135,6 +135,12 @@ async function route(request) {
   if (seg[0] === 'script' && seg[1] === 'position' && seg[3] === 'doc-url' && m === 'GET') {
     return getScriptDocUrl(seg[2], request);
   }
+  if (seg[0] === 'script' && seg[1] === 'client' && seg[3] === 'upload-logo' && m === 'POST') {
+    return uploadScriptClientLogo(seg[2], request);
+  }
+  if (seg[0] === 'script' && seg[1] === 'client' && seg[3] === 'logo-url' && m === 'GET') {
+    return getScriptClientLogoUrl(seg[2], request);
+  }
 
   return jsonRes({ error: 'Not found' }, 404);
 }
@@ -1279,6 +1285,51 @@ async function getScriptDocUrl(id, request) {
       fileName:    pos.fileName,
       ext:         pos.ext,
     });
+  } catch (e) {
+    return jsonRes({ error: e.message }, 500);
+  }
+}
+
+async function uploadScriptClientLogo(id, request) {
+  requireAdmin(request);
+  const client = await kvGet(`script:client:${id}`);
+  if (!client) return jsonRes({ error: 'Client not found' }, 404);
+  try {
+    const formData    = await request.formData();
+    const file        = formData.get('file');
+    if (!file) return jsonRes({ error: 'No file in request' }, 400);
+
+    const fileName    = file.name || 'logo.png';
+    const ext         = fileName.split('.').pop().toLowerCase() || 'png';
+    const contentType = file.type || 'image/png';
+    const safeClient  = client.name.replace(/[^a-zA-Z0-9 _-]/g, '').trim();
+    const filePath    = `CTI Interviews/Scripts/${safeClient}/logo.${ext}`;
+
+    const blob        = await file.arrayBuffer();
+    const accessToken = await getAccessToken();
+    const fileItem    = await uploadToOneDrive(filePath, blob, accessToken, contentType);
+
+    client.logoItemId = fileItem.id;
+    client.logoExt    = ext;
+    await kvPut(`script:client:${id}`, client);
+    return jsonRes({ ok: true });
+  } catch (e) {
+    return jsonRes({ error: 'Logo upload failed: ' + e.message }, 500);
+  }
+}
+
+async function getScriptClientLogoUrl(id, request) {
+  requireAdmin(request);
+  const client = await kvGet(`script:client:${id}`);
+  if (!client?.logoItemId) return jsonRes({ notFound: true });
+  try {
+    const accessToken = await getAccessToken();
+    const res  = await fetch(
+      `https://graph.microsoft.com/v1.0/users/${ONEDRIVE_USER}/drive/items/${client.logoItemId}`,
+      { headers: { 'Authorization': `Bearer ${accessToken}` } }
+    );
+    const item = await res.json();
+    return jsonRes({ downloadUrl: item['@microsoft.graph.downloadUrl'] || null });
   } catch (e) {
     return jsonRes({ error: e.message }, 500);
   }

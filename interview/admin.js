@@ -1607,6 +1607,7 @@ function esc(str) {
 // ── Interview Script ──────────────────────────────────────────
 
 let _currentScriptClientId = null;
+let _addClientLogoFile = null;
 
 // ── Level 1: Client list ──────────────────────────────────────
 
@@ -1636,19 +1637,35 @@ async function loadScriptClientsList() {
     }
     el.innerHTML = `
       <div class="card" style="padding:0;overflow:hidden">
-        ${_scriptClients.map((c, i) => `
-          <div style="display:flex;align-items:center;padding:15px 20px;cursor:pointer;${i < _scriptClients.length - 1 ? 'border-bottom:1px solid var(--border)' : ''};transition:background 0.12s"
+        ${_scriptClients.map((c, i) => {
+          const initials = c.name.trim().split(/\s+/).map(w => w[0]).join('').slice(0, 2).toUpperCase();
+          return `
+          <div style="display:flex;align-items:center;gap:12px;padding:12px 20px;cursor:pointer;${i < _scriptClients.length - 1 ? 'border-bottom:1px solid var(--border)' : ''};transition:background 0.12s"
             onmouseenter="this.style.background='var(--bg)'" onmouseleave="this.style.background=''"
             onclick="openScriptClient('${c.id}')">
+            <div id="cl-av-${c.id}" style="width:38px;height:38px;border-radius:50%;background:var(--accent);display:flex;align-items:center;justify-content:center;flex-shrink:0;overflow:hidden;font-size:12px;font-weight:700;color:#fff">${initials}</div>
             <div style="flex:1;font-size:14px;font-weight:600">${esc(c.name)}</div>
             <span style="color:var(--muted);font-size:20px;line-height:1;font-weight:300">›</span>
-          </div>
-        `).join('')}
+          </div>`;
+        }).join('')}
       </div>
     `;
+    // Lazy-load logos for clients that have one
+    _scriptClients.filter(c => c.logoItemId).forEach(c => loadClientLogoAvatar(c.id, `cl-av-${c.id}`));
   } catch (e) {
     if (el) el.innerHTML = `<div class="empty-state" style="color:var(--red)">${esc(e.message)}</div>`;
   }
+}
+
+async function loadClientLogoAvatar(clientId, elId) {
+  const el = document.getElementById(elId);
+  if (!el) return;
+  try {
+    const data = await apiJSON('GET', `/api/script/client/${clientId}/logo-url`);
+    if (data.downloadUrl) {
+      el.innerHTML = `<img src="${data.downloadUrl}" style="width:100%;height:100%;object-fit:cover;border-radius:50%">`;
+    }
+  } catch { /* silently skip */ }
 }
 
 // ── Level 2: Positions inside a client ───────────────────────
@@ -1656,12 +1673,14 @@ async function loadScriptClientsList() {
 async function openScriptClient(clientId) {
   _currentScriptClientId = clientId;
   const client = _scriptClients.find(c => c.id === clientId);
+  const initials = (client?.name || '').trim().split(/\s+/).map(w => w[0]).join('').slice(0, 2).toUpperCase();
   const main = document.getElementById('admin-main');
   main.innerHTML = `
     <div style="max-width:720px">
-      <div style="display:flex;align-items:center;gap:8px;margin-bottom:20px">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:20px">
         <button class="btn btn-ghost" style="padding:5px 12px;font-size:13px" onclick="renderScriptPage()">← Interview Scripts</button>
         <span style="color:var(--muted);font-size:14px">›</span>
+        <div id="sc-hdr-av-${clientId}" style="width:32px;height:32px;border-radius:50%;background:var(--accent);display:flex;align-items:center;justify-content:center;flex-shrink:0;overflow:hidden;font-size:11px;font-weight:700;color:#fff">${initials}</div>
         <span style="font-size:15px;font-weight:700">${esc(client?.name || '')}</span>
       </div>
       <div class="flex justify-between items-center mb-16">
@@ -1675,6 +1694,7 @@ async function openScriptClient(clientId) {
       <div id="sc-positions-${clientId}"><div class="empty-state">Loading…</div></div>
     </div>
   `;
+  if (client?.logoItemId) loadClientLogoAvatar(clientId, `sc-hdr-av-${clientId}`);
   await loadClientPositions(clientId);
 }
 
@@ -1732,14 +1752,59 @@ function renderScriptPositionRow(p, idx, total) {
 
 // ── Script CRUD actions ───────────────────────────────────────
 
-async function promptAddClient() {
-  const name = prompt('Enter client name:');
-  if (!name?.trim()) return;
+function promptAddClient() {
+  _addClientLogoFile = null;
+  document.getElementById('new-client-name').value = '';
+  document.getElementById('client-logo-preview').innerHTML = '<span style="font-size:26px">🏢</span>';
+  const inp = document.getElementById('client-logo-input');
+  if (inp) inp.value = '';
+  const btn = document.getElementById('add-client-btn');
+  if (btn) { btn.disabled = false; btn.textContent = 'Add Client'; }
+  openModal('modal-add-client');
+  setTimeout(() => document.getElementById('new-client-name')?.focus(), 80);
+}
+
+function previewClientLogo(input) {
+  const file = input.files?.[0];
+  if (!file) return;
+  _addClientLogoFile = file;
+  const reader = new FileReader();
+  reader.onload = e => {
+    document.getElementById('client-logo-preview').innerHTML =
+      `<img src="${e.target.result}" style="width:100%;height:100%;object-fit:cover">`;
+  };
+  reader.readAsDataURL(file);
+}
+
+async function submitAddClient() {
+  const name = document.getElementById('new-client-name').value.trim();
+  if (!name) return toast('Client name is required', 'error');
+  const btn = document.getElementById('add-client-btn');
+  if (btn) { btn.disabled = true; btn.textContent = 'Adding…'; }
   try {
-    await apiJSON('POST', '/api/script/clients', { name: name.trim() });
+    const client = await apiJSON('POST', '/api/script/clients', { name });
+    if (_addClientLogoFile) {
+      try {
+        const form = new FormData();
+        form.append('file', _addClientLogoFile);
+        const res = await fetch(`${WORKER_URL}/api/script/client/${client.id}/upload-logo`, {
+          method: 'POST',
+          headers: { 'X-Admin-Key': adminKey },
+          body: form,
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Logo upload failed');
+      } catch (e) {
+        toast('Client added but logo failed: ' + e.message, 'error');
+      }
+    }
     toast('Client added', 'success');
+    closeModal('modal-add-client');
     await loadScriptClientsList();
-  } catch (e) { toast(e.message, 'error'); }
+  } catch (e) {
+    toast(e.message, 'error');
+    if (btn) { btn.disabled = false; btn.textContent = 'Add Client'; }
+  }
 }
 
 async function deleteScriptClient(id, name) {
