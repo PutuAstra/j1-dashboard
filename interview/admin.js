@@ -1608,6 +1608,8 @@ function esc(str) {
 
 let _currentScriptClientId = null;
 let _addClientLogoFile = null;
+let _cropper = null;
+let _cropCallback = null;
 
 // ── Level 1: Client list ──────────────────────────────────────
 
@@ -1643,7 +1645,7 @@ async function loadScriptClientsList() {
           <div style="display:flex;align-items:center;gap:12px;padding:12px 20px;cursor:pointer;${i < _scriptClients.length - 1 ? 'border-bottom:1px solid var(--border)' : ''};transition:background 0.12s"
             onmouseenter="this.style.background='var(--bg)'" onmouseleave="this.style.background=''"
             onclick="openScriptClient('${c.id}')">
-            <div id="cl-av-${c.id}" style="width:38px;height:38px;border-radius:50%;background:var(--accent);display:flex;align-items:center;justify-content:center;flex-shrink:0;overflow:hidden;font-size:12px;font-weight:700;color:#fff">${initials}</div>
+            <div id="cl-av-${c.id}" style="width:44px;height:44px;border-radius:50%;background:var(--accent);display:flex;align-items:center;justify-content:center;flex-shrink:0;overflow:hidden;font-size:13px;font-weight:700;color:#fff">${initials}</div>
             <div style="flex:1;font-size:14px;font-weight:600">${esc(c.name)}</div>
             <span style="color:var(--muted);font-size:20px;line-height:1;font-weight:300">›</span>
           </div>`;
@@ -1668,32 +1670,36 @@ async function loadClientLogoAvatar(clientId, elId) {
   } catch { /* silently skip */ }
 }
 
-async function updateClientLogo(clientId, input) {
+function updateClientLogo(clientId, input) {
   const file = input.files?.[0];
   if (!file) return;
-  const avEl = document.getElementById(`sc-hdr-av-${clientId}`);
-  if (avEl) avEl.style.opacity = '0.4';
-  try {
-    const form = new FormData();
-    form.append('file', file);
-    const res = await fetch(`${WORKER_URL}/api/script/client/${clientId}/upload-logo`, {
-      method: 'POST',
-      headers: { 'X-Admin-Key': adminKey },
-      body: form,
-    });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error || 'Upload failed');
-    toast('Logo updated', 'success');
-    // Mark in cache so list reloads the logo
-    const c = _scriptClients.find(c => c.id === clientId);
-    if (c) c.logoItemId = 'updated';
-    // Reload avatar in header
-    if (avEl) avEl.style.opacity = '1';
-    loadClientLogoAvatar(clientId, `sc-hdr-av-${clientId}`);
-  } catch (e) {
-    toast(e.message, 'error');
-    if (avEl) avEl.style.opacity = '1';
-  }
+  input.value = '';
+  openCropModal(file, async blob => {
+    const avEl = document.getElementById(`sc-hdr-av-${clientId}`);
+    if (avEl) avEl.style.opacity = '0.4';
+    try {
+      const croppedFile = new File([blob], 'logo.jpg', { type: 'image/jpeg' });
+      const form = new FormData();
+      form.append('file', croppedFile);
+      const res = await fetch(`${WORKER_URL}/api/script/client/${clientId}/upload-logo`, {
+        method: 'POST',
+        headers: { 'X-Admin-Key': adminKey },
+        body: form,
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Upload failed');
+      toast('Logo updated', 'success');
+      const c = _scriptClients.find(c => c.id === clientId);
+      if (c) c.logoItemId = 'updated';
+      if (avEl) {
+        avEl.style.opacity = '1';
+        avEl.innerHTML = `<img src="${URL.createObjectURL(blob)}" style="width:100%;height:100%;object-fit:cover;border-radius:50%">`;
+      }
+    } catch (e) {
+      toast(e.message, 'error');
+      if (avEl) avEl.style.opacity = '1';
+    }
+  });
 }
 
 // ── Level 2: Positions inside a client ───────────────────────
@@ -1708,12 +1714,12 @@ async function openScriptClient(clientId) {
       <div style="display:flex;align-items:center;gap:10px;margin-bottom:20px">
         <button class="btn btn-ghost" style="padding:5px 12px;font-size:13px" onclick="renderScriptPage()">← Interview Scripts</button>
         <span style="color:var(--muted);font-size:14px">›</span>
-        <div style="position:relative;flex-shrink:0;width:36px;height:36px;cursor:pointer" title="Click to update logo"
+        <div style="position:relative;flex-shrink:0;width:44px;height:44px;cursor:pointer" title="Click to update logo"
           onclick="document.getElementById('hdr-logo-inp-${clientId}').click()"
           onmouseenter="document.getElementById('sc-hdr-ov-${clientId}').style.opacity='1'"
           onmouseleave="document.getElementById('sc-hdr-ov-${clientId}').style.opacity='0'">
-          <div id="sc-hdr-av-${clientId}" style="width:36px;height:36px;border-radius:50%;background:var(--accent);display:flex;align-items:center;justify-content:center;overflow:hidden;font-size:11px;font-weight:700;color:#fff">${initials}</div>
-          <div id="sc-hdr-ov-${clientId}" style="position:absolute;inset:0;border-radius:50%;background:rgba(0,0,0,0.45);display:flex;align-items:center;justify-content:center;opacity:0;transition:opacity 0.15s;pointer-events:none;font-size:13px">📷</div>
+          <div id="sc-hdr-av-${clientId}" style="width:44px;height:44px;border-radius:50%;background:var(--accent);display:flex;align-items:center;justify-content:center;overflow:hidden;font-size:13px;font-weight:700;color:#fff">${initials}</div>
+          <div id="sc-hdr-ov-${clientId}" style="position:absolute;inset:0;border-radius:50%;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;opacity:0;transition:opacity 0.15s;pointer-events:none;font-size:15px">📷</div>
           <input type="file" id="hdr-logo-inp-${clientId}" accept="image/*" style="display:none"
             onchange="updateClientLogo('${clientId}', this)">
         </div>
@@ -1803,13 +1809,59 @@ function promptAddClient() {
 function previewClientLogo(input) {
   const file = input.files?.[0];
   if (!file) return;
-  _addClientLogoFile = file;
+  input.value = '';
+  openCropModal(file, blob => {
+    _addClientLogoFile = new File([blob], 'logo.jpg', { type: 'image/jpeg' });
+    const url = URL.createObjectURL(blob);
+    document.getElementById('client-logo-preview').innerHTML =
+      `<img src="${url}" style="width:100%;height:100%;object-fit:cover">`;
+  });
+}
+
+// ── Logo crop helpers ─────────────────────────────────────────
+
+function openCropModal(file, onApply) {
+  _cropCallback = onApply;
   const reader = new FileReader();
   reader.onload = e => {
-    document.getElementById('client-logo-preview').innerHTML =
-      `<img src="${e.target.result}" style="width:100%;height:100%;object-fit:cover">`;
+    const img = document.getElementById('crop-img');
+    img.src = e.target.result;
+    const btn = document.getElementById('apply-crop-btn');
+    if (btn) { btn.disabled = false; btn.textContent = '✓ Apply'; }
+    openModal('modal-crop-logo');
+    setTimeout(() => {
+      if (_cropper) { _cropper.destroy(); _cropper = null; }
+      _cropper = new Cropper(img, {
+        aspectRatio: 1,
+        viewMode: 1,
+        dragMode: 'move',
+        guides: false,
+        center: false,
+        highlight: false,
+        background: true,
+        autoCropArea: 0.85,
+        responsive: true,
+      });
+    }, 150);
   };
   reader.readAsDataURL(file);
+}
+
+function closeCropModal() {
+  if (_cropper) { _cropper.destroy(); _cropper = null; }
+  _cropCallback = null;
+  closeModal('modal-crop-logo');
+}
+
+function applyCrop() {
+  if (!_cropper || !_cropCallback) return;
+  const btn = document.getElementById('apply-crop-btn');
+  if (btn) { btn.disabled = true; btn.textContent = 'Applying…'; }
+  _cropper.getCroppedCanvas({ width: 320, height: 320 }).toBlob(blob => {
+    const cb = _cropCallback;
+    closeCropModal();
+    cb(blob);
+  }, 'image/jpeg', 0.92);
 }
 
 async function submitAddClient() {

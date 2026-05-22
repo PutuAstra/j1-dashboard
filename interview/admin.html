@@ -10,7 +10,14 @@
   <meta name="theme-color" content="#B01A18" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="style.css?v=20250522x" />
+  <link rel="stylesheet" href="style.css?v=20250522y" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.2/cropper.min.css" />
+  <style>
+    /* Circular crop box for logo */
+    #modal-crop-logo .cropper-view-box,
+    #modal-crop-logo .cropper-face { border-radius: 50%; }
+    #modal-crop-logo .cropper-view-box { outline: 2px solid #fff; outline-color: rgba(255,255,255,0.8); }
+  </style>
 </head>
 <body>
 
@@ -217,6 +224,23 @@
   </div>
 </div>
 
+<!-- Modal: Crop Logo -->
+<div class="modal-overlay" id="modal-crop-logo">
+  <div class="modal" style="max-width:540px;padding:0;overflow:hidden">
+    <div class="modal-header" style="padding:14px 20px;border-bottom:1px solid var(--border)">
+      <h2>Crop Logo</h2>
+      <button class="btn btn-ghost" onclick="closeCropModal()">✕</button>
+    </div>
+    <div style="background:#111;min-height:300px;max-height:420px;overflow:hidden;display:flex;align-items:center;justify-content:center">
+      <img id="crop-img" style="max-width:100%;display:block">
+    </div>
+    <div style="padding:14px 20px;display:flex;justify-content:flex-end;gap:8px;border-top:1px solid var(--border)">
+      <button class="btn btn-outline" onclick="closeCropModal()">Cancel</button>
+      <button class="btn btn-primary" id="apply-crop-btn" onclick="applyCrop()">✓ Apply</button>
+    </div>
+  </div>
+</div>
+
 <!-- Modal: Add Script Client -->
 <div class="modal-overlay" id="modal-add-client">
   <div class="modal" style="max-width:460px">
@@ -255,6 +279,7 @@
 
 <div id="toast"></div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-<script src="admin.js?v=20250522z10"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.2/cropper.min.js"></script>
+<script src="admin.js?v=20250522z11"></script>
 </body>
 </html>
