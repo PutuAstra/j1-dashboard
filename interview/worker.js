@@ -1117,12 +1117,13 @@ async function getResumeUrl(token, request) {
 
 async function saveSessionReview(token, request) {
   requireAdmin(request);
-  const { notes, decision } = await request.json();
-  await kvPut(`session:${token}:review`, { notes, decision, reviewedAt: Date.now() });
-  // Mirror decision onto the session for fast list rendering
+  const { notes, decision, stars } = await request.json();
+  await kvPut(`session:${token}:review`, { notes, decision, stars: stars || 0, reviewedAt: Date.now() });
+  // Mirror decision + stars onto the session for fast list rendering
   const session = await kvGet(`session:${token}`);
   if (session) {
     session.reviewDecision = decision;
+    session.reviewStars    = stars || 0;
     await kvPut(`session:${token}`, session);
   }
   return jsonRes({ ok: true });

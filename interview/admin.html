@@ -169,6 +169,19 @@
           </div>
         </div>
       </div>
+      <div id="sessions-extra-filters" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px;align-items:center">
+        <button class="filter-chip active" id="fd-all" onclick="setDecisionFilter('all')">All</button>
+        <button class="filter-chip"        id="fd-fwd" onclick="setDecisionFilter('move_forward')">✓ Forward</button>
+        <button class="filter-chip"        id="fd-rej" onclick="setDecisionFilter('not_moving_forward')">✗ Not Forward</button>
+        <span style="display:inline-block;width:1px;height:16px;background:var(--border);margin:0 2px;vertical-align:middle"></span>
+        <button class="filter-chip active" id="fs-0"   onclick="setStarFilter(0)">Any ★</button>
+        <button class="filter-chip"        id="fs-1"   onclick="setStarFilter(1)">★</button>
+        <button class="filter-chip"        id="fs-2"   onclick="setStarFilter(2)">★★</button>
+        <button class="filter-chip"        id="fs-3"   onclick="setStarFilter(3)">★★★</button>
+        <button class="filter-chip"        id="fs-4"   onclick="setStarFilter(4)">★★★★</button>
+        <button class="filter-chip"        id="fs-5"   onclick="setStarFilter(5)">★★★★★</button>
+      </div>
+
       <div class="sessions-table-header">
         <span>Name</span>
         <span style="text-align:center">Status</span>
@@ -196,6 +209,6 @@
 
 <div id="toast"></div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-<script src="admin.js?v=20250522y"></script>
+<script src="admin.js?v=20250522z"></script>
 </body>
 </html>

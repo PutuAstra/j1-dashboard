@@ -20,6 +20,9 @@ let _bulkRows = [];
 let _bulkHeaders = [];
 let _bulkNameCol = null;
 let _bulkEmailCol = null;
+let _decisionFilter = 'all';
+let _starFilter = 0;
+let _reviewStars = 0;
 
 // ── Auth ──────────────────────────────────────────────────────
 
@@ -944,6 +947,17 @@ async function openSessions(interviewId, title, tab = 'invite') {
   currentInterviewId = interviewId;
   document.getElementById('modal-interview-title').textContent = title;
   resetInviteForm();
+  // Reset decision + star filters to defaults
+  _decisionFilter = 'all';
+  _starFilter = 0;
+  [['fd-all','all'],['fd-fwd','move_forward'],['fd-rej','not_moving_forward']].forEach(([id, val]) => {
+    const c = document.getElementById(id);
+    if (c) c.classList.toggle('active', val === 'all');
+  });
+  [0,1,2,3,4,5].forEach(i => {
+    const c = document.getElementById(`fs-${i}`);
+    if (c) c.classList.toggle('active', i === 0);
+  });
   switchSessionTab(tab);
   openModal('modal-sessions');
   await loadSessions(interviewId);
@@ -971,12 +985,32 @@ function setSessionFilter(filter) {
   filterAndRenderSessions();
 }
 
+function setDecisionFilter(filter) {
+  _decisionFilter = filter;
+  [['fd-all','all'],['fd-fwd','move_forward'],['fd-rej','not_moving_forward']].forEach(([id, val]) => {
+    const c = document.getElementById(id);
+    if (c) c.classList.toggle('active', filter === val);
+  });
+  filterAndRenderSessions();
+}
+
+function setStarFilter(n) {
+  _starFilter = n;
+  [0,1,2,3,4,5].forEach(i => {
+    const c = document.getElementById(`fs-${i}`);
+    if (c) c.classList.toggle('active', i === n);
+  });
+  filterAndRenderSessions();
+}
+
 function filterAndRenderSessions() {
   const query = (document.getElementById('search-candidates')?.value || '').trim().toLowerCase();
   let list = _allSessions.filter(s => {
     if (_sessionFilter !== 'all' && s.status !== _sessionFilter) return false;
     if (query && !s.candidateName.toLowerCase().includes(query) &&
         !(s.candidateEmail || '').toLowerCase().includes(query)) return false;
+    if (_decisionFilter !== 'all' && s.reviewDecision !== _decisionFilter) return false;
+    if (_starFilter > 0 && (s.reviewStars || 0) < _starFilter) return false;
     return true;
   });
 
@@ -1026,8 +1060,11 @@ function renderSessionRow(s, num) {
     ? `<img src="" style="display:none">` // replaced by loadAvatarPhoto
     : `<span style="font-size:11px;font-weight:700;color:var(--muted)">${candidateInitials(s.candidateName)}</span>`;
 
+  const starsBadge = s.reviewStars
+    ? `<span style="font-size:12px;letter-spacing:0.5px;color:#f59e0b;white-space:nowrap">${'★'.repeat(s.reviewStars)}<span style="color:var(--border)">${'★'.repeat(5 - s.reviewStars)}</span></span>`
+    : '';
   const decisionBadge = s.reviewDecision
-    ? `<span style="font-size:10px;padding:2px 7px;border-radius:10px;${DECISION_STYLE[s.reviewDecision]||''};white-space:nowrap">${DECISION_LABEL[s.reviewDecision]||s.reviewDecision}</span>`
+    ? `<span style="font-size:10px;padding:2px 7px;border-radius:10px;${DECISION_STYLE[s.reviewDecision]||''};white-space:nowrap">${DECISION_LABEL[s.reviewDecision]||s.reviewDecision}</span>${starsBadge}`
     : '';
 
   const videosCell = responseCount > 0
@@ -1281,9 +1318,12 @@ async function openReview(token, candidateName) {
       resumeSection = `<div class="empty-state" style="flex:none">No resume uploaded</div>`;
     }
 
-    // Restore saved decision
+    // Restore saved decision + stars
     if (reviewData && !reviewData.notFound) {
       _reviewDecision = reviewData.decision;
+      _reviewStars    = reviewData.stars || 0;
+    } else {
+      _reviewStars = 0;
     }
 
     const decisionFwd = _reviewDecision === 'move_forward';
@@ -1292,7 +1332,7 @@ async function openReview(token, candidateName) {
     const reviewOutcome = `
       <div style="border-top:1px solid var(--border);padding-top:16px;flex-shrink:0">
         <h3 style="margin:0 0 12px;font-size:14px">Review Outcome</h3>
-        <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap">
+        <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;align-items:center">
           <button id="btn-fwd" onclick="setReviewDecision('move_forward')"
             class="btn" style="font-size:12px;padding:7px 16px;transition:all 0.15s;
             ${decisionFwd ? 'background:#16a34a;color:#fff;border:1px solid #16a34a' : 'background:transparent;border:1px solid transparent;color:var(--muted)'}">
@@ -1303,6 +1343,14 @@ async function openReview(token, candidateName) {
             ${decisionRej ? 'background:#dc2626;color:#fff;border:1px solid #dc2626' : 'background:transparent;border:1px solid transparent;color:var(--muted)'}">
             ✗ Not Moving Forward
           </button>
+          <div id="star-picker" style="display:inline-flex;gap:2px;margin-left:6px;align-items:center">
+            ${Array.from({length:5}, (_,i) =>
+              `<span style="font-size:24px;cursor:pointer;color:${i < _reviewStars ? '#f59e0b' : 'var(--border)'};transition:color 0.1s;line-height:1;padding:0 1px"
+                onmouseenter="highlightStars(${i+1})"
+                onmouseleave="highlightStars(_reviewStars)"
+                onclick="setReviewStars(${i+1})">★</span>`
+            ).join('')}
+          </div>
         </div>
         <textarea id="review-notes" placeholder="Notes about this candidate…"
           style="width:100%;min-height:90px;background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:10px 12px;color:var(--text);font-size:13px;resize:vertical;box-sizing:border-box"
@@ -1343,13 +1391,27 @@ function setReviewDecision(decision) {
 async function saveReviewOutcome(token) {
   const notes    = document.getElementById('review-notes')?.value || '';
   const decision = _reviewDecision;
+  const stars    = _reviewStars || 0;
   if (!decision) return toast('Please select a decision first', 'error');
   try {
-    await apiJSON('POST', `/api/session/${token}/review`, { notes, decision });
+    await apiJSON('POST', `/api/session/${token}/review`, { notes, decision, stars });
     toast('Review saved', 'success');
     // Refresh session list so decision badge shows
     if (currentInterviewId) await loadSessions(currentInterviewId);
   } catch (e) { toast(e.message, 'error'); }
+}
+
+function highlightStars(n) {
+  const container = document.getElementById('star-picker');
+  if (!container) return;
+  container.querySelectorAll('span').forEach((s, i) => {
+    s.style.color = i < n ? '#f59e0b' : 'var(--border)';
+  });
+}
+
+function setReviewStars(n) {
+  _reviewStars = n;
+  highlightStars(n);
 }
 
 async function runAnalysis(token) {
