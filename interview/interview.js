@@ -433,18 +433,11 @@ function continueToInterview() {
   if (micAnalyser) { micAnalyser.disconnect(); micAnalyser = null; }
   if (setupAudioCtx) { setupAudioCtx.close().catch(() => {}); setupAudioCtx = null; }
 
-  // Move bgCanvas to document.body (hidden) before showQuestion() replaces
-  // main().innerHTML — same fix as bgVid. Chrome stops pushing frames to a
-  // captureStream() if the source canvas is detached from the DOM, causing the
-  // preview and recording to freeze/go blank. Keeping it on body keeps it alive.
-  if (bgCanvas && bgCanvas.parentNode !== document.body) {
-    bgCanvas.style.cssText = 'position:fixed;top:-9999px;left:-9999px;width:1px;height:1px;pointer-events:none';
-    document.body.appendChild(bgCanvas);
-  }
-
-  // Always capture from bgCanvas so the CTI watermark is baked into the recording
-  // for ALL background modes (including None). The draw loop calls drawWatermark()
-  // every frame regardless of bgMode, so the logo is always present.
+  // Capture stream while bgCanvas is still in the DOM (setup screen).
+  // showQuestion() immediately re-inserts bgCanvas into the camera-wrap div
+  // so it stays composited — Chrome only pushes captureStream frames from
+  // canvases that are actively rendered in the page compositor. Off-screen
+  // or detached canvases produce no frames regardless of JS draw calls.
   canvasStream = bgCanvas.captureStream(30);
   mediaStream.getAudioTracks().forEach(t => canvasStream.addTrack(t));
 
@@ -478,7 +471,7 @@ function showQuestion(index) {
         </p>
 
         <div class="camera-wrap" id="camera-wrap">
-          <video id="preview" autoplay muted playsinline></video>
+          <!-- bgCanvas is inserted here programmatically after innerHTML is set -->
           <div id="timer-overlay" class="timer-overlay" style="display:none"></div>
           <div id="overlay"></div>
         </div>
@@ -492,8 +485,16 @@ function showQuestion(index) {
       </div>
     </div>`;
 
-  const preview = document.getElementById('preview');
-  preview.srcObject = canvasStream || mediaStream;
+  // Place bgCanvas as the first child of camera-wrap so it fills the preview area.
+  // It MUST be in the visible DOM — Chrome only composites (and thus captureStream-
+  // captures) canvases that are part of the rendered page. The draw loop keeps
+  // writing to it every rAF tick, so the user sees the live watermarked feed and
+  // the recording bakes the logo in. Timer/overlay divs sit on top via z-index.
+  const camWrap = document.getElementById('camera-wrap');
+  if (bgCanvas && camWrap) {
+    bgCanvas.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;display:block';
+    camWrap.insertBefore(bgCanvas, camWrap.firstChild);
+  }
 }
 
 function updateProgress(index, total) {
@@ -698,7 +699,6 @@ function clearOverlay() {
 function stopStream() {
   if (segLoopId) { cancelAnimationFrame(segLoopId); segLoopId = null; }
   if (segModel) { try { segModel.close(); } catch (e) {} segModel = null; }
-  if (bgCanvas) { try { bgCanvas.remove(); } catch (e) {} }
   bgCanvas = null; bgCtx = null; canvasStream = null;
   blurMaskCanvas = null;
   if (bgVid) { bgVid.srcObject = null; bgVid.remove(); bgVid = null; }
