@@ -1101,6 +1101,72 @@ async function revokeSession(token, name) {
 
 // ── Review videos ─────────────────────────────────────────────
 
+function starsHTML(n, max = 5) {
+  return Array.from({ length: max }, (_, i) =>
+    `<span style="color:${i < n ? '#f59e0b' : 'var(--border)'}">★</span>`
+  ).join('');
+}
+
+const LEVEL_COLORS = {
+  'Excellent':    '#16a34a',
+  'Good':         '#2563eb',
+  'Intermediate': '#d97706',
+  'Basic':        '#dc2626',
+  'Very limited': '#9ca3af',
+};
+
+function renderAnalysisPanel(analysis, token) {
+  const overall = analysis.overall || {};
+  const levelColor = LEVEL_COLORS[overall.level] || 'var(--accent)';
+  const ts = analysis.analyzedAt
+    ? new Date(analysis.analyzedAt).toLocaleString()
+    : '';
+
+  const qCards = (analysis.questions || []).map(q => `
+    <div style="border:1px solid var(--border);border-radius:8px;padding:14px 16px;margin-bottom:10px">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:6px">
+        <div style="font-size:13px;font-weight:600;color:var(--text)">
+          Q${q.questionIndex + 1}: ${esc(q.qText || '')}
+        </div>
+        <div style="flex-shrink:0;font-size:18px;line-height:1">${starsHTML(q.stars)}</div>
+      </div>
+      <p style="font-size:12px;color:var(--text);margin:0 0 8px">${esc(q.feedback || '')}</p>
+      ${q.transcript ? `
+        <details style="margin-top:4px">
+          <summary style="font-size:11px;color:var(--muted);cursor:pointer;user-select:none">Show transcript</summary>
+          <p style="font-size:11px;color:var(--muted);margin:6px 0 0;line-height:1.55;font-style:italic">"${esc(q.transcript)}"</p>
+        </details>` : ''}
+    </div>
+  `).join('');
+
+  return `
+    <div id="analysis-panel" style="margin-top:24px;border-top:1px solid var(--border);padding-top:20px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+        <h3 style="margin:0;font-size:15px">English Analysis</h3>
+        <div style="display:flex;gap:8px;align-items:center">
+          ${ts ? `<span style="font-size:11px;color:var(--muted)">${ts}</span>` : ''}
+          <button class="btn btn-outline" style="padding:4px 12px;font-size:12px"
+            onclick="runAnalysis('${token}')">Re-analyze</button>
+        </div>
+      </div>
+
+      <!-- Overall badge -->
+      <div style="background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:16px 20px;margin-bottom:16px;display:flex;gap:20px;align-items:center">
+        <div style="text-align:center;flex-shrink:0">
+          <div style="font-size:32px;line-height:1">${starsHTML(overall.stars)}</div>
+          <div style="font-size:11px;color:var(--muted);margin-top:4px">${overall.stars || '?'} / 5</div>
+        </div>
+        <div>
+          <span style="display:inline-block;background:${levelColor};color:#fff;font-size:11px;font-weight:700;padding:2px 10px;border-radius:20px;margin-bottom:6px">${esc(overall.level || '')}</span>
+          <p style="font-size:13px;color:var(--text);margin:0;line-height:1.5">${esc(overall.summary || '')}</p>
+        </div>
+      </div>
+
+      <!-- Per-question cards -->
+      ${qCards}
+    </div>`;
+}
+
 async function openReview(token, candidateName) {
   document.getElementById('review-candidate-name').textContent = candidateName;
   openModal('modal-review');
@@ -1119,17 +1185,23 @@ async function openReview(token, candidateName) {
       return;
     }
 
-    const items = await Promise.all(session.responses.map(async r => {
-      const q = interview?.questions?.[r.questionIndex];
-      const urlRes = await fetch(
-        `${WORKER_URL}/api/session/${token}/video/${r.questionIndex}`,
-        { headers: { 'X-Admin-Key': adminKey } }
-      );
-      const { downloadUrl, webUrl } = await urlRes.json();
-      return { q, downloadUrl, webUrl, questionIndex: r.questionIndex };
-    }));
+    // Load video URLs + cached analysis in parallel
+    const [items, cachedAnalysis] = await Promise.all([
+      Promise.all(session.responses.map(async r => {
+        const q = interview?.questions?.[r.questionIndex];
+        const urlRes = await fetch(
+          `${WORKER_URL}/api/session/${token}/video/${r.questionIndex}`,
+          { headers: { 'X-Admin-Key': adminKey } }
+        );
+        const { downloadUrl, webUrl } = await urlRes.json();
+        return { q, downloadUrl, webUrl, questionIndex: r.questionIndex };
+      })),
+      fetch(`${WORKER_URL}/api/session/${token}/analysis`, {
+        headers: { 'X-Admin-Key': adminKey }
+      }).then(r => r.json()).catch(() => ({ notFound: true })),
+    ]);
 
-    content.innerHTML = `<div class="review-grid">
+    const videoGrid = `<div class="review-grid">
       ${items.map(({ q, downloadUrl, webUrl, questionIndex }) => `
         <div class="review-item">
           ${downloadUrl
@@ -1143,8 +1215,64 @@ async function openReview(token, candidateName) {
         </div>
       `).join('')}
     </div>`;
+
+    // Analyze button (shown when no cached analysis yet)
+    const analyzeBtn = `
+      <div style="margin-top:20px;border-top:1px solid var(--border);padding-top:20px;text-align:center">
+        <button class="btn btn-primary" onclick="runAnalysis('${token}')" id="analyze-btn">
+          🤖 Analyze English Proficiency
+        </button>
+        <p class="text-muted text-sm" style="margin-top:8px">
+          Transcribes all recordings and rates English skill with AI (takes ~20–40 s)
+        </p>
+      </div>`;
+
+    const analysisPart = cachedAnalysis?.notFound
+      ? analyzeBtn
+      : renderAnalysisPanel(cachedAnalysis, token);
+
+    content.innerHTML = videoGrid + analysisPart;
   } catch (e) {
     content.innerHTML = `<div class="empty-state" style="color:var(--red)">${e.message}</div>`;
+  }
+}
+
+async function runAnalysis(token) {
+  const panel = document.getElementById('analysis-panel');
+  const btn   = document.getElementById('analyze-btn');
+
+  // Show loading state
+  const loadingHTML = `
+    <div id="analysis-panel" style="margin-top:24px;border-top:1px solid var(--border);padding-top:20px;text-align:center">
+      <div class="spinner" style="margin:0 auto 12px"></div>
+      <p class="text-muted text-sm">Transcribing recordings and analyzing English…</p>
+      <p class="text-muted" style="font-size:11px">This may take 20–40 seconds</p>
+    </div>`;
+
+  if (panel) {
+    panel.outerHTML = loadingHTML;
+  } else if (btn) {
+    btn.closest('div').outerHTML = loadingHTML;
+  }
+
+  try {
+    const res = await fetch(`${WORKER_URL}/api/session/${token}/analyze`, {
+      method: 'POST',
+      headers: { 'X-Admin-Key': adminKey },
+    });
+    const data = await res.json();
+    if (data.error) throw new Error(data.error);
+
+    const newPanel = document.getElementById('analysis-panel');
+    if (newPanel) newPanel.outerHTML = renderAnalysisPanel(data, token);
+  } catch (e) {
+    const newPanel = document.getElementById('analysis-panel');
+    if (newPanel) newPanel.outerHTML = `
+      <div id="analysis-panel" style="margin-top:24px;border-top:1px solid var(--border);padding-top:20px">
+        <p style="color:var(--red);font-size:13px">Analysis failed: ${esc(e.message)}</p>
+        <button class="btn btn-outline" style="font-size:12px;padding:4px 12px"
+          onclick="runAnalysis('${token}')">Try again</button>
+      </div>`;
   }
 }
 

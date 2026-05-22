@@ -33,6 +33,7 @@ async function handle(request) {
     return await route(request);
   } catch (e) {
     const status = e.message === 'Unauthorized' ? 401 : 500;
+    if (status === 500) console.error('Worker unhandled error:', e.message, e.stack || '');
     return jsonRes({ error: e.message }, status);
   }
 }
@@ -93,6 +94,14 @@ async function route(request) {
   }
   if (seg[0] === 'tw-session' && seg[2] === 'recording-url' && m === 'GET') {
     return getTWRecordingUrl(seg[1], request);
+  }
+
+  // One-way: AI English analysis
+  if (seg[0] === 'session' && seg[2] === 'analyze' && m === 'POST') {
+    return analyzeSession(seg[1], request);
+  }
+  if (seg[0] === 'session' && seg[2] === 'analysis' && m === 'GET') {
+    return getAnalysis(seg[1], request);
   }
 
   return jsonRes({ error: 'Not found' }, 404);
@@ -396,6 +405,7 @@ async function deleteSession(token, request) {
   if (session.status === 'completed') return jsonRes({ error: 'Cannot revoke a completed session' }, 400);
 
   await INTERVIEW_DATA.delete(`session:${token}`);
+  await INTERVIEW_DATA.delete(`session:${token}:analysis`); // clean up cached analysis
   const sessions = (await kvGet(`interview:${session.interviewId}:sessions`)) || [];
   await kvPut(`interview:${session.interviewId}:sessions`, sessions.filter(t => t !== token));
   return jsonRes({ ok: true });
@@ -458,10 +468,12 @@ async function createTWSession(request) {
   if (autoMeeting && scheduledAt) {
     try {
       const meeting = await createTeamsMeeting(session);
-      session.meetingLink     = meeting.joinUrl;
-      session.calendarEventId = meeting.eventId;
-      session.calendarWebLink = meeting.webLink;
-      session.teamsGenerated  = true;
+      session.meetingLink        = meeting.joinUrl;
+      session.calendarEventId    = meeting.eventId;
+      session.calendarWebLink    = meeting.webLink;
+      session.meetingShortId     = meeting.shortId;    // e.g. "a1b2c3d4"
+      session.meetingSubjectTag  = meeting.subjectTag; // e.g. "[CTI-a1b2c3d4]"
+      session.teamsGenerated     = true;
     } catch (e) {
       session.teamsError = e.message;
     }
@@ -570,45 +582,153 @@ async function sendTWEmail(id, request) {
   return jsonRes({ ok: true });
 }
 
+// ── Resolve the organizer's OneDrive drive base URL ──────────────
+// Tries /users/{email}/drive first. If that returns 423 (common when the
+// account has sign-in blocked or SharePoint access policies block the
+// /users/ endpoint), falls back to /sites/{host}/personal/{path}/drive
+// which only requires Sites.ReadWrite.All and is not user-account-gated.
+async function resolveOrganizerDriveBase(organizer, accessToken) {
+  const userBase = `https://graph.microsoft.com/v1.0/users/${organizer}/drive`;
+  const testRes  = await fetch(`${userBase}/root`, {
+    headers: { 'Authorization': `Bearer ${accessToken}` },
+  });
+  console.log(`[drive] /users/ → ${testRes.status}`);
+  if (testRes.ok) return { driveBase: userBase, error: null };
+
+  if (testRes.status !== 423) {
+    const err = await testRes.json().catch(() => ({}));
+    console.error(`[drive] /users/ failed: ${testRes.status} ${JSON.stringify(err.error || {})}`);
+    return {
+      driveBase: null,
+      error: {
+        message: `Cannot access OneDrive for ${organizer} (HTTP ${testRes.status}): ${err.error?.message || 'unknown'}`,
+        code: err.error?.code,
+        innerError: err.error?.innerError,
+      },
+    };
+  }
+
+  // 423 → try site-based access.
+  // Derive the personal site path from the email:
+  //   corporate-recruiter@cti-usa.com  →  corporate-recruiter_cti-usa_com
+  // Rule: replace '@' with '_', keep hyphens, replace '.' with '_'.
+  const sitePath   = organizer.toLowerCase().replace('@', '_').replace(/\./g, '_');
+  const siteApiUrl = `https://graph.microsoft.com/v1.0/sites/ctiworldwide-my.sharepoint.com:/personal/${sitePath}`;
+  console.log(`[drive] 423 → trying site fallback: /personal/${sitePath}`);
+
+  const siteRes = await fetch(siteApiUrl, {
+    headers: { 'Authorization': `Bearer ${accessToken}` },
+  });
+  console.log(`[drive] site fallback → ${siteRes.status}`);
+  if (!siteRes.ok) {
+    const siteErr = await siteRes.json().catch(() => ({}));
+    console.error(`[drive] site fallback failed: ${siteRes.status} ${JSON.stringify(siteErr.error || {})}`);
+    return {
+      driveBase: null,
+      error: {
+        message: `Cannot access OneDrive for ${organizer}: /users/ returned 423, site fallback returned ${siteRes.status}: ${siteErr.error?.message || 'unknown'}`,
+        code: siteErr.error?.code,
+        hint: 'Check if the account is blocked in Azure AD (portal.azure.com → Users → Block sign-in) or if a SharePoint network location policy is restricting access.',
+      },
+    };
+  }
+
+  const siteData  = await siteRes.json();
+  console.log(`[drive] site fallback OK, siteId=${siteData.id}`);
+  const siteBase  = `https://graph.microsoft.com/v1.0/sites/${siteData.id}/drive`;
+  return { driveBase: siteBase, error: null };
+}
+
 async function fetchTWRecording(id, request) {
   requireAdmin(request);
   const session = await kvGet(`tw-session:${id}`);
   if (!session) return jsonRes({ error: 'Session not found' }, 404);
 
-  const organizer   = EMAIL_SENDER || ONEDRIVE_USER;
+  // Use ONEDRIVE_USER (not EMAIL_SENDER) — Teams meetings are created in
+  // ONEDRIVE_USER's calendar so recordings land in their accessible drive.
+  const organizer   = ONEDRIVE_USER;
   const accessToken = await getAccessToken();
 
-  // List recent files in the organizer's OneDrive Recordings folder
-  const listRes = await fetch(
-    `https://graph.microsoft.com/v1.0/users/${organizer}/drive/root:/Recordings:/children` +
-    `?$orderby=createdDateTime+desc&$top=30&$select=id,name,createdDateTime,size,webUrl`,
+  // ── Step 1: resolve drive base (with 423 fallback) ─────────────
+  const { driveBase, error } = await resolveOrganizerDriveBase(organizer, accessToken);
+  if (error) return jsonRes(error, 500);
+
+  // ── Step 2: search for recordings ──────────────────────────────
+  // Teams recordings are named after the meeting subject (e.g. "Interview -
+  // Cunard Line.mp4"), NOT "recording.mp4", so we search several terms and
+  // also list the Recordings folder directly.
+  let files = [];
+  const videoExt = /\.(mp4|mkv|webm)$/i;
+
+  // 2a. List Recordings folder (most reliable — Teams saves here by default)
+  const recFolderRes = await fetch(
+    `${driveBase}/root:/Recordings:/children` +
+    `?$orderby=createdDateTime+desc&$top=50&$select=id,name,createdDateTime,size,webUrl`,
     { headers: { 'Authorization': `Bearer ${accessToken}` } }
   );
-
-  if (!listRes.ok) {
-    if (listRes.status === 404) return jsonRes({ notFound: true, message: 'No Recordings folder found yet. Teams saves recordings there after the meeting ends.' });
-    const err = await listRes.json().catch(() => ({}));
-    return jsonRes({ error: 'Could not access Recordings folder: ' + (err.error?.message || listRes.status) }, 500);
+  if (recFolderRes.ok) {
+    const data = await recFolderRes.json();
+    files.push(...(data.value || []).filter(f => videoExt.test(f.name)));
   }
 
-  const { value: files } = await listRes.json();
-  const meetingStart = session.scheduledAt || 0;
+  // 2b. Drive search for ".mp4" — catches files outside the Recordings folder
+  if (!files.length) {
+    const s = await fetch(
+      `${driveBase}/search(q='.mp4')` +
+      `?$top=50&$select=id,name,createdDateTime,size,webUrl`,
+      { headers: { 'Authorization': `Bearer ${accessToken}` } }
+    );
+    if (s.ok) {
+      const data = await s.json();
+      files.push(...(data.value || []).filter(f => videoExt.test(f.name)));
+    }
+  }
 
-  // Match MP4 files created after the meeting started
-  const candidates = (files || []).filter(f =>
-    f.name.toLowerCase().endsWith('.mp4') &&
-    new Date(f.createdDateTime).getTime() > meetingStart
+  const meetingStart = session.scheduledAt || 0;
+  // Only look for recordings created AFTER the meeting started (not before).
+  // This prevents picking up recordings from earlier sessions.
+  const windowStart  = meetingStart;
+
+  // Match video files created at or after the meeting time
+  let candidates = files.filter(f =>
+    new Date(f.createdDateTime).getTime() >= windowStart
   );
+  // If time filter yields nothing (meeting time not set / clock skew), use all
+  if (!candidates.length) candidates = files;
 
   if (!candidates.length) {
     return jsonRes({ notFound: true, message: 'No recording found yet. Recording may still be processing — try again in a few minutes.' });
   }
 
-  // Prefer a file whose name contains the candidate name or "Interview"
-  const namePart = session.candidateName.split(' ')[0].toLowerCase();
-  let best = candidates.find(f => f.name.toLowerCase().includes(namePart))
-          || candidates.find(f => f.name.toLowerCase().includes('interview'))
-          || candidates[0];
+  // ── Match by unique session ID tag first (most reliable) ──────
+  // New meetings have [CTI-xxxxxxxx] embedded in the subject → filename.
+  const idTag     = session.meetingShortId ? `cti-${session.meetingShortId}` : null;
+  const idMatch   = idTag
+    ? candidates.find(f => f.name.toLowerCase().includes(idTag))
+    : null;
+
+  // ── Fallback: meaningful words from the candidate's name ────────
+  // (skip short words/honorifics like "I", "de", "Mr")
+  const nameWords = session.candidateName
+    .toLowerCase()
+    .split(/\s+/)
+    .filter(w => w.length > 2);
+
+  const nameMatch = candidates.find(f => {
+    const fn = f.name.toLowerCase();
+    return nameWords.some(w => fn.includes(w));
+  });
+
+  const best = idMatch || nameMatch;
+
+  if (!best) {
+    // Neither tag nor name matched — don't guess, report what was found
+    const fileList = candidates.map(f => f.name).join(', ');
+    return jsonRes({
+      notFound: true,
+      message: `Found ${candidates.length} recording(s) after meeting time but none matched "${session.candidateName}". Files found: ${fileList}`,
+    });
+  }
 
   session.recordingDriveItemId = best.id;
   session.recordingFileName    = best.name;
@@ -625,10 +745,14 @@ async function getTWRecordingUrl(id, request) {
   if (!session.recordingDriveItemId) return jsonRes({ error: 'No recording linked to this session' }, 404);
 
   try {
-    const organizer   = EMAIL_SENDER || ONEDRIVE_USER;
+    const organizer   = ONEDRIVE_USER;
     const accessToken = await getAccessToken();
+
+    const { driveBase, error } = await resolveOrganizerDriveBase(organizer, accessToken);
+    if (error) return jsonRes(error, 500);
+
     const itemRes = await fetch(
-      `https://graph.microsoft.com/v1.0/users/${organizer}/drive/items/${session.recordingDriveItemId}`,
+      `${driveBase}/items/${session.recordingDriveItemId}`,
       { headers: { 'Authorization': `Bearer ${accessToken}` } }
     );
     const item = await itemRes.json();
@@ -644,15 +768,26 @@ async function getTWRecordingUrl(id, request) {
 
 async function createTeamsMeeting(session) {
   const accessToken = await getAccessToken();
-  const organizer   = EMAIL_SENDER || ONEDRIVE_USER;
+  // Always use ONEDRIVE_USER as the Teams meeting organizer so that
+  // recordings land in ONEDRIVE_USER's drive (accessible via app-only auth).
+  // EMAIL_SENDER is only used as the FROM address in notification emails.
+  const organizer   = ONEDRIVE_USER;
 
   const startMs  = session.scheduledAt;
   const endMs    = startMs + (session.duration || 60) * 60 * 1000;
   const startStr = new Date(startMs).toISOString().replace('Z', '');
   const endStr   = new Date(endMs).toISOString().replace('Z', '');
 
+  // Embed a short session ID tag in the meeting subject.
+  // Teams includes the meeting subject in the recording filename, so
+  // fetchTWRecording can match by this tag instead of guessing by name.
+  // e.g. subject = "Interview: Cunard Line - Waiter — Herry Wahyudi [CTI-a1b2c3d4]"
+  // recording  = "Interview Cunard Line - Waiter — Herry Wahyudi [CTI-a1b2c3d4]-Meeting Recording.mp4"
+  const shortId  = session.id.replace(/-/g, '').slice(0, 8); // 8-char hex tag
+  const subjectTag = `[CTI-${shortId}]`;
+
   const eventBody = {
-    subject: `Interview: ${session.position} — ${session.candidateName}`,
+    subject: `Interview: ${session.position} — ${session.candidateName} ${subjectTag}`,
     body: {
       contentType: 'HTML',
       content: `
@@ -696,8 +831,180 @@ async function createTeamsMeeting(session) {
 
   const event = await res.json();
   return {
-    joinUrl: event.onlineMeeting?.joinUrl || '',
-    eventId: event.id,
-    webLink: event.webLink || '',
+    joinUrl:  event.onlineMeeting?.joinUrl || '',
+    eventId:  event.id,
+    webLink:  event.webLink || '',
+    shortId,           // passed back so caller can store it on the session
+    subjectTag,        // e.g. "[CTI-a1b2c3d4]"
   };
+}
+
+// ── English Analysis (One-Way Interview) ──────────────────────
+// Required Worker secrets: OPENAI_API_KEY, ANTHROPIC_API_KEY
+
+async function analyzeSession(token, request) {
+  requireAdmin(request);
+
+  if (typeof OPENAI_API_KEY === 'undefined' || !OPENAI_API_KEY) {
+    return jsonRes({ error: 'OPENAI_API_KEY is not configured in Worker secrets.' }, 500);
+  }
+  if (typeof ANTHROPIC_API_KEY === 'undefined' || !ANTHROPIC_API_KEY) {
+    return jsonRes({ error: 'ANTHROPIC_API_KEY is not configured in Worker secrets.' }, 500);
+  }
+
+  const session = await kvGet(`session:${token}`);
+  if (!session) return jsonRes({ error: 'Session not found' }, 404);
+
+  const responses = (session.responses || []).filter(r => r.driveItemId);
+  if (!responses.length) return jsonRes({ error: 'No recordings found for this session.' }, 400);
+
+  const interview  = await kvGet(`interview:${session.interviewId}`);
+  const questions  = interview?.questions || [];
+  const accessToken = await getAccessToken();
+
+  // ── Step 1: resolve @microsoft.graph.downloadUrl for every response ──
+  const downloadItems = await Promise.all(responses.map(async r => {
+    try {
+      const res = await fetch(
+        `https://graph.microsoft.com/v1.0/users/${ONEDRIVE_USER}/drive/items/${r.driveItemId}`,
+        { headers: { 'Authorization': `Bearer ${accessToken}` } }
+      );
+      const item = await res.json();
+      return { qIndex: r.questionIndex, url: item['@microsoft.graph.downloadUrl'] || null };
+    } catch {
+      return { qIndex: r.questionIndex, url: null };
+    }
+  }));
+
+  // ── Step 2: download each video + transcribe via OpenAI Whisper (parallel) ──
+  const transcripts = await Promise.all(downloadItems.map(async ({ qIndex, url }) => {
+    const qText = questions[qIndex]?.text || `Question ${qIndex + 1}`;
+
+    if (!url) {
+      return { qIndex, qText, transcript: '[Recording unavailable]', error: true };
+    }
+    try {
+      const videoRes = await fetch(url);
+      if (!videoRes.ok) {
+        return { qIndex, qText, transcript: '[Download failed]', error: true };
+      }
+      const blob = await videoRes.blob();
+
+      // Whisper hard limit is 25 MB
+      if (blob.size > 24 * 1024 * 1024) {
+        return { qIndex, qText, transcript: '[Recording too large to transcribe (>24 MB)]', error: true };
+      }
+
+      const form = new FormData();
+      form.append('file', blob, `q${qIndex + 1}.webm`);
+      form.append('model', 'whisper-1');
+      form.append('language', 'en');
+
+      const whisperRes = await fetch('https://api.openai.com/v1/audio/transcriptions', {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${OPENAI_API_KEY}` },
+        body: form,
+      });
+      if (!whisperRes.ok) {
+        const e = await whisperRes.json().catch(() => ({}));
+        console.error(`[analyze] Whisper Q${qIndex + 1}:`, JSON.stringify(e));
+        return { qIndex, qText, transcript: '[Transcription failed]', error: true };
+      }
+      const wData = await whisperRes.json();
+      return { qIndex, qText, transcript: wData.text?.trim() || '' };
+    } catch (e) {
+      console.error(`[analyze] Q${qIndex + 1} exception:`, e.message);
+      return { qIndex, qText, transcript: '[Error: ' + e.message + ']', error: true };
+    }
+  }));
+
+  // Sort by question order
+  transcripts.sort((a, b) => a.qIndex - b.qIndex);
+
+  // ── Step 3: analyze with Claude ──
+  const qaBlock = transcripts.map(t =>
+    `Question ${t.qIndex + 1}: ${t.qText}\nCandidate's answer: ${t.transcript}`
+  ).join('\n\n---\n\n');
+
+  const prompt = `You are a professional recruiter evaluating a candidate's English language proficiency from their video interview answers.
+
+Candidate: ${session.candidateName}
+
+${qaBlock}
+
+Rate each answer's English on a 1–5 scale:
+1 ⭐ Very limited — hard to follow, major errors, very basic vocabulary
+2 ⭐⭐ Basic — understandable but frequent grammar/vocabulary errors
+3 ⭐⭐⭐ Intermediate — communicates ideas, noticeable but not blocking errors
+4 ⭐⭐⭐⭐ Good — fluent and professional, occasional minor errors
+5 ⭐⭐⭐⭐⭐ Excellent — near-native, sophisticated vocabulary, polished tone
+
+Criteria: grammar accuracy, vocabulary range, sentence complexity, fluency, professional tone.
+
+Respond with ONLY a valid JSON object — no commentary before or after:
+{
+  "questions": [
+    {
+      "questionIndex": 0,
+      "stars": 4,
+      "feedback": "One concise sentence summarising this answer's English quality."
+    }
+  ],
+  "overall": {
+    "stars": 4,
+    "level": "Good",
+    "summary": "2–3 sentence professional summary of the candidate's overall English proficiency."
+  }
+}`;
+
+  const claudeRes = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: {
+      'Content-Type':      'application/json',
+      'x-api-key':         ANTHROPIC_API_KEY,
+      'anthropic-version': '2023-06-01',
+    },
+    body: JSON.stringify({
+      model:      'claude-3-5-haiku-20241022',
+      max_tokens: 1024,
+      messages:   [{ role: 'user', content: prompt }],
+    }),
+  });
+
+  if (!claudeRes.ok) {
+    const e = await claudeRes.json().catch(() => ({}));
+    console.error('[analyze] Claude error:', JSON.stringify(e));
+    return jsonRes({ error: 'Analysis failed: ' + (e.error?.message || claudeRes.status) }, 500);
+  }
+
+  const claudeData = await claudeRes.json();
+  const rawText = claudeData.content?.[0]?.text || '{}';
+
+  let analysis;
+  try {
+    const match = rawText.match(/\{[\s\S]*\}/);
+    analysis = JSON.parse(match ? match[0] : rawText);
+  } catch (e) {
+    console.error('[analyze] JSON parse failed. Raw:', rawText.slice(0, 300));
+    return jsonRes({ error: 'Could not parse AI response. Raw: ' + rawText.slice(0, 200) }, 500);
+  }
+
+  // Attach transcripts to each question result
+  analysis.questions = (analysis.questions || []).map(q => {
+    const t = transcripts.find(t => t.qIndex === q.questionIndex);
+    return { ...q, transcript: t?.transcript || '', qText: t?.qText || '' };
+  });
+  analysis.analyzedAt     = Date.now();
+  analysis.candidateName  = session.candidateName;
+
+  // Cache in KV
+  await kvPut(`session:${token}:analysis`, analysis);
+  return jsonRes(analysis);
+}
+
+async function getAnalysis(token, request) {
+  requireAdmin(request);
+  const analysis = await kvGet(`session:${token}:analysis`);
+  if (!analysis) return jsonRes({ notFound: true });
+  return jsonRes(analysis);
 }
