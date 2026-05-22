@@ -408,12 +408,13 @@ tr:hover td { background: var(--card-2); }
   object-fit: cover;
 }
 
-/* Canvas fills the wrap without cropping — object-fit:cover clips top/bottom
-   for non-16:9 webcams and hides the watermark logo drawn near the top edge */
+/* Canvas uses contain so portrait mobile cameras display without stretching.
+   object-fit:fill/cover distorts or crops non-16:9 video; contain preserves
+   the aspect ratio and shows black bars (camera-wrap bg:#000) for the gaps. */
 .camera-wrap canvas {
   width: 100%;
   height: 100%;
-  object-fit: fill;
+  object-fit: contain;
 }
 
 .timer-overlay {
