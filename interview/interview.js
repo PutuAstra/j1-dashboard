@@ -32,6 +32,7 @@ let micMeterFrameId = null;
 let setupAudioCtx = null;
 const BG_FILLS = { white: '#f0ede8', navy: '#1a2744', slate: '#374151' };
 let logoImg = null;
+let blurMaskCanvas = null;  // cached ellipse mask for applySimpleBlur
 
 const token = new URLSearchParams(location.search).get('token');
 const main = () => document.getElementById('take-main');
@@ -238,27 +239,44 @@ function ensureTmp(w, h) {
   return { tc: tmpCtx, tw: w, th: h };
 }
 
-// Portrait-mode blur — no AI required
+// Build (or retrieve cached) elliptical alpha mask for the blur fallback.
+// Uses canvas.ellipse() + blur so the shape is properly elliptical, not circular.
+function ensureBlurMask(w, h) {
+  if (blurMaskCanvas && blurMaskCanvas.width === w && blurMaskCanvas.height === h) {
+    return blurMaskCanvas;
+  }
+  blurMaskCanvas = document.createElement('canvas');
+  blurMaskCanvas.width  = w;
+  blurMaskCanvas.height = h;
+  const mc = blurMaskCanvas.getContext('2d');
+  mc.clearRect(0, 0, w, h);
+  // Draw a feathered ellipse that covers the full person:
+  //   horizontal: ±44% of width  → shoulders to shoulders, comfortable margin
+  //   vertical:   ±52% of height → head to mid-torso (clips slightly above top, fine)
+  mc.save();
+  mc.filter = 'blur(20px)';   // feather edges; also slightly shrinks visible zone
+  mc.fillStyle = 'black';
+  mc.beginPath();
+  mc.ellipse(w * 0.50, h * 0.48, w * 0.44, h * 0.52, 0, 0, 2 * Math.PI);
+  mc.fill();
+  mc.restore();
+  return blurMaskCanvas;
+}
+
+// Portrait-mode blur — no AI required; uses proper ellipse (not a circle)
 function applySimpleBlur(vid, w, h) {
-  // Strong background blur
+  // 1. Draw strongly blurred background (overscan to avoid dark border artifacts)
   bgCtx.save();
-  bgCtx.filter = 'blur(24px)';
-  bgCtx.drawImage(vid, -32, -32, w + 64, h + 64);
+  bgCtx.filter = 'blur(22px)';
+  bgCtx.drawImage(vid, -28, -28, w + 56, h + 56);
   bgCtx.restore();
-  // Tight sharp oval over the person — narrower so edges/chair hide behind blur
-  const cx = w / 2, cy = h * 0.40;
-  const r1 = Math.min(w, h) * 0.22;  // inner fully-sharp radius (tighter)
-  const r2 = Math.min(w, h) * 0.46;  // outer fade radius (tighter)
-  const grd = bgCtx.createRadialGradient(cx, cy, r1, cx, cy, r2);
-  grd.addColorStop(0,    'rgba(0,0,0,1)');
-  grd.addColorStop(0.55, 'rgba(0,0,0,0.9)');
-  grd.addColorStop(1,    'rgba(0,0,0,0)');
+
+  // 2. Composite sharp person through the pre-built elliptical mask
   const { tc } = ensureTmp(w, h);
   tc.clearRect(0, 0, w, h);
-  tc.drawImage(vid, 0, 0, w, h);
+  tc.drawImage(vid, 0, 0, w, h);                  // sharp video
   tc.globalCompositeOperation = 'destination-in';
-  tc.fillStyle = grd;
-  tc.fillRect(0, 0, w, h);
+  tc.drawImage(ensureBlurMask(w, h), 0, 0);        // keep only inside ellipse
   tc.globalCompositeOperation = 'source-over';
   bgCtx.drawImage(tmpCanvas, 0, 0, w, h);
 }
@@ -657,6 +675,7 @@ function stopStream() {
   if (segLoopId) { cancelAnimationFrame(segLoopId); segLoopId = null; }
   if (segModel) { try { segModel.close(); } catch (e) {} segModel = null; }
   bgCanvas = null; bgCtx = null; canvasStream = null;
+  blurMaskCanvas = null;
   mediaStream?.getTracks().forEach(t => t.stop());
 }
 
