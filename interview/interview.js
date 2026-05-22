@@ -179,18 +179,29 @@ async function showSetup() {
 
 async function loadSegmentation(vid) {
   const status = document.getElementById('seg-status');
+  const MP_CDN = 'https://cdn.jsdelivr.net/npm/@mediapipe/selfie_segmentation';
   try {
-    if (typeof SelfieSegmentation === 'undefined') throw new Error('not available');
-    segModel = new SelfieSegmentation({
-      locateFile: f => `https://cdn.jsdelivr.net/npm/@mediapipe/selfie_segmentation@0.1.1675465578/${f}`
-    });
+    // Dynamically load MediaPipe so we can catch failures cleanly
+    if (typeof SelfieSegmentation === 'undefined') {
+      await new Promise((resolve, reject) => {
+        const s = document.createElement('script');
+        s.src = MP_CDN + '/selfie_segmentation.js';
+        s.crossOrigin = 'anonymous';
+        s.onload = resolve;
+        s.onerror = () => reject(new Error('Script load failed'));
+        document.head.appendChild(s);
+      });
+    }
+    if (typeof SelfieSegmentation === 'undefined') throw new Error('SelfieSegmentation not defined');
+    segModel = new SelfieSegmentation({ locateFile: f => `${MP_CDN}/${f}` });
     segModel.setOptions({ modelSelection: 1 });
     segModel.onResults(handleSegResults);
     await segModel.initialize();
     segReady = true;
     if (status) { status.textContent = '✓ AI ready — select a background above'; status.style.color = '#22c55e'; }
-  } catch {
-    if (status) status.textContent = 'AI background not available in this browser';
+  } catch (e) {
+    console.warn('[VirtualBg]', e.message);
+    if (status) status.textContent = 'AI background unavailable — None only';
     document.querySelectorAll('.bg-opt:not([data-bg="none"]), .bg-swatch').forEach(b => {
       b.style.opacity = '0.35'; b.style.pointerEvents = 'none';
     });
@@ -264,20 +275,25 @@ function startMicMeter() {
   } catch (e) {}
 }
 
-function testSpeakers() {
+async function testSpeakers() {
   try {
-    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    // Reuse the mic AudioContext if available; browsers limit concurrent contexts
+    const actx = setupAudioCtx || new (window.AudioContext || window.webkitAudioContext)();
+    await actx.resume(); // browsers suspend AudioContext until user gesture
+    const now = actx.currentTime;
     [440, 554, 659].forEach((freq, i) => {
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-      osc.connect(gain); gain.connect(ctx.destination);
+      const osc = actx.createOscillator();
+      const gain = actx.createGain();
+      osc.connect(gain); gain.connect(actx.destination);
       osc.frequency.value = freq;
-      gain.gain.setValueAtTime(0.25, ctx.currentTime + i * 0.22);
-      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + i * 0.22 + 0.2);
-      osc.start(ctx.currentTime + i * 0.22);
-      osc.stop(ctx.currentTime + i * 0.22 + 0.22);
+      gain.gain.setValueAtTime(0.4, now + i * 0.25);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + i * 0.25 + 0.22);
+      osc.start(now + i * 0.25);
+      osc.stop(now + i * 0.25 + 0.25);
     });
-  } catch (e) {}
+  } catch (e) {
+    console.error('Speaker test failed:', e);
+  }
 }
 
 function continueToInterview() {
