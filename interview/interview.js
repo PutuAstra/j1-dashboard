@@ -433,10 +433,18 @@ function continueToInterview() {
   if (micAnalyser) { micAnalyser.disconnect(); micAnalyser = null; }
   if (setupAudioCtx) { setupAudioCtx.close().catch(() => {}); setupAudioCtx = null; }
 
-  // ALWAYS capture from bgCanvas so the CTI logo watermark is baked into every
-  // recording regardless of which virtual background (including None) is selected.
-  // The canvas loop is already running for all bg modes and calls drawWatermark()
-  // every frame — we just need to use its output stream instead of the raw feed.
+  // Move bgCanvas to document.body (hidden) before showQuestion() replaces
+  // main().innerHTML — same fix as bgVid. Chrome stops pushing frames to a
+  // captureStream() if the source canvas is detached from the DOM, causing the
+  // preview and recording to freeze/go blank. Keeping it on body keeps it alive.
+  if (bgCanvas && bgCanvas.parentNode !== document.body) {
+    bgCanvas.style.cssText = 'position:fixed;top:-9999px;left:-9999px;width:1px;height:1px;pointer-events:none';
+    document.body.appendChild(bgCanvas);
+  }
+
+  // Always capture from bgCanvas so the CTI watermark is baked into the recording
+  // for ALL background modes (including None). The draw loop calls drawWatermark()
+  // every frame regardless of bgMode, so the logo is always present.
   canvasStream = bgCanvas.captureStream(30);
   mediaStream.getAudioTracks().forEach(t => canvasStream.addTrack(t));
 
@@ -690,6 +698,7 @@ function clearOverlay() {
 function stopStream() {
   if (segLoopId) { cancelAnimationFrame(segLoopId); segLoopId = null; }
   if (segModel) { try { segModel.close(); } catch (e) {} segModel = null; }
+  if (bgCanvas) { try { bgCanvas.remove(); } catch (e) {} }
   bgCanvas = null; bgCtx = null; canvasStream = null;
   blurMaskCanvas = null;
   if (bgVid) { bgVid.srcObject = null; bgVid.remove(); bgVid = null; }
