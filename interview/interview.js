@@ -98,7 +98,10 @@ function showIntro() {
 
 async function requestCamera() {
   try {
-    mediaStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+    mediaStream = await navigator.mediaDevices.getUserMedia({
+      video: { width: { ideal: 1280 }, height: { ideal: 720 }, frameRate: { ideal: 30 } },
+      audio: { echoCancellation: true, noiseSuppression: true, sampleRate: 44100 }
+    });
     showQuestion(0);
   } catch (e) {
     if (e.name === 'NotAllowedError') {
@@ -113,7 +116,10 @@ async function requestCamera() {
 
 async function showSetup() {
   try {
-    mediaStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+    mediaStream = await navigator.mediaDevices.getUserMedia({
+      video: { width: { ideal: 1280 }, height: { ideal: 720 }, frameRate: { ideal: 30 } },
+      audio: { echoCancellation: true, noiseSuppression: true, sampleRate: 44100 }
+    });
   } catch (e) {
     return showError(e.name === 'NotAllowedError'
       ? 'Camera and microphone access was denied. Please allow access in your browser settings and reload the page.'
@@ -538,7 +544,11 @@ function startRecording() {
   const q = interview.questions[currentQ];
   chunks = [];
 
-  recorder = new MediaRecorder(canvasStream || mediaStream, { mimeType: getSupportedMimeType() });
+  recorder = new MediaRecorder(canvasStream || mediaStream, {
+    mimeType: getSupportedMimeType(),
+    videoBitsPerSecond: 2500000,   // 2.5 Mbps — good 720p quality
+    audioBitsPerSecond: 128000,    // 128 kbps audio
+  });
   recorder.ondataavailable = e => { if (e.data.size > 0) chunks.push(e.data); };
   recorder.onstop = handleRecordingStop;
   recorder.start(1000);
