@@ -1606,10 +1606,15 @@ function esc(str) {
 
 // ── Interview Script ──────────────────────────────────────────
 
+let _currentScriptClientId = null;
+
+// ── Level 1: Client list ──────────────────────────────────────
+
 async function renderScriptPage() {
+  _currentScriptClientId = null;
   const main = document.getElementById('admin-main');
   main.innerHTML = `
-    <div style="max-width:860px">
+    <div style="max-width:720px">
       <div class="flex justify-between items-center mb-16">
         <h2>Interview Scripts</h2>
         <button class="btn btn-primary" onclick="promptAddClient()">+ Add Client</button>
@@ -1617,10 +1622,10 @@ async function renderScriptPage() {
       <div id="script-clients-list"><div class="empty-state">Loading…</div></div>
     </div>
   `;
-  await loadScriptPage();
+  await loadScriptClientsList();
 }
 
-async function loadScriptPage() {
+async function loadScriptClientsList() {
   const el = document.getElementById('script-clients-list');
   if (!el) return;
   try {
@@ -1629,45 +1634,75 @@ async function loadScriptPage() {
       el.innerHTML = `<div class="empty-state">No clients yet. Click "+ Add Client" to get started.</div>`;
       return;
     }
-    // Load all positions in parallel
-    const posMap = {};
-    await Promise.all(_scriptClients.map(async c => {
-      try { posMap[c.id] = await apiJSON('GET', `/api/script/client/${c.id}/positions`); }
-      catch { posMap[c.id] = []; }
-    }));
-    el.innerHTML = _scriptClients.map(c => renderScriptClientCard(c, posMap[c.id] || [])).join('');
+    el.innerHTML = `
+      <div class="card" style="padding:0;overflow:hidden">
+        ${_scriptClients.map((c, i) => `
+          <div style="display:flex;align-items:center;padding:15px 20px;cursor:pointer;${i < _scriptClients.length - 1 ? 'border-bottom:1px solid var(--border)' : ''};transition:background 0.12s"
+            onmouseenter="this.style.background='var(--bg)'" onmouseleave="this.style.background=''"
+            onclick="openScriptClient('${c.id}')">
+            <div style="flex:1;font-size:14px;font-weight:600">${esc(c.name)}</div>
+            <span style="color:var(--muted);font-size:20px;line-height:1;font-weight:300">›</span>
+          </div>
+        `).join('')}
+      </div>
+    `;
   } catch (e) {
     if (el) el.innerHTML = `<div class="empty-state" style="color:var(--red)">${esc(e.message)}</div>`;
   }
 }
 
-function renderScriptClientCard(client, positions) {
-  const posHTML = positions.length
-    ? positions.map(p => renderScriptPositionRow(p)).join('')
-    : `<div style="padding:12px 0;font-size:12px;color:var(--muted);text-align:center">No positions yet. Click "+ Add Position" to add one.</div>`;
-  return `
-    <div class="card" style="margin-bottom:16px">
-      <div style="display:flex;justify-content:space-between;align-items:center;padding-bottom:12px;border-bottom:1px solid var(--border);margin-bottom:12px">
-        <span style="font-size:15px;font-weight:700">${esc(client.name)}</span>
-        <div style="display:flex;gap:8px">
-          <button class="btn btn-outline" style="font-size:12px;padding:5px 14px"
-            onclick="promptAddPosition('${client.id}')">+ Add Position</button>
-          <button class="btn" style="font-size:12px;padding:5px 14px;color:var(--red);border:1px solid var(--red);background:transparent"
-            onclick="deleteScriptClient('${client.id}','${esc(client.name).replace(/'/g,'\\\'')}')">Delete Client</button>
+// ── Level 2: Positions inside a client ───────────────────────
+
+async function openScriptClient(clientId) {
+  _currentScriptClientId = clientId;
+  const client = _scriptClients.find(c => c.id === clientId);
+  const main = document.getElementById('admin-main');
+  main.innerHTML = `
+    <div style="max-width:720px">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:20px">
+        <button class="btn btn-ghost" style="padding:5px 12px;font-size:13px" onclick="renderScriptPage()">← Interview Scripts</button>
+        <span style="color:var(--muted);font-size:14px">›</span>
+        <span style="font-size:15px;font-weight:700">${esc(client?.name || '')}</span>
+      </div>
+      <div class="flex justify-between items-center mb-16">
+        <h3 style="margin:0">Positions</h3>
+        <div style="display:flex;gap:8px;align-items:center">
+          <button class="btn btn-outline" onclick="promptAddPosition('${clientId}')">+ Add Position</button>
+          <button class="btn btn-ghost" style="font-size:18px;padding:4px 10px;color:var(--red)" title="Delete this client"
+            onclick="deleteScriptClient('${clientId}','${esc(client?.name || '').replace(/'/g, "\\'")}')">🗑️</button>
         </div>
       </div>
-      <div id="sc-pos-${client.id}">${posHTML}</div>
+      <div id="sc-positions-${clientId}"><div class="empty-state">Loading…</div></div>
     </div>
   `;
+  await loadClientPositions(clientId);
 }
 
-function renderScriptPositionRow(p) {
+async function loadClientPositions(clientId) {
+  const el = document.getElementById(`sc-positions-${clientId}`);
+  if (!el) return;
+  try {
+    const positions = await apiJSON('GET', `/api/script/client/${clientId}/positions`);
+    if (!positions.length) {
+      el.innerHTML = `<div class="empty-state">No positions yet. Click "+ Add Position" to add one.</div>`;
+      return;
+    }
+    el.innerHTML = `<div class="card" style="padding:0;overflow:hidden">
+      ${positions.map((p, i) => renderScriptPositionRow(p, i, positions.length)).join('')}
+    </div>`;
+  } catch (e) {
+    if (el) el.innerHTML = `<div class="empty-state" style="color:var(--red)">${esc(e.message)}</div>`;
+  }
+}
+
+function renderScriptPositionRow(p, idx, total) {
   const hasDoc = !!p.driveItemId;
   const uploadedDate = p.uploadedAt
     ? new Date(p.uploadedAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })
     : null;
+  const notLast = idx < total - 1;
   return `
-    <div style="display:flex;align-items:center;gap:12px;padding:10px 14px;border:1px solid var(--border);border-radius:8px;margin-bottom:8px;background:var(--bg)">
+    <div style="display:flex;align-items:center;gap:12px;padding:14px 20px;${notLast ? 'border-bottom:1px solid var(--border)' : ''}">
       <div style="flex:1;min-width:0">
         <div style="font-size:13px;font-weight:600">${esc(p.name)}</div>
         <div style="font-size:11px;color:var(--muted);margin-top:2px">
@@ -1679,8 +1714,8 @@ function renderScriptPositionRow(p) {
       <div style="display:flex;gap:6px;flex-shrink:0;align-items:center">
         ${hasDoc
           ? `<button class="btn btn-outline" style="font-size:12px;padding:4px 12px"
-               onclick="viewScriptDoc('${p.id}','${esc(p.fileName||'document')}')">View</button>
-             <button class="btn btn-ghost" style="font-size:12px;padding:4px 10px" title="Download"
+               onclick="viewScriptDoc('${p.id}','${esc(p.fileName || 'document')}')">View</button>
+             <button class="btn btn-ghost" style="font-size:13px;padding:4px 10px" title="Download"
                onclick="downloadScriptDoc('${p.id}')">↓</button>`
           : ''}
         <label class="btn btn-outline" style="font-size:12px;padding:4px 14px;cursor:pointer;font-weight:600">
@@ -1688,12 +1723,14 @@ function renderScriptPositionRow(p) {
           <input type="file" accept=".pdf,.doc,.docx" style="display:none"
             onchange="uploadScriptDoc('${p.id}', this)">
         </label>
-        <button class="btn" style="font-size:12px;padding:4px 10px;color:var(--red);border:1px solid var(--red);background:transparent" title="Delete position"
-          onclick="deleteScriptPosition('${p.id}','${esc(p.name).replace(/'/g,'\\\'')}','${p.clientId}')">✕</button>
+        <button class="btn btn-ghost" style="font-size:18px;padding:4px 8px;color:var(--red)" title="Delete position"
+          onclick="deleteScriptPosition('${p.id}','${esc(p.name).replace(/'/g, "\\'")}','${p.clientId}')">🗑️</button>
       </div>
     </div>
   `;
 }
+
+// ── Script CRUD actions ───────────────────────────────────────
 
 async function promptAddClient() {
   const name = prompt('Enter client name:');
@@ -1701,7 +1738,7 @@ async function promptAddClient() {
   try {
     await apiJSON('POST', '/api/script/clients', { name: name.trim() });
     toast('Client added', 'success');
-    await loadScriptPage();
+    await loadScriptClientsList();
   } catch (e) { toast(e.message, 'error'); }
 }
 
@@ -1710,7 +1747,7 @@ async function deleteScriptClient(id, name) {
   try {
     await apiJSON('DELETE', `/api/script/client/${id}`);
     toast('Client deleted', 'success');
-    await loadScriptPage();
+    renderScriptPage();
   } catch (e) { toast(e.message, 'error'); }
 }
 
@@ -1720,7 +1757,7 @@ async function promptAddPosition(clientId) {
   try {
     await apiJSON('POST', `/api/script/client/${clientId}/positions`, { name: name.trim() });
     toast('Position added', 'success');
-    await loadScriptPage();
+    await loadClientPositions(clientId);
   } catch (e) { toast(e.message, 'error'); }
 }
 
@@ -1729,14 +1766,13 @@ async function deleteScriptPosition(id, name, clientId) {
   try {
     await apiJSON('DELETE', `/api/script/position/${id}`);
     toast('Position deleted', 'success');
-    await loadScriptPage();
+    await loadClientPositions(clientId);
   } catch (e) { toast(e.message, 'error'); }
 }
 
 async function uploadScriptDoc(positionId, input) {
   const file = input.files?.[0];
   if (!file) return;
-  // Show inline loading on the label button
   const label = input.closest('label');
   const origText = label?.textContent?.trim();
   if (label) { label.textContent = 'Uploading…'; label.style.pointerEvents = 'none'; label.style.opacity = '0.6'; }
@@ -1751,7 +1787,7 @@ async function uploadScriptDoc(positionId, input) {
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || 'Upload failed');
     toast('Document uploaded', 'success');
-    await loadScriptPage();
+    if (_currentScriptClientId) await loadClientPositions(_currentScriptClientId);
   } catch (e) {
     toast(e.message, 'error');
     if (label) { label.textContent = origText || 'Upload'; label.style.pointerEvents = ''; label.style.opacity = ''; }
@@ -1762,7 +1798,7 @@ async function viewScriptDoc(positionId, fileName) {
   try {
     const data = await apiJSON('GET', `/api/script/position/${positionId}/doc-url`);
     if (!data.downloadUrl) return toast('Document not available', 'error');
-    const ext = (data.ext || (fileName.split('.').pop()) || 'pdf').toLowerCase();
+    const ext = (data.ext || fileName.split('.').pop() || 'pdf').toLowerCase();
     const enc = encodeURIComponent(data.downloadUrl);
     const viewerSrc = (ext === 'doc' || ext === 'docx')
       ? `https://view.officeapps.live.com/op/embed.aspx?src=${enc}`
