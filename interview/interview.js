@@ -107,9 +107,10 @@ function showQuestion(index) {
           <div class="progress-bar-fill" id="progress-fill" style="width:${((index) / total) * 100}%"></div>
         </div>
 
-        <p class="question-text" id="question-text" style="filter:blur(7px);user-select:none;transition:filter 0.4s ease">
-          Question ${index + 1}: ${esc(q.text)}
-        </p>
+        <div id="question-text" style="filter:blur(7px);user-select:none;transition:filter 0.4s ease">
+          <p style="font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:6px">Question ${index + 1}</p>
+          <p class="question-text">${esc(q.text)}</p>
+        </div>
         <p id="question-hint" class="text-sm text-muted" style="margin-top:-4px;margin-bottom:4px">
           🔒 Question will be revealed when you press Record
         </p>
