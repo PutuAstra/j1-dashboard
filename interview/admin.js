@@ -1258,7 +1258,7 @@ function renderAnalysisPanel(analysis, token) {
   `).join('');
 
   return `
-    <div id="analysis-panel" style="margin-top:24px;border-top:1px solid var(--border);padding-top:20px">
+    <div id="analysis-panel">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
         <h3 style="margin:0;font-size:15px">English Analysis</h3>
         <div style="display:flex;gap:8px;align-items:center">
@@ -1476,7 +1476,7 @@ async function runAnalysis(token) {
 
   // Show loading state
   const loadingHTML = `
-    <div id="analysis-panel" style="margin-top:24px;border-top:1px solid var(--border);padding-top:20px;text-align:center">
+    <div id="analysis-panel" style="text-align:center">
       <div class="spinner" style="margin:0 auto 12px"></div>
       <p class="text-muted text-sm">Transcribing recordings and analyzing English…</p>
       <p class="text-muted" style="font-size:11px">This may take 20–40 seconds</p>
@@ -1501,7 +1501,7 @@ async function runAnalysis(token) {
   } catch (e) {
     const newPanel = document.getElementById('analysis-panel');
     if (newPanel) newPanel.outerHTML = `
-      <div id="analysis-panel" style="margin-top:24px;border-top:1px solid var(--border);padding-top:20px">
+      <div id="analysis-panel">
         <p style="color:var(--red);font-size:13px">Analysis failed: ${esc(e.message)}</p>
         <button class="btn btn-outline" style="font-size:12px;padding:4px 12px"
           onclick="runAnalysis('${token}')">Try again</button>
