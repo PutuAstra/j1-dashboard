@@ -402,11 +402,18 @@ tr:hover td { background: var(--card-2); }
   margin-bottom: 20px;
 }
 
-.camera-wrap video,
-.camera-wrap canvas {
+.camera-wrap video {
   width: 100%;
   height: 100%;
   object-fit: cover;
+}
+
+/* Canvas fills the wrap without cropping — object-fit:cover clips top/bottom
+   for non-16:9 webcams and hides the watermark logo drawn near the top edge */
+.camera-wrap canvas {
+  width: 100%;
+  height: 100%;
+  object-fit: fill;
 }
 
 .timer-overlay {
