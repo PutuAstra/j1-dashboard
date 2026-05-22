@@ -610,35 +610,22 @@ function startCountdown() {
       return null;
     }
 
-    // Two chained utterances: preamble → question text.
-    // Splitting avoids browsers that fire onend at sentence boundaries
-    // (period triggers sentence-end in some TTS engines).
+    // Single utterance — avoids all mobile chaining/timing issues.
+    // The "..." ellipsis creates a natural pause between preamble and question
+    // without relying on chained speak() calls (which fail silently on mobile).
     function doSpeak(voice) {
-      function makeUtt(text) {
-        const u = new SpeechSynthesisUtterance(text);
-        if (voice) u.voice = voice;
-        u.rate   = 0.88;
-        u.pitch  = 0.95;
-        u.volume = 1;
-        return u;
-      }
-
       const numWords = ['one','two','three','four','five','six','seven','eight','nine','ten'];
       const qNum = numWords[currentQ] || String(currentQ + 1);
-      const utt1 = makeUtt(`Question number ${qNum}.`);
-      const utt2 = makeUtt(q.text || '');
-
-      // Only start countdown after the QUESTION (utt2) finishes
-      utt2.onend   = () => beginCountdown();
-      utt2.onerror = () => beginCountdown();
-
-      // When preamble ends, speak the question.
-      // setTimeout avoids a Chrome bug where speak() called synchronously
-      // inside onend silently drops on the first utterance.
-      utt1.onend   = () => setTimeout(() => window.speechSynthesis.speak(utt2), 120);
-      utt1.onerror = () => setTimeout(() => window.speechSynthesis.speak(utt2), 120);
-
-      window.speechSynthesis.speak(utt1);
+      const utt = new SpeechSynthesisUtterance(
+        `Question number ${qNum}... ${q.text || ''}`
+      );
+      if (voice) utt.voice = voice;
+      utt.rate   = 0.88;
+      utt.pitch  = 0.95;
+      utt.volume = 1;
+      utt.onend   = () => beginCountdown();
+      utt.onerror = () => beginCountdown();
+      window.speechSynthesis.speak(utt);
     }
 
     // Voices may not be loaded yet on first call — wait if needed
