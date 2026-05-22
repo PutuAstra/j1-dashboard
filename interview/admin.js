@@ -228,7 +228,7 @@ function renderInterviewCard(interview) {
           <button class="btn btn-primary" onclick="openSessions('${interview.id}', '${esc(interview.title)}', 'candidates')">Candidates</button>
           <button class="btn btn-outline" onclick="openSessions('${interview.id}', '${esc(interview.title)}', 'invite')">Invite</button>
           <button class="btn btn-ghost" style="padding:6px 10px;font-size:15px" title="Edit" onclick="openEditInterview('${interview.id}')">✏</button>
-          <button class="btn btn-ghost" style="padding:6px 10px;font-size:15px;color:var(--red)" title="Delete" onclick="deleteInterview('${interview.id}')">🗑</button>
+          <button class="btn btn-ghost" style="padding:6px 10px;font-size:15px;color:var(--muted)" title="Delete" onclick="deleteInterview('${interview.id}')">🗑</button>
         </div>
       </div>
     </div>
