@@ -85,7 +85,7 @@ function showIntro() {
       </div>
 
       <button class="btn btn-primary btn-lg mt-24" onclick="showSetup()">
-        Start Interview
+        Setup &amp; Preview
       </button>
     </div>`;
 }
