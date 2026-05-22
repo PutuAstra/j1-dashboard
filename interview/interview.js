@@ -518,26 +518,53 @@ function startCountdown() {
   if (hint) hint.style.display = 'none';
 
   document.getElementById('record-btn').disabled = true;
-  let count = 3;
 
-  showOverlay(`
-    <div class="countdown-overlay" id="countdown-overlay">
-      <div class="countdown-number" id="countdown-num">${count}</div>
-      <div class="countdown-label">Get ready…</div>
-    </div>`);
+  const q = interview.questions[currentQ];
 
-  const tick = setInterval(() => {
-    count--;
-    const numEl = document.getElementById('countdown-num');
-    if (!numEl) return clearInterval(tick);
-    if (count <= 0) {
-      clearInterval(tick);
-      clearOverlay();
-      startRecording();
-    } else {
-      numEl.textContent = count;
-    }
-  }, 1000);
+  // ── Step 2: 3-2-1 countdown → start recording ────────────────
+  function beginCountdown() {
+    let count = 3;
+    showOverlay(`
+      <div class="countdown-overlay" id="countdown-overlay">
+        <div class="countdown-number" id="countdown-num">${count}</div>
+        <div class="countdown-label">Get ready…</div>
+      </div>`);
+
+    const tick = setInterval(() => {
+      count--;
+      const numEl = document.getElementById('countdown-num');
+      if (!numEl) return clearInterval(tick);
+      if (count <= 0) {
+        clearInterval(tick);
+        clearOverlay();
+        startRecording();
+      } else {
+        numEl.textContent = count;
+      }
+    }, 1000);
+  }
+
+  // ── Step 1: read question aloud, then countdown ───────────────
+  if ('speechSynthesis' in window) {
+    window.speechSynthesis.cancel(); // clear any queued speech first
+
+    showOverlay(`
+      <div class="countdown-overlay" id="countdown-overlay">
+        <div style="font-size:36px;margin-bottom:8px">🔊</div>
+        <div class="countdown-label">Reading question…</div>
+      </div>`);
+
+    const utterance = new SpeechSynthesisUtterance(q.text);
+    utterance.rate  = 0.92;  // slightly slower for clarity
+    utterance.pitch = 1;
+    utterance.volume = 1;
+    utterance.onend   = () => beginCountdown();
+    utterance.onerror = () => beginCountdown(); // fallback if TTS fails
+    window.speechSynthesis.speak(utterance);
+  } else {
+    // Browser doesn't support TTS — go straight to countdown
+    beginCountdown();
+  }
 }
 
 function startRecording() {
