@@ -208,8 +208,9 @@ async function loadSegmentation(vid) {
     if (status) { status.textContent = '✓ AI ready — select a background above'; status.style.color = '#22c55e'; }
   } catch (e) {
     console.warn('[VirtualBg]', e.message);
-    if (status) status.textContent = 'AI background unavailable — None only';
-    document.querySelectorAll('.bg-opt:not([data-bg="none"]), .bg-swatch').forEach(b => {
+    // Blur works without AI (portrait-mode fallback); only colour swatches need AI
+    if (status) status.textContent = 'Blur ✓ (no AI) · Solid colours need AI (unavailable)';
+    document.querySelectorAll('.bg-swatch').forEach(b => {
       b.style.opacity = '0.35'; b.style.pointerEvents = 'none';
     });
   }
@@ -226,15 +227,50 @@ function drawWatermark() {
   bgCtx.restore();
 }
 
+// Portrait-mode blur — no AI required
+// Blurs full frame then composites a sharp oval over the centre
+function applySimpleBlur(vid, w, h) {
+  // Step 1: blurred background
+  bgCtx.save();
+  bgCtx.filter = 'blur(18px)';
+  bgCtx.drawImage(vid, -24, -24, w + 48, h + 48); // overdraw to hide blur edge artefacts
+  bgCtx.restore();
+
+  // Step 2: sharp centre oval (where the person sits)
+  const cx = w / 2, cy = h * 0.44;
+  const r1 = Math.min(w, h) * 0.30;
+  const r2 = Math.min(w, h) * 0.58;
+  const grd = bgCtx.createRadialGradient(cx, cy, r1, cx, cy, r2);
+  grd.addColorStop(0,   'rgba(0,0,0,1)');
+  grd.addColorStop(0.6, 'rgba(0,0,0,0.85)');
+  grd.addColorStop(1,   'rgba(0,0,0,0)');
+
+  const tmp = document.createElement('canvas');
+  tmp.width = w; tmp.height = h;
+  const tc = tmp.getContext('2d');
+  tc.drawImage(vid, 0, 0, w, h);
+  tc.globalCompositeOperation = 'destination-in';
+  tc.fillStyle = grd;
+  tc.fillRect(0, 0, w, h);
+
+  bgCtx.drawImage(tmp, 0, 0, w, h);
+}
+
 function startBgLoop(vid) {
   function loop(ts) {
     if (!bgCanvas || !bgCtx) return;
     const w = bgCanvas.width, h = bgCanvas.height;
     if (!vid.videoWidth) { segLoopId = requestAnimationFrame(loop); return; }
-    if (bgMode === 'none' || !segReady) {
+
+    if (bgMode === 'none') {
       bgCtx.drawImage(vid, 0, 0, w, h);
       drawWatermark();
-    } else if (ts - lastSendTs >= 66 && segModel) {
+    } else if (bgMode === 'blur' && !segReady) {
+      // Fallback portrait-mode blur (works in every browser, no AI)
+      applySimpleBlur(vid, w, h);
+      drawWatermark();
+    } else if (segReady && ts - lastSendTs >= 66 && segModel) {
+      // AI segmentation path (proper background replacement/blur)
       lastSendTs = ts;
       segModel.send({ image: vid }).catch(() => {});
     }
