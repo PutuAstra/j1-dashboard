@@ -240,16 +240,19 @@ function ensureTmp(w, h) {
 
 // Portrait-mode blur — no AI required
 function applySimpleBlur(vid, w, h) {
+  // Strong background blur
   bgCtx.save();
-  bgCtx.filter = 'blur(18px)';
-  bgCtx.drawImage(vid, -24, -24, w + 48, h + 48);
+  bgCtx.filter = 'blur(24px)';
+  bgCtx.drawImage(vid, -32, -32, w + 64, h + 64);
   bgCtx.restore();
-  const cx = w / 2, cy = h * 0.44;
-  const r1 = Math.min(w, h) * 0.30, r2 = Math.min(w, h) * 0.58;
+  // Tight sharp oval over the person — narrower so edges/chair hide behind blur
+  const cx = w / 2, cy = h * 0.40;
+  const r1 = Math.min(w, h) * 0.22;  // inner fully-sharp radius (tighter)
+  const r2 = Math.min(w, h) * 0.46;  // outer fade radius (tighter)
   const grd = bgCtx.createRadialGradient(cx, cy, r1, cx, cy, r2);
-  grd.addColorStop(0, 'rgba(0,0,0,1)');
-  grd.addColorStop(0.65, 'rgba(0,0,0,0.85)');
-  grd.addColorStop(1, 'rgba(0,0,0,0)');
+  grd.addColorStop(0,    'rgba(0,0,0,1)');
+  grd.addColorStop(0.55, 'rgba(0,0,0,0.9)');
+  grd.addColorStop(1,    'rgba(0,0,0,0)');
   const { tc } = ensureTmp(w, h);
   tc.clearRect(0, 0, w, h);
   tc.drawImage(vid, 0, 0, w, h);
@@ -262,7 +265,12 @@ function applySimpleBlur(vid, w, h) {
 
 // Draw frame using the stored AI segmentation mask
 function drawWithMask(vid, w, h) {
-  if (!lastSegMask) { bgCtx.drawImage(vid, 0, 0, w, h); return; }
+  if (!lastSegMask) {
+    // Mask not yet available — use blur fallback for blur mode, raw video otherwise
+    if (bgMode === 'blur') { applySimpleBlur(vid, w, h); }
+    else { bgCtx.drawImage(vid, 0, 0, w, h); }
+    return;
+  }
   // Draw background
   if (bgMode === 'blur') {
     bgCtx.save();
@@ -339,27 +347,39 @@ function startMicMeter() {
   } catch (e) {}
 }
 
+// Build a WAV blob for a single tone — no AudioContext needed, bypasses autoplay policy
+function _makeBeepWav(freq, duration) {
+  const SR = 44100;
+  const n = Math.floor(SR * duration);
+  const buf = new ArrayBuffer(44 + n * 2);
+  const v = new DataView(buf);
+  const str = (off, s) => { for (let i = 0; i < s.length; i++) v.setUint8(off + i, s.charCodeAt(i)); };
+  str(0, 'RIFF'); v.setUint32(4, 36 + n * 2, true);
+  str(8, 'WAVE'); str(12, 'fmt ');
+  v.setUint32(16, 16, true); v.setUint16(20, 1, true); v.setUint16(22, 1, true);
+  v.setUint32(24, SR, true); v.setUint32(28, SR * 2, true);
+  v.setUint16(32, 2, true); v.setUint16(34, 16, true);
+  str(36, 'data'); v.setUint32(40, n * 2, true);
+  for (let i = 0; i < n; i++) {
+    const t = i / SR;
+    const fade = Math.min(t * 40, 1, (duration - t) * 40); // fast fade in/out to avoid clicks
+    v.setInt16(44 + i * 2, Math.round(0.6 * fade * 32767 * Math.sin(2 * Math.PI * freq * t)), true);
+  }
+  return URL.createObjectURL(new Blob([buf], { type: 'audio/wav' }));
+}
+
 function testSpeakers() {
-  // Always use a fresh AudioContext — avoids suspended/closed state issues
-  try {
-    const actx = new (window.AudioContext || window.webkitAudioContext)();
-    const play = () => {
-      const now = actx.currentTime;
-      [440, 554, 659].forEach((freq, i) => {
-        const osc = actx.createOscillator();
-        const gain = actx.createGain();
-        osc.connect(gain); gain.connect(actx.destination);
-        osc.frequency.value = freq;
-        gain.gain.setValueAtTime(0.5, now + i * 0.25);
-        gain.gain.exponentialRampToValueAtTime(0.0001, now + i * 0.25 + 0.23);
-        osc.start(now + i * 0.25);
-        osc.stop(now + i * 0.25 + 0.25);
-      });
-      setTimeout(() => actx.close(), 1500);
-    };
-    // Resume is needed in Chrome (autoplay policy)
-    if (actx.state === 'suspended') { actx.resume().then(play); } else { play(); }
-  } catch (e) { console.error('Speaker test:', e); }
+  const tones = [440, 554, 659];
+  let i = 0;
+  function next() {
+    if (i >= tones.length) return;
+    const url = _makeBeepWav(tones[i], 0.28);
+    const a = new Audio(url);
+    a.onended = () => { URL.revokeObjectURL(url); i++; setTimeout(next, 60); };
+    a.onerror  = () => { URL.revokeObjectURL(url); i++; setTimeout(next, 60); };
+    a.play().catch(() => {});
+  }
+  next();
 }
 
 function continueToInterview() {
@@ -368,8 +388,8 @@ function continueToInterview() {
   if (micAnalyser) { micAnalyser.disconnect(); micAnalyser = null; }
   if (setupAudioCtx) { setupAudioCtx.close().catch(() => {}); setupAudioCtx = null; }
 
-  if (bgMode !== 'none' && bgCanvas && segReady) {
-    // Canvas stream: video from bgCanvas + audio from mediaStream
+  if (bgMode !== 'none' && bgCanvas) {
+    // Canvas stream: video from bgCanvas (with bg applied) + audio from mediaStream
     canvasStream = bgCanvas.captureStream(30);
     mediaStream.getAudioTracks().forEach(t => canvasStream.addTrack(t));
   } else {
