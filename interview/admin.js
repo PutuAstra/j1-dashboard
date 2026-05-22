@@ -1396,8 +1396,12 @@ async function saveReviewOutcome(token) {
   try {
     await apiJSON('POST', `/api/session/${token}/review`, { notes, decision, stars });
     toast('Review saved', 'success');
-    // Refresh session list so decision badge shows
-    if (currentInterviewId) await loadSessions(currentInterviewId);
+    closeModal('modal-review');
+    // Refresh session list so decision badge + stars show on the card
+    if (currentInterviewId) {
+      switchSessionTab('candidates');
+      await loadSessions(currentInterviewId);
+    }
   } catch (e) { toast(e.message, 'error'); }
 }
 
