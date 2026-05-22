@@ -23,6 +23,9 @@ let segReady = false;
 let segModel = null;
 let segLoopId = null;
 let lastSendTs = 0;
+let lastSegMask = null;   // stores latest segmentation mask for use in draw loop
+let tmpCanvas = null;     // reusable off-screen canvas (avoid creating per-frame)
+let tmpCtx = null;
 let canvasStream = null;
 let micAnalyser = null;
 let micMeterFrameId = null;
@@ -227,33 +230,57 @@ function drawWatermark() {
   bgCtx.restore();
 }
 
+// Ensure a reusable temp canvas the right size
+function ensureTmp(w, h) {
+  if (!tmpCanvas) { tmpCanvas = document.createElement('canvas'); tmpCtx = tmpCanvas.getContext('2d'); }
+  if (tmpCanvas.width !== w) tmpCanvas.width = w;
+  if (tmpCanvas.height !== h) tmpCanvas.height = h;
+  return { tc: tmpCtx, tw: w, th: h };
+}
+
 // Portrait-mode blur — no AI required
-// Blurs full frame then composites a sharp oval over the centre
 function applySimpleBlur(vid, w, h) {
-  // Step 1: blurred background
   bgCtx.save();
   bgCtx.filter = 'blur(18px)';
-  bgCtx.drawImage(vid, -24, -24, w + 48, h + 48); // overdraw to hide blur edge artefacts
+  bgCtx.drawImage(vid, -24, -24, w + 48, h + 48);
   bgCtx.restore();
-
-  // Step 2: sharp centre oval (where the person sits)
   const cx = w / 2, cy = h * 0.44;
-  const r1 = Math.min(w, h) * 0.30;
-  const r2 = Math.min(w, h) * 0.58;
+  const r1 = Math.min(w, h) * 0.30, r2 = Math.min(w, h) * 0.58;
   const grd = bgCtx.createRadialGradient(cx, cy, r1, cx, cy, r2);
-  grd.addColorStop(0,   'rgba(0,0,0,1)');
-  grd.addColorStop(0.6, 'rgba(0,0,0,0.85)');
-  grd.addColorStop(1,   'rgba(0,0,0,0)');
-
-  const tmp = document.createElement('canvas');
-  tmp.width = w; tmp.height = h;
-  const tc = tmp.getContext('2d');
+  grd.addColorStop(0, 'rgba(0,0,0,1)');
+  grd.addColorStop(0.65, 'rgba(0,0,0,0.85)');
+  grd.addColorStop(1, 'rgba(0,0,0,0)');
+  const { tc } = ensureTmp(w, h);
+  tc.clearRect(0, 0, w, h);
   tc.drawImage(vid, 0, 0, w, h);
   tc.globalCompositeOperation = 'destination-in';
   tc.fillStyle = grd;
   tc.fillRect(0, 0, w, h);
+  tc.globalCompositeOperation = 'source-over';
+  bgCtx.drawImage(tmpCanvas, 0, 0, w, h);
+}
 
-  bgCtx.drawImage(tmp, 0, 0, w, h);
+// Draw frame using the stored AI segmentation mask
+function drawWithMask(vid, w, h) {
+  if (!lastSegMask) { bgCtx.drawImage(vid, 0, 0, w, h); return; }
+  // Draw background
+  if (bgMode === 'blur') {
+    bgCtx.save();
+    bgCtx.filter = 'blur(18px)';
+    bgCtx.drawImage(vid, -24, -24, w + 48, h + 48);
+    bgCtx.restore();
+  } else if (BG_FILLS[bgMode]) {
+    bgCtx.fillStyle = BG_FILLS[bgMode];
+    bgCtx.fillRect(0, 0, w, h);
+  }
+  // Cut out person using stored mask + current video frame
+  const { tc } = ensureTmp(w, h);
+  tc.clearRect(0, 0, w, h);
+  tc.drawImage(lastSegMask, 0, 0, w, h);
+  tc.globalCompositeOperation = 'source-in';
+  tc.drawImage(vid, 0, 0, w, h);
+  tc.globalCompositeOperation = 'source-over';
+  bgCtx.drawImage(tmpCanvas, 0, 0, w, h);
 }
 
 function startBgLoop(vid) {
@@ -264,44 +291,25 @@ function startBgLoop(vid) {
 
     if (bgMode === 'none') {
       bgCtx.drawImage(vid, 0, 0, w, h);
-      drawWatermark();
     } else if (bgMode === 'blur' && !segReady) {
-      // Fallback portrait-mode blur (works in every browser, no AI)
       applySimpleBlur(vid, w, h);
-      drawWatermark();
-    } else if (segReady && ts - lastSendTs >= 66 && segModel) {
-      // AI segmentation path (proper background replacement/blur)
-      lastSendTs = ts;
-      segModel.send({ image: vid }).catch(() => {});
+    } else if (segReady) {
+      // Throttle segmentation sends; draw every frame using stored mask
+      if (ts - lastSendTs >= 66 && segModel) {
+        lastSendTs = ts;
+        segModel.send({ image: vid }).catch(() => {});
+      }
+      drawWithMask(vid, w, h);
     }
+    drawWatermark();
     segLoopId = requestAnimationFrame(loop);
   }
   segLoopId = requestAnimationFrame(loop);
 }
 
 function handleSegResults(results) {
-  if (!bgCanvas || !bgCtx || bgMode === 'none') return;
-  const w = bgCanvas.width, h = bgCanvas.height;
-  // Cut out person using segmentation mask
-  const tmp = document.createElement('canvas');
-  tmp.width = w; tmp.height = h;
-  const tc = tmp.getContext('2d');
-  tc.drawImage(results.segmentationMask, 0, 0, w, h);
-  tc.globalCompositeOperation = 'source-in';
-  tc.drawImage(results.image, 0, 0, w, h);
-  // Draw background
-  if (bgMode === 'blur') {
-    bgCtx.save();
-    bgCtx.filter = 'blur(18px)';
-    bgCtx.drawImage(results.image, -24, -24, w + 48, h + 48);
-    bgCtx.restore();
-  } else if (BG_FILLS[bgMode]) {
-    bgCtx.fillStyle = BG_FILLS[bgMode];
-    bgCtx.fillRect(0, 0, w, h);
-  }
-  // Draw person on top
-  bgCtx.drawImage(tmp, 0, 0, w, h);
-  drawWatermark();
+  // Just store the mask; drawing happens in the animation loop every frame
+  lastSegMask = results.segmentationMask;
 }
 
 function setBg(mode) {
@@ -331,25 +339,27 @@ function startMicMeter() {
   } catch (e) {}
 }
 
-async function testSpeakers() {
+function testSpeakers() {
+  // Always use a fresh AudioContext — avoids suspended/closed state issues
   try {
-    // Reuse the mic AudioContext if available; browsers limit concurrent contexts
-    const actx = setupAudioCtx || new (window.AudioContext || window.webkitAudioContext)();
-    await actx.resume(); // browsers suspend AudioContext until user gesture
-    const now = actx.currentTime;
-    [440, 554, 659].forEach((freq, i) => {
-      const osc = actx.createOscillator();
-      const gain = actx.createGain();
-      osc.connect(gain); gain.connect(actx.destination);
-      osc.frequency.value = freq;
-      gain.gain.setValueAtTime(0.4, now + i * 0.25);
-      gain.gain.exponentialRampToValueAtTime(0.001, now + i * 0.25 + 0.22);
-      osc.start(now + i * 0.25);
-      osc.stop(now + i * 0.25 + 0.25);
-    });
-  } catch (e) {
-    console.error('Speaker test failed:', e);
-  }
+    const actx = new (window.AudioContext || window.webkitAudioContext)();
+    const play = () => {
+      const now = actx.currentTime;
+      [440, 554, 659].forEach((freq, i) => {
+        const osc = actx.createOscillator();
+        const gain = actx.createGain();
+        osc.connect(gain); gain.connect(actx.destination);
+        osc.frequency.value = freq;
+        gain.gain.setValueAtTime(0.5, now + i * 0.25);
+        gain.gain.exponentialRampToValueAtTime(0.0001, now + i * 0.25 + 0.23);
+        osc.start(now + i * 0.25);
+        osc.stop(now + i * 0.25 + 0.25);
+      });
+      setTimeout(() => actx.close(), 1500);
+    };
+    // Resume is needed in Chrome (autoplay policy)
+    if (actx.state === 'suspended') { actx.resume().then(play); } else { play(); }
+  } catch (e) { console.error('Speaker test:', e); }
 }
 
 function continueToInterview() {
