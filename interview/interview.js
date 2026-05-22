@@ -599,9 +599,11 @@ function startCountdown() {
       utt2.onend   = () => beginCountdown();
       utt2.onerror = () => beginCountdown();
 
-      // When preamble ends, speak the question
-      utt1.onend   = () => window.speechSynthesis.speak(utt2);
-      utt1.onerror = () => window.speechSynthesis.speak(utt2);
+      // When preamble ends, speak the question.
+      // setTimeout avoids a Chrome bug where speak() called synchronously
+      // inside onend silently drops on the first utterance.
+      utt1.onend   = () => setTimeout(() => window.speechSynthesis.speak(utt2), 120);
+      utt1.onerror = () => setTimeout(() => window.speechSynthesis.speak(utt2), 120);
 
       window.speechSynthesis.speak(utt1);
     }
