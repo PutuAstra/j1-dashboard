@@ -590,7 +590,9 @@ function startCountdown() {
         return u;
       }
 
-      const utt1 = makeUtt('Here is your question.');
+      const numWords = ['one','two','three','four','five','six','seven','eight','nine','ten'];
+      const qNum = numWords[currentQ] || String(currentQ + 1);
+      const utt1 = makeUtt(`Question number ${qNum}.`);
       const utt2 = makeUtt(q.text || '');
 
       // Only start countdown after the QUESTION (utt2) finishes
