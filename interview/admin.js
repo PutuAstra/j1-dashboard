@@ -1668,6 +1668,34 @@ async function loadClientLogoAvatar(clientId, elId) {
   } catch { /* silently skip */ }
 }
 
+async function updateClientLogo(clientId, input) {
+  const file = input.files?.[0];
+  if (!file) return;
+  const avEl = document.getElementById(`sc-hdr-av-${clientId}`);
+  if (avEl) avEl.style.opacity = '0.4';
+  try {
+    const form = new FormData();
+    form.append('file', file);
+    const res = await fetch(`${WORKER_URL}/api/script/client/${clientId}/upload-logo`, {
+      method: 'POST',
+      headers: { 'X-Admin-Key': adminKey },
+      body: form,
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Upload failed');
+    toast('Logo updated', 'success');
+    // Mark in cache so list reloads the logo
+    const c = _scriptClients.find(c => c.id === clientId);
+    if (c) c.logoItemId = 'updated';
+    // Reload avatar in header
+    if (avEl) avEl.style.opacity = '1';
+    loadClientLogoAvatar(clientId, `sc-hdr-av-${clientId}`);
+  } catch (e) {
+    toast(e.message, 'error');
+    if (avEl) avEl.style.opacity = '1';
+  }
+}
+
 // ── Level 2: Positions inside a client ───────────────────────
 
 async function openScriptClient(clientId) {
@@ -1680,7 +1708,15 @@ async function openScriptClient(clientId) {
       <div style="display:flex;align-items:center;gap:10px;margin-bottom:20px">
         <button class="btn btn-ghost" style="padding:5px 12px;font-size:13px" onclick="renderScriptPage()">← Interview Scripts</button>
         <span style="color:var(--muted);font-size:14px">›</span>
-        <div id="sc-hdr-av-${clientId}" style="width:32px;height:32px;border-radius:50%;background:var(--accent);display:flex;align-items:center;justify-content:center;flex-shrink:0;overflow:hidden;font-size:11px;font-weight:700;color:#fff">${initials}</div>
+        <div style="position:relative;flex-shrink:0;width:36px;height:36px;cursor:pointer" title="Click to update logo"
+          onclick="document.getElementById('hdr-logo-inp-${clientId}').click()"
+          onmouseenter="document.getElementById('sc-hdr-ov-${clientId}').style.opacity='1'"
+          onmouseleave="document.getElementById('sc-hdr-ov-${clientId}').style.opacity='0'">
+          <div id="sc-hdr-av-${clientId}" style="width:36px;height:36px;border-radius:50%;background:var(--accent);display:flex;align-items:center;justify-content:center;overflow:hidden;font-size:11px;font-weight:700;color:#fff">${initials}</div>
+          <div id="sc-hdr-ov-${clientId}" style="position:absolute;inset:0;border-radius:50%;background:rgba(0,0,0,0.45);display:flex;align-items:center;justify-content:center;opacity:0;transition:opacity 0.15s;pointer-events:none;font-size:13px">📷</div>
+          <input type="file" id="hdr-logo-inp-${clientId}" accept="image/*" style="display:none"
+            onchange="updateClientLogo('${clientId}', this)">
+        </div>
         <span style="font-size:15px;font-weight:700">${esc(client?.name || '')}</span>
       </div>
       <div class="flex justify-between items-center mb-16">
