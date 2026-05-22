@@ -1411,10 +1411,14 @@ async function openReview(token, candidateName) {
       </div>`;
 
     content.innerHTML = `
-      <div style="flex:1;min-width:0;overflow-y:auto;padding:20px;display:flex;flex-direction:column;gap:4px;border-right:1px solid var(--border)">
-        <h3 style="margin:0 0 12px;font-size:14px">Recordings</h3>
-        ${videosHTML}
-        ${analysisSection}
+      <div style="flex:1;min-width:0;display:flex;flex-direction:column;overflow:hidden;border-right:1px solid var(--border)">
+        <div style="flex:1;overflow-y:auto;padding:20px 20px 12px">
+          <h3 style="margin:0 0 12px;font-size:14px">Recordings</h3>
+          ${videosHTML}
+        </div>
+        <div style="flex-shrink:0;padding:14px 20px;border-top:1px solid var(--border);background:var(--card)">
+          ${analysisSection}
+        </div>
       </div>
       <div style="flex:1;min-width:0;overflow-y:auto;padding:20px;display:flex;flex-direction:column;gap:16px">
         ${resumeSection}
