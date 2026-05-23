@@ -56,7 +56,7 @@ function doLogout() {
 function showApp() {
   document.getElementById('login-gate').style.display = 'none';
   document.getElementById('app').style.display = 'block';
-  const valid = ['ow-list', 'ow-create', 'tw-list', 'tw-schedule', 'scripts', 'booking', 'booking-create'];
+  const valid = ['ow-list', 'ow-create', 'tw-list', 'tw-schedule', 'scripts', 'booking', 'booking-create', 'holidays'];
   const hash  = window.location.hash.replace('#', '');
   gotoPage(valid.includes(hash) ? hash : 'ow-list');
 }
@@ -101,6 +101,7 @@ function gotoPage(page) {
   const activeNav = ['ow-create', 'ow-list'].includes(page) ? 'ow-list'
                   : page === 'scripts' ? 'scripts'
                   : ['booking', 'booking-create'].includes(page) ? 'booking'
+                  : page === 'holidays' ? 'holidays'
                   : 'tw-list';
   document.querySelectorAll('.sidebar-item').forEach(btn =>
     btn.classList.toggle('active', btn.dataset.page === activeNav)
@@ -115,6 +116,7 @@ function gotoPage(page) {
   if (page === 'scripts')        renderScriptPage();
   if (page === 'booking')        renderBookingPage();
   if (page === 'booking-create') renderCreateBookingLinkPage();
+  if (page === 'holidays')       renderHolidaysPage();
 }
 
 // ── One-Way: List page ────────────────────────────────────────
@@ -2301,6 +2303,297 @@ function applyRangesToAllDays(sourceDayIdx) {
 
   document.getElementById('slot-rules-editor').innerHTML = renderSlotRulesEditor();
   toast(`Applied ${BOOKING_DAYS[sourceDayIdx]}'s schedule to all ${enabledDays.length} enabled days`, 'success');
+}
+
+// ── Holiday & Closure Settings ────────────────────────────────
+
+let _holidays        = [];
+let _holidaySettings = {};
+
+const COUNTRY_OPTIONS = [
+  ['ID','Indonesia'],['US','United States'],['AU','Australia'],
+  ['GB','United Kingdom'],['SG','Singapore'],['MY','Malaysia'],
+  ['PH','Philippines'],['JP','Japan'],['CN','China'],['IN','India'],
+];
+
+async function renderHolidaysPage() {
+  const main = document.getElementById('admin-main');
+  main.innerHTML = `
+    <div style="max-width:860px">
+      <h2 class="mb-16">Holiday &amp; Closure Settings</h2>
+      <div id="holidays-page-content"><div class="spinner" style="margin:60px auto"></div></div>
+    </div>
+  `;
+  try {
+    const [settings, holidays] = await Promise.all([
+      apiJSON('GET', '/api/holidays/settings').catch(() => ({})),
+      apiJSON('GET', '/api/holidays').catch(() => []),
+    ]);
+    _holidaySettings = settings;
+    _holidays = holidays;
+    renderHolidaysContent();
+  } catch (e) {
+    document.getElementById('holidays-page-content').innerHTML =
+      `<div class="empty-state" style="color:var(--red)">${esc(e.message)}</div>`;
+  }
+}
+
+function renderHolidaysContent() {
+  const el = document.getElementById('holidays-page-content');
+  if (!el) return;
+
+  const s          = _holidaySettings;
+  const autoBlock  = s.autoBlockNational !== false; // default ON
+  const country    = s.country || 'ID';
+  const syncedYears = (s.syncedYears || []).sort();
+  const curYear    = new Date().getFullYear();
+
+  const national = _holidays.filter(h => h.type === 'national').sort((a,b) => a.date.localeCompare(b.date));
+  const custom   = _holidays.filter(h => h.type === 'custom').sort((a,b) => a.date.localeCompare(b.date));
+
+  el.innerHTML = `
+
+    <!-- ── Global Settings ────────────────────────────────── -->
+    <div class="card" style="margin-bottom:16px">
+      <h3 style="margin-bottom:16px">Global Settings</h3>
+
+      <!-- Auto-block toggle -->
+      <div style="display:flex;align-items:flex-start;gap:14px;padding:14px 16px;background:var(--bg);border:1px solid var(--border);border-radius:8px;margin-bottom:16px;cursor:pointer"
+        onclick="document.getElementById('auto-block-cb').click()">
+        <input type="checkbox" id="auto-block-cb" ${autoBlock ? 'checked' : ''}
+          style="accent-color:var(--accent);width:18px;height:18px;flex-shrink:0;margin-top:2px;cursor:pointer"
+          onclick="event.stopPropagation()"
+          onchange="saveHolidaySettings({autoBlockNational:this.checked})" />
+        <div style="flex:1">
+          <div style="font-size:14px;font-weight:600">Automatically block bookings on all active holidays</div>
+          <div style="font-size:12px;color:var(--muted);margin-top:3px;line-height:1.5">
+            When enabled, all candidate-facing booking slots are <strong style="color:var(--text)">wiped for the entire day</strong>
+            on any active holiday — no manual calendar changes needed.
+          </div>
+        </div>
+        <span style="font-size:24px;margin-top:-2px;flex-shrink:0">${autoBlock ? '🛡️' : '⚠️'}</span>
+      </div>
+
+      <!-- Sync row -->
+      <div style="display:flex;align-items:flex-end;gap:10px;flex-wrap:wrap">
+        <div>
+          <label style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;color:var(--muted);display:block;margin-bottom:5px">Country</label>
+          <select id="sync-country"
+            style="background:var(--card);border:1px solid var(--border);border-radius:6px;padding:7px 12px;color:var(--text);font-size:13px">
+            ${COUNTRY_OPTIONS.map(([code, name]) =>
+              `<option value="${code}" ${code === country ? 'selected' : ''}>${name} (${code})</option>`
+            ).join('')}
+          </select>
+        </div>
+        <div>
+          <label style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;color:var(--muted);display:block;margin-bottom:5px">Year</label>
+          <select id="sync-year"
+            style="background:var(--card);border:1px solid var(--border);border-radius:6px;padding:7px 12px;color:var(--text);font-size:13px">
+            ${[curYear-1, curYear, curYear+1].map(y =>
+              `<option value="${y}" ${y === curYear ? 'selected' : ''}>${y}${syncedYears.includes(y) ? ' ✓' : ''}</option>`
+            ).join('')}
+          </select>
+        </div>
+        <button class="btn btn-outline" id="sync-btn" onclick="syncHolidays()" style="font-size:13px;white-space:nowrap">
+          🔄 Sync National Holidays
+        </button>
+        <span style="font-size:12px;color:var(--muted);align-self:center">
+          ${syncedYears.length
+            ? `<span style="color:var(--green)">✓</span> Synced: ${syncedYears.join(', ')}`
+            : 'No years synced yet — click Sync to import'}
+        </span>
+      </div>
+      <p style="font-size:11px;color:var(--muted);margin-top:10px">
+        Powered by <strong style="color:var(--text-2)">Nager.Date</strong> — free public holiday API, no key required.
+      </p>
+    </div>
+
+    <!-- ── Custom Closures ─────────────────────────────────── -->
+    <div class="card" style="margin-bottom:16px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+        <div>
+          <h3>Custom Closures</h3>
+          <div style="font-size:12px;color:var(--muted);margin-top:2px">Company outings, regional leaves, Cuti Bersama, unexpected office closures</div>
+        </div>
+        <button class="btn btn-outline" style="font-size:12px;padding:5px 14px;flex-shrink:0" onclick="toggleAddCustomForm()">+ Add Closure</button>
+      </div>
+
+      <div id="add-custom-form" style="display:none;background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:16px;margin-bottom:14px">
+        <div style="display:grid;grid-template-columns:1fr 180px auto auto;gap:10px;align-items:end">
+          <div>
+            <label style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;color:var(--muted);display:block;margin-bottom:5px">Closure Name *</label>
+            <input type="text" id="custom-name" placeholder="e.g. Company Team Outing" autocomplete="off"
+              style="width:100%;background:var(--card);border:1px solid var(--border);border-radius:6px;padding:7px 12px;color:var(--text);font-size:13px"
+              onkeydown="if(event.key==='Enter')submitCustomHoliday()" />
+          </div>
+          <div>
+            <label style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;color:var(--muted);display:block;margin-bottom:5px">Date *</label>
+            <input type="date" id="custom-date"
+              style="width:100%;background:var(--card);border:1px solid var(--border);border-radius:6px;padding:7px 12px;color:var(--text);font-size:13px" />
+          </div>
+          <label style="display:flex;align-items:center;gap:6px;cursor:pointer;padding-bottom:2px;white-space:nowrap">
+            <input type="checkbox" id="custom-recurring" style="accent-color:var(--accent);width:15px;height:15px;cursor:pointer" />
+            <span style="font-size:13px">♻ Annual</span>
+          </label>
+          <button class="btn btn-primary" style="font-size:13px" onclick="submitCustomHoliday()">Add</button>
+        </div>
+      </div>
+
+      ${!custom.length
+        ? `<div class="empty-state" style="font-size:13px;padding:20px 0">No custom closures yet.</div>`
+        : renderHolidayRows(custom)}
+    </div>
+
+    <!-- ── National Holidays ───────────────────────────────── -->
+    <div class="card">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+        <div>
+          <h3>National Holidays
+            <span style="font-size:12px;font-weight:400;color:var(--muted);margin-left:6px">${national.length} loaded</span>
+          </h3>
+          <div style="font-size:12px;color:var(--muted);margin-top:2px">Imported from Nager.Date — sync each year separately</div>
+        </div>
+        ${national.length ? `
+          <div style="display:flex;gap:6px">
+            <button class="btn btn-ghost" style="font-size:12px;padding:4px 12px" onclick="setBulkHolidayActive('national',true)">Enable All</button>
+            <button class="btn btn-ghost" style="font-size:12px;padding:4px 12px" onclick="setBulkHolidayActive('national',false)">Disable All</button>
+          </div>` : ''}
+      </div>
+      ${!national.length
+        ? `<div class="empty-state" style="font-size:13px;padding:20px 0">
+             No national holidays loaded yet.<br/>
+             <span style="font-size:12px">Use the "Sync National Holidays" button above to import them.</span>
+           </div>`
+        : renderHolidayRows(national)}
+    </div>
+  `;
+}
+
+function renderHolidayRows(list) {
+  return `<div style="display:grid;gap:6px">
+    ${list.map(h => {
+      // Use noon UTC to avoid date-flip on timezone boundaries
+      const d       = new Date(h.date + 'T12:00:00Z');
+      const dateStr = d.toLocaleDateString(undefined, { month:'short', day:'numeric', year:'numeric' });
+      const dayStr  = d.toLocaleDateString(undefined, { weekday:'short' });
+      const isWeekend = [0, 6].includes(d.getUTCDay());
+      return `
+        <div style="display:flex;align-items:center;gap:10px;padding:10px 14px;background:var(--bg);border-radius:8px;
+          border:1px solid ${h.isActive ? 'var(--border)' : 'rgba(51,65,85,0.3)'};
+          opacity:${h.isActive ? '1' : '0.55'};transition:opacity 0.15s">
+          <div style="min-width:90px;flex-shrink:0">
+            <div style="font-size:12px;font-weight:700;color:${h.isActive ? 'var(--accent)' : 'var(--muted)'}">${dateStr}</div>
+            <div style="font-size:11px;color:${isWeekend ? 'var(--muted)' : 'var(--text-2)'}">${dayStr}</div>
+          </div>
+          <div style="flex:1;min-width:0">
+            <div style="font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(h.name)}</div>
+            ${h.nameEn && h.nameEn !== h.name
+              ? `<div style="font-size:11px;color:var(--muted)">${esc(h.nameEn)}</div>` : ''}
+          </div>
+          <div style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end">
+            ${h.isRecurring
+              ? `<span style="font-size:10px;background:rgba(99,102,241,0.15);color:#a5b4fc;padding:2px 8px;border-radius:10px;font-weight:600">♻ Annual</span>` : ''}
+            ${h.type === 'national'
+              ? `<span style="font-size:10px;background:rgba(16,185,129,0.12);color:#34d399;padding:2px 8px;border-radius:10px;font-weight:600">🌏 National</span>`
+              : `<span style="font-size:10px;background:rgba(245,158,11,0.15);color:#fbbf24;padding:2px 8px;border-radius:10px;font-weight:600">🏢 Custom</span>`}
+            <button class="btn btn-ghost" style="font-size:11px;padding:3px 10px;border:1px solid var(--border);${h.isActive ? 'color:var(--green)' : 'color:var(--muted)'}"
+              onclick="toggleHolidayActive('${h.id}',${!h.isActive})" title="${h.isActive ? 'Click to disable' : 'Click to enable'}">
+              ${h.isActive ? '● Active' : '○ Off'}
+            </button>
+            <button class="btn btn-ghost" style="font-size:15px;padding:3px 8px" title="Delete"
+              onclick="deleteHolidayEntry('${h.id}','${esc(h.name).replace(/'/g,"\\'")}')">🗑</button>
+          </div>
+        </div>
+      `;
+    }).join('')}
+  </div>`;
+}
+
+// ── Holiday CRUD ──────────────────────────────────────────────
+
+async function saveHolidaySettings(updates) {
+  try {
+    _holidaySettings = { ..._holidaySettings, ...updates };
+    await apiJSON('PUT', '/api/holidays/settings', _holidaySettings);
+    toast('Settings saved', 'success');
+    renderHolidaysContent();
+  } catch (e) { toast(e.message, 'error'); }
+}
+
+async function syncHolidays() {
+  const year    = parseInt(document.getElementById('sync-year').value);
+  const country = document.getElementById('sync-country').value;
+  const btn     = document.getElementById('sync-btn');
+  btn.disabled  = true;
+  btn.textContent = '🔄 Syncing…';
+  try {
+    const res = await apiJSON('POST', '/api/holidays/sync', { year, country });
+    toast(`✓ ${res.added} new holidays added for ${country} ${year}${res.skipped ? ` · ${res.skipped} already existed` : ''}`, 'success');
+    const [settings, holidays] = await Promise.all([
+      apiJSON('GET', '/api/holidays/settings'),
+      apiJSON('GET', '/api/holidays'),
+    ]);
+    _holidaySettings = settings;
+    _holidays = holidays;
+    renderHolidaysContent();
+  } catch (e) {
+    toast(e.message, 'error');
+    btn.disabled = false;
+    btn.textContent = '🔄 Sync National Holidays';
+  }
+}
+
+function toggleAddCustomForm() {
+  const f = document.getElementById('add-custom-form');
+  f.style.display = f.style.display === 'none' ? 'block' : 'none';
+  if (f.style.display === 'block') document.getElementById('custom-name').focus();
+}
+
+async function submitCustomHoliday() {
+  const name      = document.getElementById('custom-name').value.trim();
+  const date      = document.getElementById('custom-date').value;
+  const recurring = document.getElementById('custom-recurring').checked;
+  if (!name) return toast('Closure name is required', 'error');
+  if (!date) return toast('Date is required', 'error');
+  try {
+    const h = await apiJSON('POST', '/api/holidays', { name, date, isRecurring: recurring, type: 'custom' });
+    _holidays.unshift(h);
+    toast('Custom closure added', 'success');
+    document.getElementById('custom-name').value = '';
+    document.getElementById('custom-date').value = '';
+    document.getElementById('custom-recurring').checked = false;
+    renderHolidaysContent();
+  } catch (e) { toast(e.message, 'error'); }
+}
+
+async function toggleHolidayActive(id, active) {
+  try {
+    const updated = await apiJSON('PUT', `/api/holiday/${id}`, { isActive: active });
+    const idx = _holidays.findIndex(h => h.id === id);
+    if (idx !== -1) _holidays[idx] = updated;
+    renderHolidaysContent();
+  } catch (e) { toast(e.message, 'error'); }
+}
+
+async function deleteHolidayEntry(id, name) {
+  if (!confirm(`Delete "${name}"?`)) return;
+  try {
+    await apiJSON('DELETE', `/api/holiday/${id}`);
+    _holidays = _holidays.filter(h => h.id !== id);
+    toast('Deleted', 'success');
+    renderHolidaysContent();
+  } catch (e) { toast(e.message, 'error'); }
+}
+
+async function setBulkHolidayActive(type, active) {
+  const targets = _holidays.filter(h => h.type === type);
+  if (!targets.length) return;
+  try {
+    await Promise.all(targets.map(h => apiJSON('PUT', `/api/holiday/${h.id}`, { isActive: active })));
+    targets.forEach(h => { h.isActive = active; });
+    renderHolidaysContent();
+    toast(`${active ? 'Enabled' : 'Disabled'} all ${type} holidays`, 'success');
+  } catch (e) { toast(e.message, 'error'); }
 }
 
 async function submitCreateBookingLink() {

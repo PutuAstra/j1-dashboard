@@ -166,6 +166,27 @@ async function route(request) {
     return createBookingHandler(seg[2], request);
   }
 
+  // ── Holiday & Closure Settings ───────────────────────────────
+  // /api/holidays/settings  (must be before /api/holidays length-1 catch-all)
+  if (seg[0] === 'holidays' && seg[1] === 'settings') {
+    if (m === 'GET') return getHolidaySettings(request);
+    if (m === 'PUT') return updateHolidaySettings(request);
+  }
+  // /api/holidays/sync
+  if (seg[0] === 'holidays' && seg[1] === 'sync' && m === 'POST') {
+    return syncNationalHolidays(request);
+  }
+  // /api/holidays  (list / create)
+  if (seg[0] === 'holidays' && seg.length === 1) {
+    if (m === 'GET')  return listHolidays(request);
+    if (m === 'POST') return createHoliday(request);
+  }
+  // /api/holiday/{id}  (update / delete)
+  if (seg[0] === 'holiday' && seg.length === 2) {
+    if (m === 'PUT')    return updateHoliday(seg[1], request);
+    if (m === 'DELETE') return deleteHoliday(seg[1], request);
+  }
+
   return jsonRes({ error: 'Not found' }, 404);
 }
 
@@ -1439,7 +1460,9 @@ async function cancelBookingHandler(bookingId, request) {
 
 // ── Slot generation (public) ──────────────────────────────────
 
-function generateBookingSlots(link, bookedSlotStarts) {
+// blockedDates: Set of 'YYYY-MM-DD' strings (Step 2 — holiday protection)
+// bookedSlotStarts: Set of UTC timestamps (Step 4 — existing bookings)
+function generateBookingSlots(link, bookedSlotStarts, blockedDates = new Set()) {
   const { slotRules = [], duration = 30, daysAhead = 14, tzOffset = 0 } = link;
   const durationMs  = duration * 60 * 1000;
   const tzOffsetMs  = tzOffset * 60 * 1000;
@@ -1448,20 +1471,24 @@ function generateBookingSlots(link, bookedSlotStarts) {
   const slots       = [];
 
   for (let d = 0; d < daysAhead; d++) {
-    const checkMs    = now + d * 24 * 60 * 60 * 1000;
-    // What weekday is this in the link's timezone?
-    const localMs    = checkMs + tzOffsetMs;
-    const localDate  = new Date(localMs);
-    const weekday    = localDate.getUTCDay(); // 0=Sun … 6=Sat in local TZ
+    const checkMs   = now + d * 24 * 60 * 60 * 1000;
+    const localMs   = checkMs + tzOffsetMs;
+    const localDate = new Date(localMs);
+    const weekday   = localDate.getUTCDay();
 
-    // Support multiple ranges per day (e.g. 09:00–12:00 and 13:00–17:00)
-    const dayRules = slotRules.filter(r => r.day === weekday);
-    if (!dayRules.length) continue;
-
-    // Compute UTC timestamp of local midnight for this date
     const y  = localDate.getUTCFullYear();
     const mo = localDate.getUTCMonth();
     const dy = localDate.getUTCDate();
+
+    // ── Step 2: Holiday hard-block — wipe entire day if it's a holiday ──
+    const localDateStr = `${y}-${String(mo + 1).padStart(2, '0')}-${String(dy).padStart(2, '0')}`;
+    if (blockedDates.has(localDateStr)) continue; // skip ALL slots this day
+
+    // ── Step 1: Check recruiter's weekly template ────────────────
+    const dayRules = slotRules.filter(r => r.day === weekday);
+    if (!dayRules.length) continue;
+
+    // UTC of local midnight: local midnight = UTC midnight - tzOffset
     const localMidnightUtc = Date.UTC(y, mo, dy) - tzOffsetMs;
 
     for (const rule of dayRules) {
@@ -1472,6 +1499,7 @@ function generateBookingSlots(link, bookedSlotStarts) {
 
       let t = startUtc;
       while (t + durationMs <= endUtc) {
+        // 2-hour buffer + Step 4: not already booked
         if (t > now + bufferMs && !bookedSlotStarts.has(t)) {
           slots.push({ start: t, end: t + durationMs });
         }
@@ -1483,17 +1511,60 @@ function generateBookingSlots(link, bookedSlotStarts) {
 }
 
 async function getBookingSlots(token) {
+  // ── Step 1: Fetch recruiter's availability template ──────────
   const link = await kvGet(`booking:link:${token}`);
   if (!link) return jsonRes({ error: 'Booking link not found' }, 404);
   if (!link.active) return jsonRes({ error: 'This booking link is no longer active' }, 410);
 
-  const ids    = (await kvGet(`booking:link:${token}:bookings`)) || [];
-  const active = await Promise.all(ids.map(id => kvGet(`booking:booking:${id}`)));
-  const booked = new Set(
-    active.filter(b => b && b.status === 'confirmed').map(b => b.slotStart)
+  // ── Step 2: Holiday Protection Layer (hard-block entire days) ─
+  // Load settings + full holiday list in parallel for minimal latency
+  const [settings, holidayIds] = await Promise.all([
+    kvGet('holiday:settings'),
+    kvGet('holiday:list'),
+  ]);
+  const cfg = settings || {};
+
+  const blockedDates = new Set(); // 'YYYY-MM-DD' strings in the link's local timezone
+
+  // Default ON — only skip if explicitly disabled
+  if (cfg.autoBlockNational !== false && holidayIds?.length) {
+    const allHolidays = await Promise.all(holidayIds.map(id => kvGet(`holiday:${id}`)));
+    const active = allHolidays.filter(h => h?.isActive);
+
+    // Pre-compute year range we'll generate slots for
+    const now         = Date.now();
+    const rangeEndMs  = now + (link.daysAhead || 14) * 24 * 60 * 60 * 1000;
+    const yearStart   = new Date(now).getUTCFullYear();
+    const yearEnd     = new Date(rangeEndMs).getUTCFullYear();
+
+    for (const h of active) {
+      if (h.isRecurring) {
+        // Same month-day every year — block across the entire generation window
+        const [, mm, dd] = h.date.split('-');
+        for (let y = yearStart; y <= yearEnd; y++) {
+          blockedDates.add(`${y}-${mm}-${dd}`);
+        }
+      } else {
+        // One-off date — block only the specific day
+        blockedDates.add(h.date);
+      }
+    }
+  }
+
+  // ── Step 3 (Outlook calendar sync — future enhancement) ──────
+  // When implemented: query recruiter's Microsoft Graph calendar for
+  // Busy/OOF events and add their dates to blockedDates / blockedSlots.
+
+  // ── Step 4: Filter out slots already taken by other candidates ─
+  const bookingIds     = (await kvGet(`booking:link:${token}:bookings`)) || [];
+  const existingBooks  = await Promise.all(bookingIds.map(id => kvGet(`booking:booking:${id}`)));
+  const bookedSlots    = new Set(
+    existingBooks.filter(b => b?.status === 'confirmed').map(b => b.slotStart)
   );
 
-  const slots = generateBookingSlots(link, booked);
+  // Generate slots applying all filters
+  const slots = generateBookingSlots(link, bookedSlots, blockedDates);
+
   return jsonRes({
     title:         link.title,
     clientName:    link.clientName,
@@ -1501,6 +1572,8 @@ async function getBookingSlots(token) {
     interviewType: link.interviewType,
     duration:      link.duration,
     slots,
+    // Expose blocked count for transparency (useful for debugging)
+    _meta: { holidaysBlocked: blockedDates.size, slotsAvailable: slots.length },
   });
 }
 
@@ -1586,6 +1659,150 @@ async function createBookingHandler(token, request) {
     meetingLink:  booking.meetingLink || null,
     calendarEventUrl: booking.calendarEventUrl || null,
   }, 201);
+}
+
+// ── Holiday & Closure handlers ────────────────────────────────
+//
+// KV Schema:
+//   holiday:list               → string[]  (ordered list of IDs)
+//   holiday:{id}               → Holiday   (see createHoliday for shape)
+//   holiday:settings           → Settings  (autoBlockNational, country, syncedYears)
+//
+// Holiday shape:
+//   { id, name, nameEn?, date (YYYY-MM-DD), isRecurring, isActive,
+//     type ('national'|'custom'), countryCode, createdAt }
+
+async function listHolidays(request) {
+  requireAdmin(request);
+  const ids      = (await kvGet('holiday:list')) || [];
+  const holidays = await Promise.all(ids.map(id => kvGet(`holiday:${id}`)));
+  return jsonRes(holidays.filter(Boolean));
+}
+
+async function createHoliday(request) {
+  requireAdmin(request);
+  const { name, date, isRecurring, type, countryCode } = await request.json();
+  if (!name) return jsonRes({ error: 'name required' }, 400);
+  if (!date || !/^\d{4}-\d{2}-\d{2}$/.test(date)) return jsonRes({ error: 'date required (YYYY-MM-DD)' }, 400);
+
+  const id      = uid();
+  const holiday = {
+    id, name, date,
+    isRecurring: !!isRecurring,
+    isActive:    true,
+    type:        type || 'custom',
+    countryCode: countryCode || 'ID',
+    createdAt:   Date.now(),
+  };
+  await kvPut(`holiday:${id}`, holiday);
+  const list = (await kvGet('holiday:list')) || [];
+  list.unshift(id);
+  await kvPut('holiday:list', list);
+  return jsonRes(holiday, 201);
+}
+
+async function updateHoliday(id, request) {
+  requireAdmin(request);
+  const existing = await kvGet(`holiday:${id}`);
+  if (!existing) return jsonRes({ error: 'Not found' }, 404);
+  const updates = await request.json();
+  const updated = { ...existing, ...updates };
+  await kvPut(`holiday:${id}`, updated);
+  return jsonRes(updated);
+}
+
+async function deleteHoliday(id, request) {
+  requireAdmin(request);
+  await INTERVIEW_DATA.delete(`holiday:${id}`);
+  const list = (await kvGet('holiday:list')) || [];
+  await kvPut('holiday:list', list.filter(i => i !== id));
+  return jsonRes({ ok: true });
+}
+
+async function getHolidaySettings(request) {
+  requireAdmin(request);
+  const settings = (await kvGet('holiday:settings')) || {
+    autoBlockNational: true,
+    country:           'ID',
+    syncedYears:       [],
+  };
+  return jsonRes(settings);
+}
+
+async function updateHolidaySettings(request) {
+  requireAdmin(request);
+  const existing = (await kvGet('holiday:settings')) || {};
+  const updates  = await request.json();
+  const updated  = { ...existing, ...updates };
+  await kvPut('holiday:settings', updated);
+  return jsonRes(updated);
+}
+
+async function syncNationalHolidays(request) {
+  requireAdmin(request);
+  const { year, country } = await request.json();
+  const countryCode = (country || 'ID').toUpperCase();
+  const yr          = parseInt(year) || new Date().getFullYear();
+
+  // Fetch from Nager.Date (free, no API key required)
+  let fetched;
+  try {
+    const res = await fetch(
+      `https://date.nager.at/api/v3/PublicHolidays/${yr}/${countryCode}`,
+      { headers: { 'Accept': 'application/json' } }
+    );
+    if (!res.ok) {
+      return jsonRes({ error: `Nager.Date returned HTTP ${res.status} for ${countryCode} ${yr}. Check the country code is valid.` }, 502);
+    }
+    fetched = await res.json();
+  } catch (e) {
+    return jsonRes({ error: 'Could not reach Nager.Date API: ' + e.message }, 502);
+  }
+
+  if (!Array.isArray(fetched) || !fetched.length) {
+    return jsonRes({ error: `No holidays returned for ${countryCode} ${yr}. This country code may not be supported.` }, 404);
+  }
+
+  // Load existing holidays to avoid duplicates
+  const existingIds      = (await kvGet('holiday:list')) || [];
+  const existingHolidays = (await Promise.all(existingIds.map(id => kvGet(`holiday:${id}`)))).filter(Boolean);
+
+  let addedCount = 0, skippedCount = 0;
+  const newIds = [...existingIds];
+
+  for (const h of fetched) {
+    // Skip if already loaded (same date + national + same country)
+    const exists = existingHolidays.find(
+      e => e.date === h.date && e.type === 'national' && e.countryCode === countryCode
+    );
+    if (exists) { skippedCount++; continue; }
+
+    const id = uid();
+    const holiday = {
+      id,
+      name:        h.localName || h.name,
+      nameEn:      h.name,
+      date:        h.date,          // YYYY-MM-DD — exact date for this year
+      isRecurring: h.fixed === true, // Nager: fixed=true means same date every year
+      isActive:    true,
+      type:        'national',
+      countryCode,
+      createdAt:   Date.now(),
+    };
+    await kvPut(`holiday:${id}`, holiday);
+    newIds.unshift(id);
+    addedCount++;
+  }
+
+  await kvPut('holiday:list', newIds);
+
+  // Record which years have been synced
+  const cfg         = (await kvGet('holiday:settings')) || {};
+  const syncedYears = cfg.syncedYears || [];
+  if (!syncedYears.includes(yr)) syncedYears.push(yr);
+  await kvPut('holiday:settings', { autoBlockNational: true, ...cfg, country: countryCode, syncedYears });
+
+  return jsonRes({ ok: true, added: addedCount, skipped: skippedCount, total: fetched.length });
 }
 
 async function sendBookingConfirmationEmail(booking, link) {

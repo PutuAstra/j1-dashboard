@@ -76,6 +76,13 @@
       <div class="sidebar-children">
         <button class="sidebar-item sidebar-child" data-page="scripts" onclick="gotoPage('scripts')">Manage Scripts</button>
       </div>
+      <button class="sidebar-parent-btn" onclick="toggleSidebarGroup(this)" aria-expanded="true">
+        Settings
+        <span class="sidebar-chevron">▾</span>
+      </button>
+      <div class="sidebar-children">
+        <button class="sidebar-item sidebar-child" data-page="holidays" onclick="gotoPage('holidays')">Holiday &amp; Closure</button>
+      </div>
     </aside>
 
     <main class="admin-main" id="admin-main">
@@ -281,6 +288,6 @@
 <div id="toast"></div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.2/cropper.min.js"></script>
-<script src="admin.js?v=20250523c"></script>
+<script src="admin.js?v=20250523d"></script>
 </body>
 </html>
