@@ -324,24 +324,29 @@
       font-size: 0.75rem; color: var(--text3);
     }
     .mem-info-row {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 10px;
-      padding: 14px 20px;
+      display: table;
+      width: 100%;
+      border-collapse: collapse;
       background: var(--surface2);
       border-radius: 12px;
+      overflow: hidden;
       font-size: 0.82rem;
     }
-    .mem-info-item { display: flex; align-items: center; gap: 8px; color: var(--text2); flex: 1; }
-    .mem-info-item:first-child { justify-content: flex-start; }
-    .mem-info-item:nth-child(2) { justify-content: center; flex: 0 0 auto; }
-    .mem-info-item:last-child { justify-content: flex-end; }
+    .mem-info-item {
+      display: table-cell;
+      padding: 12px 16px;
+      vertical-align: middle;
+      color: var(--text2);
+      width: 33.33%;
+    }
+    .mem-info-item:nth-child(2) { text-align: center; border-left: 1px solid var(--border); border-right: 1px solid var(--border); }
+    .mem-info-item:last-child { text-align: right; }
+    .mem-info-item .ico { margin-right: 6px; }
     .mem-info-item span.label { color: var(--text3); font-size: 0.72rem; text-transform: uppercase; letter-spacing: 1px; }
     .day-pass-badge {
-      background: #D4A017; color: #000;
-      font-weight: 800; font-size: 0.9rem;
-      padding: 4px 14px; border-radius: 8px;
+      color: #D4A017;
+      font-weight: 800; font-size: 1rem;
+      display: block; margin-top: 2px;
     }
 
     /* Footer */
@@ -554,15 +559,16 @@
     </div>
     <div class="mem-info-row">
       <div class="mem-info-item">
-        <span>🕐</span>
-        <div><span class="label">Jam Buka</span><br>8.00 am – 8.00 pm</div>
+        <span class="ico">🕐</span><span class="label">Jam Buka</span><br>
+        <span style="padding-left:22px">8.00 am – 8.00 pm</span>
       </div>
       <div class="mem-info-item">
-        <div><span class="label">Day Pass</span><br><span class="day-pass-badge">Rp 15.000</span></div>
+        <span class="label">Day Pass</span>
+        <span class="day-pass-badge">Rp 15.000</span>
       </div>
       <div class="mem-info-item">
-        <span>📞</span>
-        <div><span class="label">Hubungi Kami</span><br>087861548151</div>
+        <span class="ico">📞</span><span class="label">Hubungi Kami</span><br>
+        <span>087861548151</span>
       </div>
     </div>
   </div>
