@@ -182,6 +182,8 @@
     .b-beg  { background: rgba(6,214,160,0.1);   color: #06d6a0;  border: 1px solid rgba(6,214,160,0.2); }
     .b-int  { background: rgba(255,165,0,0.1);   color: #ffa500;  border: 1px solid rgba(255,165,0,0.2); }
     .b-adv  { background: rgba(212,160,23,0.1);   color: var(--red); border: 1px solid rgba(212,160,23,0.2); }
+    .b-smt  { background: rgba(255,100,80,0.12);  color: #ff9988;  border: 1px solid rgba(255,100,80,0.25); }
+    .b-crd  { background: rgba(80,180,255,0.12);  color: #80ccff;  border: 1px solid rgba(80,180,255,0.25); }
 
     /* Muscles */
     .mblock { margin-bottom: 14px; }
@@ -361,10 +363,10 @@
   <p class="header-sub">Proper Form &nbsp;·&nbsp; Muscle Targeting &nbsp;·&nbsp; Train Injury-Free</p>
   <p class="header-address">📍 Desa Sukadana, Kec. Kubu, Kab. Karangasem, Bali</p>
   <div class="header-stats">
-    <div><div class="stat-num">21</div><div class="stat-lbl">Exercises</div></div>
-    <div><div class="stat-num">3</div><div class="stat-lbl">Categories</div></div>
-    <div><div class="stat-num">12+</div><div class="stat-lbl">Muscle Groups</div></div>
-    <div><div class="stat-num">HD</div><div class="stat-lbl">Video Guides</div></div>
+    <div><div class="stat-num">36</div><div class="stat-lbl">Latihan</div></div>
+    <div><div class="stat-num">5</div><div class="stat-lbl">Kategori</div></div>
+    <div><div class="stat-num">15+</div><div class="stat-lbl">Otot</div></div>
+    <div><div class="stat-num">HD</div><div class="stat-lbl">Video</div></div>
   </div>
 </header>
 
@@ -421,25 +423,28 @@
             <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
           </svg>
         </span>
-        <input type="text" id="searchInput" placeholder="Search exercises or muscles..." autocomplete="off">
+        <input type="text" id="searchInput" placeholder="Cari latihan atau otot..." autocomplete="off">
       </div>
       <div class="tabs" id="catTabs">
-        <button class="active" data-cat="all">All (21)</button>
-        <button data-cat="free-weights">🏋️ Free Weights (9)</button>
-        <button data-cat="cable">🔗 Cables (6)</button>
-        <button data-cat="machine">⚙️ Machines (6)</button>
+        <button class="active" data-cat="all">Semua (36)</button>
+        <button data-cat="free-weights">🏋️ Beban Bebas (12)</button>
+        <button data-cat="smith">🔧 Smith Machine (3)</button>
+        <button data-cat="cable">🔗 Kabel (6)</button>
+        <button data-cat="machine">⚙️ Mesin (12)</button>
+        <button data-cat="cardio">🏃 Kardio (3)</button>
       </div>
       <select class="msel" id="muscleSel">
-        <option value="">All Muscles</option>
-        <option value="Chest">Chest</option>
-        <option value="Lats">Lats / Back</option>
-        <option value="Shoulders">Shoulders</option>
-        <option value="Biceps">Biceps</option>
-        <option value="Triceps">Triceps</option>
-        <option value="Quads">Quads</option>
-        <option value="Hamstrings">Hamstrings</option>
-        <option value="Glutes">Glutes</option>
-        <option value="Core">Core</option>
+        <option value="">Semua Otot</option>
+        <option value="Chest">Dada (Chest)</option>
+        <option value="Lats">Punggung / Lats</option>
+        <option value="Shoulders">Bahu (Shoulders)</option>
+        <option value="Biceps">Bisep (Biceps)</option>
+        <option value="Triceps">Trisep (Triceps)</option>
+        <option value="Quads">Paha Depan (Quads)</option>
+        <option value="Hamstrings">Paha Belakang</option>
+        <option value="Glutes">Bokong (Glutes)</option>
+        <option value="Core">Perut (Core)</option>
+        <option value="Calves">Betis (Calves)</option>
       </select>
     </div>
     <p class="res-info" id="resInfo"></p>
@@ -465,19 +470,19 @@
 // videoId = YouTube video ID. If a video doesn't load, click "Search on YouTube".
 const EX = [
 
-  // ════ FREE WEIGHTS ════
+  // ════ BEBAN BEBAS ════
 
   { id:1, name:"Barbell Back Squat", cat:"free-weights", diff:"Intermediate",
     pri:[["Quads","quads"],["Glutes","glutes"]],
     sec:[["Hamstrings","hams"],["Core","core"],["Lower Back","lower-back"]],
     vid:"bEv6CCg2BC8",
     tips:[
-      "Bar rests on upper traps (high bar) or rear delts (low bar) — never on your neck",
-      "Feet shoulder-width, toes 15–30° outward to match your hip anatomy",
-      "Big breath + brace core (Valsalva maneuver) before you descend",
-      "Knees track in line with toes — push them out throughout the lift",
-      "Descend until thighs reach parallel or below — full depth = full glutes",
-      "Drive through heels, squeeze glutes hard as you lock out at the top"
+      "Letakkan barbel di punggung atas (trapezius), bukan di leher",
+      "Kaki selebar bahu, jari kaki ke luar 15–30°",
+      "Tarik napas dalam dan kencangkan perut sebelum turun",
+      "Lutut mengikuti arah jari kaki selama gerakan",
+      "Turun hingga paha sejajar lantai atau lebih dalam",
+      "Dorong melalui tumit, kencangkan bokong di puncak"
     ]
   },
 
@@ -486,12 +491,12 @@ const EX = [
     sec:[["Triceps","triceps"],["Shoulders","shoulders"]],
     vid:"vcBig73ojpE",
     tips:[
-      "Feet flat, slight natural arch in lower back, shoulder blades retracted & depressed",
-      "Grip slightly wider than shoulder-width — index fingers on the knurling rings",
-      "Lower bar to lower chest / sternum area — not your neck",
-      "Elbows 45–75° from torso (not flared to 90°) to protect shoulders",
-      "Bar touches chest lightly each rep, press to lockout",
-      "Maintain whole-body tension — drive feet through the floor as you press"
+      "Kaki rata di lantai, punggung bawah sedikit melengkung alami, bahu ditarik ke belakang",
+      "Genggam barbel sedikit lebih lebar dari bahu",
+      "Turunkan ke bagian bawah dada — bukan ke leher",
+      "Siku membentuk sudut 45–75° dari tubuh, jangan terlalu lebar",
+      "Sentuh dada ringan setiap repetisi, dorong sampai lengan hampir lurus",
+      "Tekan kaki ke lantai saat mendorong untuk stabilitas"
     ]
   },
 
@@ -500,12 +505,12 @@ const EX = [
     sec:[["Traps","traps"],["Lats","lats"],["Core","core"],["Forearms","forearms"]],
     vid:"VL5Ab0T07e4",
     tips:[
-      "Bar over mid-foot (~1 inch from shins), feet hip-width apart",
-      "Hinge at hips to grab bar — double overhand or mixed grip",
-      "Neutral spine: chest tall, lat tension ('protect your armpits')",
-      "Think 'push the floor away' — not 'pull the bar up'",
-      "Bar drags up your legs the whole way — wear socks or long socks",
-      "Lock out by squeezing glutes; don't hyperextend lower back"
+      "Barbel di tengah telapak kaki, kaki selebar pinggul",
+      "Bungkuk di pinggul untuk memegang barbel — punggung tetap lurus",
+      "Punggung netral: dada tegak, otot punggung tegang",
+      "Bayangkan 'mendorong lantai ke bawah', bukan 'menarik barbel ke atas'",
+      "Barbel tetap menyentuh kaki selama mengangkat",
+      "Kunci gerakan dengan memeras bokong — jangan melengkungkan punggung bawah"
     ]
   },
 
@@ -514,254 +519,468 @@ const EX = [
     sec:[["Triceps","triceps"],["Traps","traps"],["Core","core"]],
     vid:"_RlRDWO2jfg",
     tips:[
-      "Grip slightly wider than shoulder-width, bar resting on front delts",
-      "Wrists stacked directly above elbows — no wrist rollback",
-      "Core braced, glutes squeezed, no lower back hyperextension",
-      "Press straight up — shift your head back as bar passes your face",
-      "Finish with bar over ears, elbows close to full lock, shrug at top",
-      "Lower with control back to front deltoid start position"
+      "Genggam barbel sedikit lebih lebar dari bahu, barbel di atas dada",
+      "Pergelangan tangan tegak lurus di atas siku",
+      "Kencangkan perut dan bokong, jangan melengkungkan punggung bawah",
+      "Dorong lurus ke atas — gerakkan kepala ke belakang saat barbel melewati wajah",
+      "Selesaikan dengan barbel di atas kepala, lengan hampir lurus",
+      "Turunkan dengan kontrol kembali ke posisi awal"
     ]
   },
 
-  { id:5, name:"Dumbbell Bicep Curl", cat:"free-weights", diff:"Beginner",
+  { id:5, name:"Barbell Bent-Over Row", cat:"free-weights", diff:"Intermediate",
+    pri:[["Back","back"],["Lats","lats"]],
+    sec:[["Biceps","biceps"],["Traps","traps"],["Core","core"]],
+    vid:"rqTOAM8WoeM",
+    tips:[
+      "Bungkuk 45° di pinggul, punggung lurus, lutut sedikit ditekuk",
+      "Pegang barbel selebar bahu atau sedikit lebih lebar",
+      "Tarik barbel ke perut bagian bawah, siku ke belakang",
+      "Remas otot punggung dengan kuat di puncak gerakan",
+      "Jangan mengayunkan tubuh ke atas untuk membantu gerakan",
+      "Turunkan dengan kontrol sambil merasakan peregangan punggung"
+    ]
+  },
+
+  { id:6, name:"EZ Bar Bicep Curl", cat:"free-weights", diff:"Beginner",
     pri:[["Biceps","biceps"]],
     sec:[["Forearms","forearms"]],
-    vid:"i1YgFZB6alI",
+    vid:"ykJmrZ5v0Oo",
     tips:[
-      "Stand tall, elbows pinned at your sides — they must not drift forward",
-      "Supinate wrist (turn palm up) as you curl — maximize bicep peak contraction",
-      "Squeeze hard at the top — hold 1 second",
-      "Lower with a 2–3 second eccentric count for more muscle stimulus",
-      "No body swinging — if you need to swing, the weight is too heavy",
-      "Full range: arms fully straight at the bottom every rep"
+      "Pegang EZ bar dengan sudut yang nyaman untuk pergelangan tangan",
+      "Siku ditempel di samping tubuh dan tidak boleh bergerak",
+      "Angkat sampai hampir menyentuh bahu, remas bisep di atas",
+      "Turunkan perlahan dengan hitungan 2–3 detik (eksentrik lambat)",
+      "EZ bar lebih nyaman di pergelangan tangan dibanding barbel lurus",
+      "Tetap berdiri tegak — jangan ayunkan tubuh untuk curang"
     ]
   },
 
-  { id:6, name:"Dumbbell Shoulder Press", cat:"free-weights", diff:"Beginner",
+  { id:7, name:"EZ Bar Skull Crusher", cat:"free-weights", diff:"Intermediate",
+    pri:[["Triceps","triceps"]],
+    sec:[],
+    vid:"B3XQ7wNxkdU",
+    tips:[
+      "Berbaring di bangku, pegang EZ bar di atas dada dengan pegangan sempit",
+      "Turunkan barbel ke arah dahi atau sedikit di belakang kepala",
+      "Siku mengarah ke langit-langit — jangan biarkan melebar ke samping",
+      "Dorong kembali ke atas hanya dengan menggunakan trisep",
+      "Hanya siku yang bergerak — bahu dan lengan atas tetap diam",
+      "Gunakan beban yang terkontrol untuk menjaga keamanan"
+    ]
+  },
+
+  { id:8, name:"Incline Dumbbell Press", cat:"free-weights", diff:"Beginner",
+    pri:[["Chest","chest"]],
+    sec:[["Triceps","triceps"],["Shoulders","shoulders"]],
+    vid:"0G2_XV7slIg",
+    tips:[
+      "Atur bangku di sudut 30–45° untuk fokus pada dada atas",
+      "Duduk dengan punggung bersandar penuh, bahu ditarik ke belakang",
+      "Mulai dengan dumbbell di sisi dada, siku sedikit di bawah bahu",
+      "Dorong dumbbell ke atas dan sedikit ke tengah",
+      "Turunkan perlahan sampai dada terasa sedikit tegang",
+      "Jangan biarkan bahu terangkat ke depan saat mendorong"
+    ]
+  },
+
+  { id:9, name:"Dumbbell Shoulder Press", cat:"free-weights", diff:"Beginner",
     pri:[["Shoulders","shoulders"]],
     sec:[["Triceps","triceps"],["Traps","traps"]],
     vid:"qw8Q6imOaFE",
     tips:[
-      "Sit with back supported or stand with core braced tightly",
-      "Start with dumbbells at ear level, elbows at 90° (goal-post position)",
-      "Press upward and slightly inward — dumbbells nearly touch at top",
-      "Stop just short of full lockout to keep tension on deltoids",
-      "Lower slowly to 90° — don't let the weight drop past your ears",
-      "Keep wrists neutral and stacked over elbows throughout"
+      "Duduk tegak di bangku atau berdiri dengan perut dikencangkan",
+      "Mulai dengan dumbbell di tinggi telinga, siku membentuk sudut 90°",
+      "Dorong ke atas dan sedikit ke tengah — dumbbell hampir bertemu di atas",
+      "Berhenti sebelum siku terkunci penuh untuk menjaga tekanan pada bahu",
+      "Turunkan perlahan kembali ke posisi awal",
+      "Jaga pergelangan tangan lurus di atas siku sepanjang gerakan"
     ]
   },
 
-  { id:7, name:"Dumbbell Romanian Deadlift", cat:"free-weights", diff:"Intermediate",
-    pri:[["Hamstrings","hams"],["Glutes","glutes"]],
-    sec:[["Lower Back","lower-back"],["Core","core"]],
-    vid:"_oyxCn2iSjU",
-    tips:[
-      "Hold dumbbells in front of thighs, palms facing your body",
-      "This is a hip hinge — push hips back, not knees down",
-      "Keep back perfectly flat and chest tall the entire movement",
-      "Lower dumbbells along your legs until you feel a strong hamstring stretch",
-      "Soft knees throughout — they don't drive the movement",
-      "Drive hips forward to return, squeezing glutes hard at the top"
-    ]
-  },
-
-  { id:8, name:"Dumbbell Lateral Raise", cat:"free-weights", diff:"Beginner",
+  { id:10, name:"Dumbbell Lateral Raise", cat:"free-weights", diff:"Beginner",
     pri:[["Shoulders","shoulders"]],
     sec:[["Traps","traps"]],
     vid:"-hyAJdSFzT4",
     tips:[
-      "Slight forward torso lean (10–15°) targets the lateral delt better",
-      "Fixed slight bend in elbows — keep this throughout the rep",
-      "Lead with elbows, not wrists — think 'pour water out of a jug'",
-      "Tilt dumbbell so pinky side is slightly higher than thumb side",
-      "Raise only to shoulder height — higher shifts load to traps",
-      "Use lighter weight than you think. Control beats momentum here."
+      "Sedikit membungkuk ke depan 10–15° untuk menargetkan bahu samping",
+      "Tekuk siku sedikit dan pertahankan posisi ini sepanjang gerakan",
+      "Angkat dengan siku memimpin — bukan pergelangan tangan",
+      "Bayangkan 'menuangkan air dari teko': jari kelingking sedikit lebih tinggi",
+      "Angkat hanya sampai setinggi bahu — lebih tinggi hanya melatih otot trap",
+      "Gunakan beban ringan dan kontrol penuh untuk hasil terbaik"
     ]
   },
 
-  { id:9, name:"Kettlebell Swing", cat:"free-weights", diff:"Intermediate",
-    pri:[["Glutes","glutes"],["Hamstrings","hams"]],
-    sec:[["Core","core"],["Lower Back","lower-back"],["Shoulders","shoulders"]],
-    vid:"pA6o-a3y1Vo",
+  { id:11, name:"Dumbbell Romanian Deadlift", cat:"free-weights", diff:"Intermediate",
+    pri:[["Hamstrings","hams"],["Glutes","glutes"]],
+    sec:[["Lower Back","lower-back"],["Core","core"]],
+    vid:"_oyxCn2iSjU",
     tips:[
-      "This is a HIP HINGE — not a squat. Hips back, not down.",
-      "Start with bell between and behind your legs — hike it back forcefully",
-      "Explosively snap hips forward; let the bell float to chest height",
-      "Squeeze glutes and core HARD at the top of every swing",
-      "Arms stay loose — they're a link, not the power source",
-      "Bell feels weightless at the top if hip drive is correct"
+      "Pegang dumbbell di depan paha, telapak tangan menghadap tubuh",
+      "Ini adalah gerakan engsel pinggul — dorong bokong ke belakang, bukan turun",
+      "Jaga punggung tetap rata dan dada tegak sepanjang gerakan",
+      "Turunkan dumbbell menyusuri kaki hingga merasakan regangan paha belakang",
+      "Lutut sedikit ditekuk — lutut tidak menggerakkan gerakan ini",
+      "Dorong pinggul ke depan untuk naik, kencangkan bokong di atas"
     ]
   },
 
-  // ════ CABLE & PULLEY ════
+  { id:12, name:"Dumbbell Row", cat:"free-weights", diff:"Beginner",
+    pri:[["Back","back"],["Lats","lats"]],
+    sec:[["Biceps","biceps"],["Rear Delt","rear-delt"]],
+    vid:"T3N-TO4reLQ",
+    tips:[
+      "Letakkan satu tangan dan lutut di bangku sebagai tumpuan",
+      "Biarkan dumbbell menggantung lurus ke bawah",
+      "Tarik dumbbell ke samping pinggul, siku ke belakang",
+      "Remas otot punggung dengan kuat di puncak gerakan",
+      "Jangan memutar bahu ke atas saat menarik",
+      "Turunkan dengan kontrol penuh untuk merasakan regangan punggung"
+    ]
+  },
 
-  { id:10, name:"Lat Pulldown", cat:"cable", diff:"Beginner",
+  // ════ SMITH MACHINE ════
+
+  { id:13, name:"Smith Machine Squat", cat:"smith", diff:"Beginner",
+    pri:[["Quads","quads"],["Glutes","glutes"]],
+    sec:[["Hamstrings","hams"],["Core","core"]],
+    vid:"ZhO7ZOgEzuI",
+    tips:[
+      "Posisikan kaki sedikit lebih ke depan dari biasanya karena jalur Smith Machine lurus",
+      "Kaki selebar bahu, jari kaki ke luar sesuai kenyamanan",
+      "Set pengaman (safety pin) pada ketinggian yang aman sebelum mulai",
+      "Turunkan hingga paha sejajar lantai, punggung tetap tegak",
+      "Bagus untuk pemula karena jalur gerakan sudah terbimbing",
+      "Selalu kunci barbel kembali ke hook saat selesai"
+    ]
+  },
+
+  { id:14, name:"Smith Machine Bench Press", cat:"smith", diff:"Beginner",
+    pri:[["Chest","chest"]],
+    sec:[["Triceps","triceps"],["Shoulders","shoulders"]],
+    vid:"z_r6hDOYtO0",
+    tips:[
+      "Atur bangku sehingga barbel tepat di atas dada bagian bawah",
+      "Tarik bahu ke belakang dan ke bawah sebelum mulai",
+      "Turunkan ke dada bawah dengan kontrol, dorong kembali ke atas",
+      "Lebih aman dilakukan sendiri karena bisa dikunci sewaktu-waktu",
+      "Jaga siku 45–75° dari tubuh — tidak terlalu melebar",
+      "Kontrol penurunan barbel — jangan dibiarkan jatuh bebas"
+    ]
+  },
+
+  { id:15, name:"Smith Machine Overhead Press", cat:"smith", diff:"Beginner",
+    pri:[["Shoulders","shoulders"]],
+    sec:[["Triceps","triceps"],["Core","core"]],
+    vid:"7FyJdsXeta8",
+    tips:[
+      "Atur ketinggian barbel setinggi bahu saat duduk",
+      "Duduk tegak di bangku, bahu ditarik ke belakang",
+      "Dorong barbel lurus ke atas melewati kepala",
+      "Jangan melengkungkan punggung bawah berlebihan saat mendorong",
+      "Turunkan dengan kontrol kembali ke posisi bahu",
+      "Smith Machine lebih aman untuk press bahu ketika berlatih sendiri"
+    ]
+  },
+
+  // ════ KABEL ════
+
+  { id:16, name:"Lat Pulldown", cat:"cable", diff:"Beginner",
     pri:[["Lats","lats"]],
     sec:[["Biceps","biceps"],["Rear Delt","rear-delt"],["Back","back"]],
     vid:"O94yEoGXtBY",
     tips:[
-      "Grip slightly wider than shoulder-width, overhand (pronated) grip",
-      "Lean back slightly (10–15°), chest tall and proud throughout",
-      "Initiate by depressing shoulder blades — not by pulling with arms",
-      "Drive elbows toward your hip pockets as you pull down",
-      "Pull to upper chest — never behind the neck (causes injury)",
-      "Control the return: fully extend arms at the top for full lat stretch"
+      "Genggam bar sedikit lebih lebar dari bahu, telapak menghadap ke depan",
+      "Sedikit condong ke belakang, dada tegak sepanjang gerakan",
+      "Mulai dengan menekan bahu ke bawah sebelum menarik",
+      "Tarik bar ke dada atas — siku mengarah ke arah saku celana",
+      "Jangan tarik ke belakang leher — berbahaya untuk tulang belakang",
+      "Lepaskan perlahan dengan kontrol, rasakan peregangan punggung di atas"
     ]
   },
 
-  { id:11, name:"Seated Cable Row", cat:"cable", diff:"Beginner",
+  { id:17, name:"Seated Cable Row", cat:"cable", diff:"Beginner",
     pri:[["Back","back"],["Lats","lats"]],
     sec:[["Biceps","biceps"],["Rear Delt","rear-delt"]],
     vid:"7BkgqzC6WsM",
     tips:[
-      "Sit tall, knees slightly bent, torso upright throughout",
-      "Start from a full arm extension — get a complete lat stretch",
-      "Initiate with scapular retraction — squeeze shoulder blades together first",
-      "Pull handle to lower sternum / belly button area",
-      "Keep elbows close to body — don't let them flare out",
-      "Hold squeeze 1 second at peak, return with a slow 2–3 second count"
+      "Duduk tegak, lutut sedikit ditekuk, kaki bersandar di pijakan",
+      "Mulai dari posisi lengan lurus penuh untuk merasakan peregangan punggung",
+      "Mulai gerakan dengan menarik kedua tulang belikat bersama-sama",
+      "Tarik pegangan ke perut bagian bawah, siku dekat tubuh",
+      "Tahan kontraksi 1 detik di puncak gerakan",
+      "Kembalikan dengan kontrol 2–3 detik — jangan dilepas begitu saja"
     ]
   },
 
-  { id:12, name:"Cable Chest Fly", cat:"cable", diff:"Intermediate",
+  { id:18, name:"Cable Chest Fly", cat:"cable", diff:"Intermediate",
     pri:[["Chest","chest"]],
     sec:[["Shoulders","shoulders"]],
     vid:"hrh0K1Oo7Yc",
     tips:[
-      "High cables (above head) targets lower chest; low cables (floor) targets upper chest",
-      "Stand in split stance for stability with a slight forward lean",
-      "Keep a fixed slight bend in both elbows — do not change this",
-      "Arc hands together in a hugging motion — squeeze chest hard at centerline",
-      "Control the return — the stretch is where chest growth happens",
-      "Do NOT let the weight jerk your arms back at the end of each rep"
+      "Kabel tinggi (atas kepala) = menargetkan dada bawah; kabel rendah = dada atas",
+      "Berdiri dengan satu kaki di depan untuk keseimbangan yang lebih baik",
+      "Pertahankan sedikit tekukan di siku sepanjang gerakan",
+      "Bawa tangan ke tengah seperti gerakan memeluk — remas dada",
+      "Jangan biarkan tangan terlempar ke belakang saat kembali — kontrol penuh",
+      "Fokus pada regangan dada di posisi tangan paling lebar"
     ]
   },
 
-  { id:13, name:"Tricep Rope Pushdown", cat:"cable", diff:"Beginner",
+  { id:19, name:"Tricep Rope Pushdown", cat:"cable", diff:"Beginner",
     pri:[["Triceps","triceps"]],
     sec:[],
     vid:"94DXwlcX8Po",
     tips:[
-      "Set cable at head height, attach rope handle",
-      "Pin elbows tightly against your sides — they must stay fixed",
-      "Push DOWN and simultaneously FLARE the rope ends outward at the bottom",
-      "Fully extend elbows at the bottom — maximum tricep contraction",
-      "A slight forward hinge is acceptable, but avoid excessive leaning",
-      "Return with control — forearms come back to 90° or slightly above"
+      "Set kabel setinggi kepala, gunakan pegangan tali (rope)",
+      "Siku tertempel ketat di samping tubuh dan tidak boleh bergerak",
+      "Dorong ke bawah DAN sebar ujung tali ke luar di bagian bawah",
+      "Luruskan siku sepenuhnya di bawah untuk kontraksi trisep maksimal",
+      "Sedikit membungkuk ke depan masih diperbolehkan, tapi jangan berlebihan",
+      "Kembalikan dengan kontrol — lengan bawah naik ke 90° atau sedikit lebih"
     ]
   },
 
-  { id:14, name:"Cable Bicep Curl", cat:"cable", diff:"Beginner",
+  { id:20, name:"Cable Bicep Curl", cat:"cable", diff:"Beginner",
     pri:[["Biceps","biceps"]],
     sec:[["Forearms","forearms"]],
     vid:"2MUEL4nL6hA",
     tips:[
-      "Attach straight bar or EZ-bar at the low pulley",
-      "Stand close — the cable angle should pull your arms slightly forward",
-      "Elbows pinned to sides, wrist supinated (palms up) or neutral",
-      "Curl all the way up and squeeze hard at the top",
-      "Cable provides constant tension throughout — use the whole range",
-      "Slow eccentric all the way down for maximum bicep stimulus"
+      "Pasang bar lurus atau EZ bar di pulley bawah",
+      "Berdiri dekat mesin, siku tertempel di samping tubuh",
+      "Pergelangan tangan menghadap ke atas (supinasi)",
+      "Angkat sampai atas dan remas bisep dengan kuat",
+      "Kabel memberikan tekanan konstan — manfaatkan seluruh range gerak",
+      "Turunkan perlahan sampai lengan lurus penuh untuk peregangan maksimal"
     ]
   },
 
-  { id:15, name:"Face Pull", cat:"cable", diff:"Beginner",
+  { id:21, name:"Face Pull", cat:"cable", diff:"Beginner",
     pri:[["Rear Delt","rear-delt"],["Rotator Cuff","rotator"]],
     sec:[["Back","back"],["Traps","traps"]],
     vid:"ljgqer1ZpXg",
     tips:[
-      "Set cable at eye level or slightly higher; use rope attachment",
-      "Step back to create cable tension, stagger stance for stability",
-      "Pull rope TOWARD your face, with each hand going to the side of your head",
-      "Flare elbows OUT and UP — think double-bicep pose at the end",
-      "External rotation at the finish: wrists should rotate outward",
-      "Light weight, high reps. This is for shoulder health and posture correction."
+      "Set kabel setinggi mata atau sedikit lebih tinggi, gunakan tali",
+      "Mundur untuk menciptakan tegangan, kaki satu di depan untuk keseimbangan",
+      "Tarik tali ke arah wajah, tangan ke kiri dan kanan kepala",
+      "Siku keluar ke samping dan ke atas — seperti pose 'double bisep'",
+      "Rotasikan tangan ke luar di akhir gerakan untuk kesehatan sendi bahu",
+      "Gunakan beban ringan dengan repetisi banyak — ini latihan kesehatan bahu"
     ]
   },
 
-  // ════ MACHINES ════
+  // ════ MESIN ════
 
-  { id:16, name:"Leg Press", cat:"machine", diff:"Beginner",
+  { id:22, name:"Leg Press", cat:"machine", diff:"Beginner",
     pri:[["Quads","quads"],["Glutes","glutes"]],
     sec:[["Hamstrings","hams"]],
     vid:"K5n2vg3oZa4",
     tips:[
-      "Foot placement changes the emphasis: high = more glutes/hams; low = more quads",
-      "Feet shoulder-width apart, toes angled slightly outward",
-      "Lower until knees reach 90° or a little deeper if hips allow",
-      "Do NOT let your lower back peel off the backrest at the bottom",
-      "Never lock out your knees at the top — keep slight tension",
-      "Press through heels and mid-foot, not just your toes"
+      "Posisi kaki tinggi = lebih banyak bokong/paha belakang; posisi rendah = lebih banyak paha depan",
+      "Kaki selebar bahu, jari kaki sedikit ke luar",
+      "Turunkan sampai lutut membentuk sudut 90° atau lebih dalam",
+      "Jangan biarkan punggung bawah terangkat dari sandaran di posisi bawah",
+      "Jangan kunci lutut sepenuhnya di posisi atas — jaga sedikit tekukan",
+      "Dorong melalui tumit dan tengah telapak kaki, bukan ujung jari"
     ]
   },
 
-  { id:17, name:"Leg Extension", cat:"machine", diff:"Beginner",
+  { id:23, name:"Leg Extension", cat:"machine", diff:"Beginner",
     pri:[["Quads","quads"]],
     sec:[],
     vid:"2lvdnQg04PM",
     tips:[
-      "Adjust the seat back so your knee joint lines up with the machine pivot",
-      "Shin pad should sit just above the ankle, not on the shin bone",
-      "Extend all the way to full knee extension — don't stop short",
-      "Hold 1–2 seconds at the top: maximum quad squeeze",
-      "Lower with a 3-second slow eccentric for best results",
-      "Avoid very heavy weight if you have patellar tendon issues"
+      "Sesuaikan sandaran sehingga sendi lutut sejajar dengan poros mesin",
+      "Bantalan harus berada tepat di atas pergelangan kaki, bukan di tulang kering",
+      "Luruskan sepenuhnya di atas — jangan berhenti di tengah gerakan",
+      "Tahan 1–2 detik di posisi atas untuk kontraksi paha depan maksimal",
+      "Turunkan dengan hitungan 3 detik (eksentrik lambat) untuk hasil terbaik",
+      "Hindari beban sangat berat jika ada masalah pada sendi lutut"
     ]
   },
 
-  { id:18, name:"Leg Curl", cat:"machine", diff:"Beginner",
+  { id:24, name:"Leg Curl", cat:"machine", diff:"Beginner",
     pri:[["Hamstrings","hams"]],
     sec:[["Calves","calves"]],
     vid:"sP_4vybjVJs",
     tips:[
-      "Adjust so your knee joint lines up with the machine's pivot point",
-      "Shin pad just above the ankle — not on the Achilles tendon",
-      "Curl all the way up for full range of motion every rep",
-      "Do not lift your hips off the pad to cheat the weight up",
-      "Squeeze hard at peak contraction, then lower slowly (3-second count)",
-      "Pointing toes down (plantar flexion) adds more calf involvement"
+      "Sesuaikan mesin sehingga lutut sejajar dengan poros mesin",
+      "Bantalan tepat di atas pergelangan kaki",
+      "Tekuk kaki sampai paha belakang berkontraksi penuh",
+      "Jangan angkat bokong dari sandaran untuk 'curang'",
+      "Remas keras di puncak gerakan, lalu turunkan perlahan 3 detik",
+      "Menunjuk jari kaki ke bawah (plantar fleksi) menambah keterlibatan betis"
     ]
   },
 
-  { id:19, name:"Machine Chest Press", cat:"machine", diff:"Beginner",
-    pri:[["Chest","chest"]],
-    sec:[["Triceps","triceps"],["Shoulders","shoulders"]],
-    vid:"pLofEAcfsO8",
-    tips:[
-      "Adjust seat so handles are at mid-chest level when seated",
-      "Retract shoulder blades before pressing — protects your shoulder joints",
-      "Press to near-lockout, then return with control",
-      "Don't fully reset the weight stack between reps — keep constant tension",
-      "Squeeze chest hard at full extension",
-      "Great choice for beginners — the fixed path makes form easier to learn"
-    ]
-  },
-
-  { id:20, name:"Machine Shoulder Press", cat:"machine", diff:"Beginner",
-    pri:[["Shoulders","shoulders"]],
-    sec:[["Triceps","triceps"]],
-    vid:"3R14MnZbcpw",
-    tips:[
-      "Adjust seat height so handles are at shoulder level when seated",
-      "Grip handles with palms forward or neutral depending on the machine",
-      "Press straight overhead — avoid excessive lower back arching",
-      "Lower to starting position with full control on every rep",
-      "Stop just short of full elbow lockout to keep tension on deltoids",
-      "Core braced throughout to protect your spine"
-    ]
-  },
-
-  { id:21, name:"Pec Deck (Chest Fly)", cat:"machine", diff:"Beginner",
+  { id:25, name:"Pec Deck Fly", cat:"machine", diff:"Beginner",
     pri:[["Chest","chest"]],
     sec:[["Shoulders","shoulders"]],
     vid:"H4mVGHaK2f4",
     tips:[
-      "Adjust seat so elbows are at shoulder height when arms are on the pads",
-      "Slight forward lean increases chest activation",
-      "Keep forearms flat against the pads — don't just grip and pull with hands",
-      "Bring pads together and squeeze chest HARD — hold for 1 full second",
-      "Control the return — don't let pads fly back past your elbows",
-      "Full open position gives you a deep chest stretch — use that range"
+      "Sesuaikan kursi agar siku setinggi bahu saat lengan berada di bantalan",
+      "Sedikit condong ke depan untuk aktivasi dada yang lebih baik",
+      "Jaga lengan bawah rata di bantalan — jangan hanya menggenggam",
+      "Bawa bantalan bersama dan remas dada dengan kuat — tahan 1 detik",
+      "Kontrol saat bantalan kembali — jangan biarkan terlempar ke belakang",
+      "Posisi terbuka memberikan regangan dada yang dalam — manfaatkan sepenuhnya"
+    ]
+  },
+
+  { id:26, name:"T-Bar Row", cat:"machine", diff:"Intermediate",
+    pri:[["Back","back"],["Lats","lats"]],
+    sec:[["Biceps","biceps"],["Traps","traps"]],
+    vid:"FWJR5Ve8bnQ",
+    tips:[
+      "Berdiri di atas platform, bungkuk sekitar 45° dengan punggung tetap lurus",
+      "Pegang pegangan T-bar erat-erat dengan kedua tangan",
+      "Tarik ke arah dada bawah atau perut, siku ke belakang dan ke atas",
+      "Remas otot punggung di puncak — tahan 1 detik",
+      "Jangan ayunkan tubuh ke atas untuk membantu mengangkat beban",
+      "Turunkan perlahan dengan kontrol, rasakan peregangan penuh pada punggung"
+    ]
+  },
+
+  { id:27, name:"Hack Squat (DHZ Super Squat)", cat:"machine", diff:"Beginner",
+    pri:[["Quads","quads"],["Glutes","glutes"]],
+    sec:[["Hamstrings","hams"]],
+    vid:"-lAnEGH2blE",
+    tips:[
+      "Sesuaikan posisi bahu dan sandaran pada mesin dengan nyaman",
+      "Kaki selebar bahu di platform, jari kaki sedikit ke luar",
+      "Tekuk lutut perlahan, turunkan hingga paha sejajar atau lebih dalam",
+      "Jangan biarkan lutut roboh ke dalam saat turun atau naik",
+      "Dorong melalui tumit untuk kembali ke posisi awal",
+      "Mesin ini bagus karena tidak membebani tulang belakang seperti squat bebas"
+    ]
+  },
+
+  { id:28, name:"Hip Abductor (DHZ U3021D)", cat:"machine", diff:"Beginner",
+    pri:[["Glutes","glutes"]],
+    sec:[],
+    vid:"OjI5OpV6IWA",
+    tips:[
+      "Duduk tegak di mesin, sesuaikan bantalan di luar paha",
+      "Kaki dan lutut mulai dari posisi rapat atau sedikit terbuka",
+      "Dorong kedua kaki ke luar melawan bantalan secara terkontrol",
+      "Jangan gunakan sentakan — gerakkan secara lambat dan terkontrol",
+      "Tahan sebentar di posisi paling lebar untuk kontraksi bokong",
+      "Kembali ke posisi awal secara perlahan — jangan dibiarkan jatuh"
+    ]
+  },
+
+  { id:29, name:"Hip Adductor (DHZ U3021D)", cat:"machine", diff:"Beginner",
+    pri:[["Quads","quads"]],
+    sec:[],
+    vid:"MLBm7i341Rw",
+    tips:[
+      "Duduk tegak di mesin, sesuaikan bantalan di dalam paha",
+      "Kaki mulai dalam posisi terbuka sesuai pengaturan mesin",
+      "Rapatkan kedua kaki melawan bantalan ke tengah secara terkontrol",
+      "Fokus pada kontraksi otot dalam paha saat menutup",
+      "Tahan sebentar di posisi paling rapat",
+      "Kembali ke posisi terbuka secara perlahan — kontrol penuh"
+    ]
+  },
+
+  { id:30, name:"Dips", cat:"machine", diff:"Intermediate",
+    pri:[["Triceps","triceps"],["Chest","chest"]],
+    sec:[["Shoulders","shoulders"]],
+    vid:"K5JxupmoLW4",
+    tips:[
+      "Pegang palang dengan tangan selebar bahu, angkat tubuh",
+      "Condong sedikit ke depan (10–15°) untuk menargetkan dada lebih banyak",
+      "Tetap tegak untuk lebih fokus melatih trisep",
+      "Turunkan sampai siku membentuk sudut 90° — jangan terlalu rendah",
+      "Dorong kembali ke atas dengan trisep dan dada",
+      "Jika terlalu berat, gunakan band karet sebagai bantuan"
+    ]
+  },
+
+  { id:31, name:"Pull-Up", cat:"machine", diff:"Advanced",
+    pri:[["Lats","lats"],["Back","back"]],
+    sec:[["Biceps","biceps"],["Core","core"]],
+    vid:"BYvDU-j0_qQ",
+    tips:[
+      "Pegang palang lebih lebar dari bahu, telapak menghadap ke depan",
+      "Mulai dari posisi gantung lengan lurus penuh setiap repetisi",
+      "Tarik tubuh ke atas hingga dagu melewati atau menyentuh palang",
+      "Siku mengarah ke arah saku celana saat menarik ke atas",
+      "Turunkan dengan kontrol penuh — lengan lurus kembali di bawah",
+      "Jika terlalu berat, gunakan band karet atau mesin assisted pull-up"
+    ]
+  },
+
+  { id:32, name:"Decline Sit-Up", cat:"machine", diff:"Beginner",
+    pri:[["Core","core"]],
+    sec:[],
+    vid:"iL06z9PWYs8",
+    tips:[
+      "Kaitkan kaki di penahan bangku sit-up yang miring",
+      "Silangkan tangan di dada atau letakkan di belakang kepala",
+      "Angkat tubuh ke atas dengan mengontraksikan otot perut",
+      "Jangan tarik leher dengan tangan — dagu sedikit ke bawah",
+      "Turunkan perlahan sampai punggung hampir menyentuh bangku",
+      "Fokus pada otot perut, jangan gunakan momentum ayunan"
+    ]
+  },
+
+  { id:33, name:"Rotary Torso (Double Twister)", cat:"machine", diff:"Beginner",
+    pri:[["Core","core"]],
+    sec:[],
+    vid:"CxoSWcbsEB8",
+    tips:[
+      "Duduk tegak di mesin, pegang pegangan dengan erat",
+      "Putar badan ke satu sisi secara perlahan dan terkontrol",
+      "Jangan gunakan momentum untuk memutar — kontrol adalah kuncinya",
+      "Tahan sebentar di posisi paling jauh dari tengah",
+      "Kembali ke posisi tengah secara perlahan",
+      "Latihan ini melatih otot oblique (sisi perut) — gunakan beban ringan dulu"
+    ]
+  },
+
+  // ════ KARDIO ════
+
+  { id:34, name:"Treadmill", cat:"cardio", diff:"Beginner",
+    pri:[["Core","core"]],
+    sec:[["Quads","quads"],["Calves","calves"]],
+    vid:"E7sgqy7r6yc",
+    tips:[
+      "Mulai dengan kecepatan rendah (3–5 km/h) untuk pemanasan 5 menit",
+      "Jaga postur tegak — pandangan lurus ke depan, bahu rileks",
+      "Langkah ringan dan natural — jangan hentakkan kaki ke treadmill",
+      "Lengan bergerak alami maju-mundur mengikuti ritme langkah",
+      "Untuk lari interval: bergantian kecepatan tinggi 1 menit dan rendah 2 menit",
+      "Pendinginan dengan kecepatan jalan lambat selama 3–5 menit di akhir"
+    ]
+  },
+
+  { id:35, name:"Sepeda Statis", cat:"cardio", diff:"Beginner",
+    pri:[["Quads","quads"],["Glutes","glutes"]],
+    sec:[["Hamstrings","hams"],["Calves","calves"]],
+    vid:"SKvRCyELTzA",
+    tips:[
+      "Sesuaikan ketinggian kursi — kaki hampir lurus di pedal posisi bawah",
+      "Postur tegak atau sedikit condong ke depan, punggung tidak membungkuk",
+      "Kayuh menggunakan seluruh lingkaran pedal, bukan hanya mendorong ke bawah",
+      "Sesuaikan resistensi: ringan untuk kardio, berat untuk kekuatan kaki",
+      "Jaga lutut mengarah ke depan — jangan biarkan melebar ke samping",
+      "Cocok untuk pemanasan 10 menit atau sesi kardio 30–45 menit"
+    ]
+  },
+
+  { id:36, name:"Elliptical", cat:"cardio", diff:"Beginner",
+    pri:[["Quads","quads"],["Glutes","glutes"]],
+    sec:[["Hamstrings","hams"],["Core","core"]],
+    vid:"j38LNpTLwzY",
+    tips:[
+      "Berdiri tegak di atas pedal, pegang handlebar dengan ringan",
+      "Gerakkan kaki dalam pola elips yang mulus dan natural",
+      "Gunakan handlebar bergerak untuk melibatkan otot lengan dan dada juga",
+      "Jaga tekanan pada seluruh telapak kaki — jangan hanya jari kaki",
+      "Sesuaikan resistensi dan kemiringan (incline) untuk intensitas berbeda",
+      "Rendah dampak pada sendi — sangat cocok untuk pemula dan pemulihan cedera"
     ]
   }
 
@@ -770,8 +989,8 @@ const EX = [
 // ─── State ──────────────────────────────────────────────────────────────────
 let filterCat = 'all', filterMuscle = '', searchText = '';
 
-const CAT_LBL  = { 'free-weights':'🏋️ Free Weights', cable:'🔗 Cable', machine:'⚙️ Machine' };
-const CAT_CLS  = { 'free-weights':'b-fw', cable:'b-cbl', machine:'b-mch' };
+const CAT_LBL  = { 'free-weights':'🏋️ Beban Bebas', smith:'🔧 Smith Machine', cable:'🔗 Kabel', machine:'⚙️ Mesin', cardio:'🏃 Kardio' };
+const CAT_CLS  = { 'free-weights':'b-fw', smith:'b-smt', cable:'b-cbl', machine:'b-mch', cardio:'b-crd' };
 const DIFF_CLS = { Beginner:'b-beg', Intermediate:'b-int', Advanced:'b-adv' };
 const M_CLS    = {
   chest:'mc-chest', lats:'mc-lats', back:'mc-back', quads:'mc-quads',
@@ -836,7 +1055,7 @@ function card(ex) {
     </div>
     <div class="tips-wrap">
       <button class="tips-btn" id="tb-${ex.id}" onclick="toggleTips(${ex.id})">
-        <span>📋 Form Cues &amp; Technique Tips</span>
+        <span>📋 Panduan Teknik &amp; Tips Latihan</span>
         <svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
           <polyline points="6,9 12,15 18,9"/>
         </svg>
@@ -860,8 +1079,8 @@ function render() {
   const list = filtered();
   document.getElementById('resInfo').textContent =
     list.length === EX.length
-      ? `Showing all ${EX.length} exercises`
-      : `${list.length} of ${EX.length} exercises`;
+      ? `Menampilkan semua ${EX.length} latihan`
+      : `${list.length} dari ${EX.length} latihan`;
 
   document.getElementById('grid').innerHTML = list.length
     ? list.map(card).join('')
