@@ -83,7 +83,7 @@
     .filters-inner { max-width: 1400px; margin: 0 auto; display: flex; flex-direction: column; gap: 9px; }
     .frow { display: flex; gap: 9px; align-items: center; flex-wrap: wrap; }
 
-    .search-wrap { flex: 1; min-width: 180px; position: relative; }
+    .search-wrap { display: none; }
     .search-wrap input {
       width: 100%;
       background: var(--surface2);
@@ -358,7 +358,7 @@
     /* Larger touch targets */
     .tabs button { min-height: 48px; padding: 10px 16px; font-size: 0.88rem; }
     .msel { min-height: 48px; font-size: 0.88rem; }
-    .search-wrap input { min-height: 48px; font-size: 1rem; }
+    .search-wrap { display: none; }
     .tips-btn { min-height: 52px; font-size: 0.88rem; }
     .play-btn { width: 72px; height: 72px; }
     .vid-area { cursor: pointer; }
@@ -529,14 +529,7 @@
 <div class="filters">
   <div class="filters-inner">
     <div class="frow">
-      <div class="search-wrap">
-        <span class="s-icon">
-          <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-            <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
-          </svg>
-        </span>
-        <input type="text" id="searchInput" placeholder="Cari latihan atau otot..." autocomplete="off">
-      </div>
+
       <div class="tabs" id="catTabs">
         <button class="active" data-cat="all">Semua (36)</button>
         <button data-cat="free-weights">🏋️ Beban Bebas (12)</button>
@@ -1099,7 +1092,7 @@ const EX = [
 ];
 
 // ─── State ──────────────────────────────────────────────────────────────────
-let filterCat = 'all', filterMuscle = '', searchText = '';
+let filterCat = 'all', filterMuscle = '';
 
 const CAT_LBL  = { 'free-weights':'🏋️ Beban Bebas', smith:'🔧 Smith Machine', cable:'🔗 Kabel', machine:'⚙️ Mesin', cardio:'🏃 Kardio' };
 const CAT_CLS  = { 'free-weights':'b-fw', smith:'b-smt', cable:'b-cbl', machine:'b-mch', cardio:'b-crd' };
@@ -1113,14 +1106,13 @@ const M_CLS    = {
 
 // ─── Filter ──────────────────────────────────────────────────────────────────
 function filtered() {
-  const q = searchText.toLowerCase();
   return EX.filter(ex => {
     if (filterCat !== 'all' && ex.cat !== filterCat) return false;
     if (filterMuscle) {
       const all = [...ex.pri, ...ex.sec].map(([n]) => n.toLowerCase());
       if (!all.some(m => m.includes(filterMuscle.toLowerCase()))) return false;
     }
-    if (q) {
+    if (false && q) {
       const hay = [ex.name, ...ex.pri.map(m=>m[0]), ...ex.sec.map(m=>m[0])].join(' ').toLowerCase();
       if (!hay.includes(q)) return false;
     }
@@ -1230,11 +1222,11 @@ function startKiosk() {
   document.getElementById('fsPrompt').style.display = 'none';
 }
 
-// Copy logo src into fullscreen prompt
-(function() {
+// Copy logo src into fullscreen prompt (wait for full DOM)
+document.addEventListener('DOMContentLoaded', function() {
   const logo = document.querySelector('.header-logo-img');
   if (logo) document.getElementById('fsLogo').src = logo.src;
-})();
+});
 
 // ─── Admin (long-press logo 3 sec) ───────────────────────────────────────────
 let _holdTimer = null, _holdInterval = null, _holdProgress = 0;
@@ -1323,12 +1315,6 @@ document.getElementById('catTabs').addEventListener('click', e => {
 document.getElementById('muscleSel').addEventListener('change', e => {
   filterMuscle = e.target.value;
   render();
-});
-
-let debounce;
-document.getElementById('searchInput').addEventListener('input', e => {
-  clearTimeout(debounce);
-  debounce = setTimeout(() => { searchText = e.target.value; render(); }, 200);
 });
 
 // ─── Init ─────────────────────────────────────────────────────────────────────
