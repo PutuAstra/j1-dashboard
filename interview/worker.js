@@ -1454,27 +1454,29 @@ function generateBookingSlots(link, bookedSlotStarts) {
     const localDate  = new Date(localMs);
     const weekday    = localDate.getUTCDay(); // 0=Sun … 6=Sat in local TZ
 
-    const rule = slotRules.find(r => r.day === weekday);
-    if (!rule) continue;
+    // Support multiple ranges per day (e.g. 09:00–12:00 and 13:00–17:00)
+    const dayRules = slotRules.filter(r => r.day === weekday);
+    if (!dayRules.length) continue;
 
     // Compute UTC timestamp of local midnight for this date
     const y  = localDate.getUTCFullYear();
     const mo = localDate.getUTCMonth();
     const dy = localDate.getUTCDate();
-    // local midnight = UTC midnight - tzOffsetMs  (because utc = local - tzOffsetMs)
     const localMidnightUtc = Date.UTC(y, mo, dy) - tzOffsetMs;
 
-    const [fh, fm] = rule.from.split(':').map(Number);
-    const [th, tm] = rule.to.split(':').map(Number);
-    const startUtc = localMidnightUtc + (fh * 60 + fm) * 60 * 1000;
-    const endUtc   = localMidnightUtc + (th * 60 + tm) * 60 * 1000;
+    for (const rule of dayRules) {
+      const [fh, fm] = rule.from.split(':').map(Number);
+      const [th, tm] = rule.to.split(':').map(Number);
+      const startUtc = localMidnightUtc + (fh * 60 + fm) * 60 * 1000;
+      const endUtc   = localMidnightUtc + (th * 60 + tm) * 60 * 1000;
 
-    let t = startUtc;
-    while (t + durationMs <= endUtc) {
-      if (t > now + bufferMs && !bookedSlotStarts.has(t)) {
-        slots.push({ start: t, end: t + durationMs });
+      let t = startUtc;
+      while (t + durationMs <= endUtc) {
+        if (t > now + bufferMs && !bookedSlotStarts.has(t)) {
+          slots.push({ start: t, end: t + durationMs });
+        }
+        t += durationMs;
       }
-      t += durationMs;
     }
   }
   return slots;

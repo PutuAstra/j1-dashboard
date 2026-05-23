@@ -2224,48 +2224,60 @@ function renderCreateBookingLinkPage() {
 
 function renderSlotRulesEditor() {
   return BOOKING_DAYS.map((dayName, dayIdx) => {
-    const rule = _editingSlotRules.find(r => r.day === dayIdx);
-    const enabled = !!rule;
+    const rules   = _editingSlotRules.filter(r => r.day === dayIdx);
+    const enabled = rules.length > 0;
     return `
-      <div style="display:flex;align-items:center;gap:12px;padding:10px 14px;background:var(--bg);border-radius:8px;border:1px solid ${enabled ? 'var(--accent)' : 'var(--border)'}">
-        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;min-width:60px">
-          <input type="checkbox" id="day-toggle-${dayIdx}" ${enabled ? 'checked' : ''}
-            onchange="toggleSlotDay(${dayIdx},this.checked)"
-            style="accent-color:var(--accent);width:15px;height:15px;cursor:pointer" />
-          <span style="font-size:13px;font-weight:600;${enabled ? '' : 'color:var(--muted)'}">${dayName}</span>
-        </label>
-        <div style="display:flex;align-items:center;gap:8px;flex:1;${enabled ? '' : 'opacity:0.35;pointer-events:none'}">
-          <input type="time" id="day-from-${dayIdx}" value="${rule?.from || '09:00'}"
-            onchange="updateSlotTime(${dayIdx},'from',this.value)"
-            style="background:var(--card);border:1px solid var(--border);border-radius:6px;padding:5px 8px;color:var(--text);font-size:13px" />
-          <span style="color:var(--muted);font-size:13px">to</span>
-          <input type="time" id="day-to-${dayIdx}" value="${rule?.to || '17:00'}"
-            onchange="updateSlotTime(${dayIdx},'to',this.value)"
-            style="background:var(--card);border:1px solid var(--border);border-radius:6px;padding:5px 8px;color:var(--text);font-size:13px" />
+      <div style="padding:12px 14px;background:var(--bg);border-radius:8px;border:1px solid ${enabled ? 'var(--accent)' : 'var(--border)'}">
+        <div style="display:flex;align-items:center;gap:10px;${enabled ? 'margin-bottom:10px' : ''}">
+          <label style="display:flex;align-items:center;gap:8px;cursor:pointer;min-width:60px">
+            <input type="checkbox" ${enabled ? 'checked' : ''}
+              onchange="toggleSlotDay(${dayIdx},this.checked)"
+              style="accent-color:var(--accent);width:15px;height:15px;cursor:pointer" />
+            <span style="font-size:13px;font-weight:600;${enabled ? '' : 'color:var(--muted)'}">${dayName}</span>
+          </label>
+          ${enabled ? `<button type="button" class="btn btn-ghost" style="font-size:11px;padding:2px 10px;margin-left:auto;color:var(--accent)" onclick="addDayRange(${dayIdx})">+ Add range</button>` : ''}
         </div>
+        ${enabled ? rules.map((rule, rIdx) => `
+          <div style="display:flex;align-items:center;gap:8px;${rIdx > 0 ? 'margin-top:8px' : ''}">
+            <input type="time" value="${rule.from}" onchange="updateSlotRange(${dayIdx},${rIdx},'from',this.value)"
+              style="background:var(--card);border:1px solid var(--border);border-radius:6px;padding:5px 8px;color:var(--text);font-size:13px" />
+            <span style="color:var(--muted);font-size:13px">to</span>
+            <input type="time" value="${rule.to}" onchange="updateSlotRange(${dayIdx},${rIdx},'to',this.value)"
+              style="background:var(--card);border:1px solid var(--border);border-radius:6px;padding:5px 8px;color:var(--text);font-size:13px" />
+            ${rules.length > 1 ? `<button type="button" class="btn btn-ghost" style="font-size:16px;padding:2px 8px;color:var(--muted)" onclick="removeDayRange(${dayIdx},${rIdx})" title="Remove this range">×</button>` : ''}
+          </div>
+        `).join('') : ''}
       </div>
     `;
   }).join('');
 }
 
 function toggleSlotDay(dayIdx, enabled) {
-  if (enabled) {
-    if (!_editingSlotRules.find(r => r.day === dayIdx)) {
-      _editingSlotRules.push({ day: dayIdx, from: '09:00', to: '17:00' });
-    }
-  } else {
-    _editingSlotRules = _editingSlotRules.filter(r => r.day !== dayIdx);
-  }
-  // Update border color and enable/disable time inputs
-  const row = document.getElementById(`day-toggle-${dayIdx}`)?.closest('div[style]');
-  if (row) row.style.borderColor = enabled ? 'var(--accent)' : 'var(--border)';
-  const timeWrap = document.getElementById(`day-from-${dayIdx}`)?.closest('div');
-  if (timeWrap) timeWrap.style.cssText = `display:flex;align-items:center;gap:8px;flex:1;${enabled ? '' : 'opacity:0.35;pointer-events:none'}`;
+  _editingSlotRules = _editingSlotRules.filter(r => r.day !== dayIdx);
+  if (enabled) _editingSlotRules.push({ day: dayIdx, from: '09:00', to: '17:00' });
+  document.getElementById('slot-rules-editor').innerHTML = renderSlotRulesEditor();
 }
 
-function updateSlotTime(dayIdx, field, value) {
-  const rule = _editingSlotRules.find(r => r.day === dayIdx);
-  if (rule) rule[field] = value;
+function addDayRange(dayIdx) {
+  // Default the new range to start where the last range ends (or 13:00–17:00)
+  const existing = _editingSlotRules.filter(r => r.day === dayIdx);
+  const lastTo   = existing.length ? existing[existing.length - 1].to : '12:00';
+  _editingSlotRules.push({ day: dayIdx, from: lastTo, to: '17:00' });
+  document.getElementById('slot-rules-editor').innerHTML = renderSlotRulesEditor();
+}
+
+function removeDayRange(dayIdx, rangeIdx) {
+  const dayRules = _editingSlotRules.filter(r => r.day === dayIdx);
+  if (dayRules.length <= 1) return;
+  const target    = dayRules[rangeIdx];
+  const globalIdx = _editingSlotRules.indexOf(target);
+  if (globalIdx !== -1) _editingSlotRules.splice(globalIdx, 1);
+  document.getElementById('slot-rules-editor').innerHTML = renderSlotRulesEditor();
+}
+
+function updateSlotRange(dayIdx, rangeIdx, field, value) {
+  const dayRules = _editingSlotRules.filter(r => r.day === dayIdx);
+  if (dayRules[rangeIdx]) dayRules[rangeIdx][field] = value;
 }
 
 async function submitCreateBookingLink() {
@@ -2280,12 +2292,12 @@ async function submitCreateBookingLink() {
   if (!title) return toast('Title is required', 'error');
   if (!_editingSlotRules.length) return toast('Please enable at least one day of availability', 'error');
 
-  // Validate all enabled days have valid from < to
+  // Validate all ranges have valid from < to, and no overlaps within a day
   for (const r of _editingSlotRules) {
     const [fh, fm] = r.from.split(':').map(Number);
     const [th, tm] = r.to.split(':').map(Number);
     if (fh * 60 + fm >= th * 60 + tm) {
-      return toast(`${BOOKING_DAYS[r.day]}: "From" time must be before "To" time`, 'error');
+      return toast(`${BOOKING_DAYS[r.day]}: each "From" time must be before its "To" time`, 'error');
     }
   }
 
