@@ -331,6 +331,7 @@ async function submitBooking() {
       candidateName:  name,
       candidateEmail: email,
       slotStart:      _selectedSlot.start,
+      candidateTz:    Intl.DateTimeFormat().resolvedOptions().timeZone,
     });
     renderConfirmation(name, email, _selectedSlot, result);
   } catch (e) {
