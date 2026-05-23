@@ -1391,17 +1391,16 @@ async function listBookingLinks(request) {
 
 async function createBookingLink(request) {
   requireAdmin(request);
-  const { title, clientName, position, interviewType, duration, tzOffset, daysAhead, slotRules } = await request.json();
+  const { title, clientName, position, duration, tzOffset, daysAhead, slotRules } = await request.json();
   if (!title) return jsonRes({ error: 'title required' }, 400);
   if (!slotRules?.length) return jsonRes({ error: 'slotRules required' }, 400);
 
   const token = uid();
   const link = {
     token, title,
-    clientName:    clientName || '',
-    position:      position || '',
-    interviewType: interviewType || 'Interview',
-    duration:      duration || 30,
+    clientName: clientName || '',
+    position:   position || '',
+    duration:   duration || 30,
     tzOffset:      tzOffset ?? 0,
     daysAhead:     daysAhead || 14,
     slotRules,
@@ -1566,11 +1565,10 @@ async function getBookingSlots(token) {
   const slots = generateBookingSlots(link, bookedSlots, blockedDates);
 
   return jsonRes({
-    title:         link.title,
-    clientName:    link.clientName,
-    position:      link.position,
-    interviewType: link.interviewType,
-    duration:      link.duration,
+    title:      link.title,
+    clientName: link.clientName,
+    position:   link.position,
+    duration:   link.duration,
     slots,
     // Expose blocked count for transparency (useful for debugging)
     _meta: { holidaysBlocked: blockedDates.size, slotsAvailable: slots.length },
@@ -1828,7 +1826,7 @@ async function sendBookingConfirmationEmail(booking, link) {
         <table style="width:100%;border-collapse:collapse;margin:20px 0">
           <tr><td style="padding:8px 0;color:#6b7280;font-size:13px;width:100px">Date</td><td style="padding:8px 0;color:#1a1a1a;font-size:14px;font-weight:600">${dateStr}</td></tr>
           <tr><td style="padding:8px 0;color:#6b7280;font-size:13px">Time</td><td style="padding:8px 0;color:#1a1a1a;font-size:14px;font-weight:600">${timeStr} – ${endStr}</td></tr>
-          <tr><td style="padding:8px 0;color:#6b7280;font-size:13px">Type</td><td style="padding:8px 0;color:#1a1a1a;font-size:14px">${link.interviewType || 'Interview'}</td></tr>
+          <tr><td style="padding:8px 0;color:#6b7280;font-size:13px">Format</td><td style="padding:8px 0;color:#1a1a1a;font-size:14px">🟦 Microsoft Teams (video)</td></tr>
           ${booking.meetingLink ? `<tr><td style="padding:8px 0;color:#6b7280;font-size:13px">Meeting</td><td style="padding:8px 0"><a href="${booking.meetingLink}" style="color:#B01A18;font-weight:600">Join Meeting Link</a></td></tr>` : ''}
         </table>
         ${booking.meetingLink ? `

@@ -237,7 +237,7 @@ function renderSlotPicker(data) {
           ${data.clientName ? esc(data.clientName) : ''}${data.clientName && data.position ? ' · ' : ''}${data.position ? esc(data.position) : ''}
         </div>` : ''}
       <div style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap">
-        <span class="badge">${esc(data.interviewType || 'Interview')}</span>
+        <span class="badge" style="background:rgba(98,100,167,0.2);color:#9ea0cc">🟦 Microsoft Teams</span>
         <span class="badge" style="background:rgba(99,102,241,0.15);color:#a5b4fc">${data.duration} minutes</span>
       </div>
     </div>

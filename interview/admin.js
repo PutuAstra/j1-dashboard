@@ -1981,7 +1981,6 @@ let _bookingLinks = [];
 let _editingSlotRules = [];
 
 const BOOKING_DAYS = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
-const BOOKING_TYPES = ['Phone Screen', 'One-Way Video', 'Two-Way Video', 'In-Person'];
 const BOOKING_DURATIONS = [15, 30, 45, 60, 90];
 const BOOKING_DAYS_AHEAD = [7, 14, 21, 30, 60];
 
@@ -2043,7 +2042,7 @@ function renderBookingLinkCard(link) {
           <div class="text-muted text-sm" style="margin-bottom:6px">
             ${link.clientName ? `<span>${esc(link.clientName)}</span> · ` : ''}
             ${link.position ? `<span>${esc(link.position)}</span> · ` : ''}
-            <span>${link.interviewType || 'Interview'}</span> · <span>${link.duration || 30} min</span>
+            <span>🟦 Microsoft Teams</span> · <span>${link.duration || 30} min</span>
           </div>
           <div style="font-size:11px;color:var(--muted)">
             Available: ${daysLabel} &nbsp;·&nbsp; ${tzLabel} &nbsp;·&nbsp; ${link.daysAhead || 14} days ahead &nbsp;·&nbsp; Created ${created}
@@ -2179,12 +2178,6 @@ function renderCreateBookingLinkPage() {
           <div class="form-group" style="margin-bottom:0">
             <label>Position / Role</label>
             <input type="text" id="bl-position" placeholder="e.g. Waiter" autocomplete="off" />
-          </div>
-          <div class="form-group" style="margin-bottom:0">
-            <label>Interview Type</label>
-            <select id="bl-type">
-              ${BOOKING_TYPES.map(t => `<option value="${t}">${t}</option>`).join('')}
-            </select>
           </div>
           <div class="form-group" style="margin-bottom:0">
             <label>Slot Duration</label>
@@ -2600,7 +2593,6 @@ async function submitCreateBookingLink() {
   const title       = document.getElementById('bl-title').value.trim();
   const clientName  = document.getElementById('bl-client').value.trim();
   const position    = document.getElementById('bl-position').value.trim();
-  const interviewType = document.getElementById('bl-type').value;
   const duration    = parseInt(document.getElementById('bl-duration').value);
   const tzOffset    = parseInt(document.getElementById('bl-tz').value);
   const daysAhead   = parseInt(document.getElementById('bl-days-ahead').value);
@@ -2622,7 +2614,7 @@ async function submitCreateBookingLink() {
 
   try {
     await apiJSON('POST', '/api/booking/links', {
-      title, clientName, position, interviewType, duration,
+      title, clientName, position, duration,
       tzOffset, daysAhead, slotRules: _editingSlotRules,
     });
     toast('Booking link created!', 'success');
