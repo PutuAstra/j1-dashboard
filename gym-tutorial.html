@@ -247,6 +247,99 @@
     .empty h3 { font-size: 1.2rem; margin-bottom: 6px; }
     .empty p { font-size: 0.84rem; color: var(--text3); }
 
+    /* ── Membership Section ── */
+    .membership {
+      background: var(--surface);
+      border-top: 1px solid var(--border);
+      border-bottom: 1px solid var(--border);
+      padding: 32px 20px;
+    }
+    .membership-inner { max-width: 900px; margin: 0 auto; }
+    .membership-title {
+      text-align: center;
+      font-size: clamp(1rem, 3vw, 1.3rem);
+      font-weight: 900;
+      letter-spacing: 4px;
+      text-transform: uppercase;
+      color: #D4A017;
+      margin-bottom: 6px;
+    }
+    .membership-quote {
+      text-align: center;
+      font-style: italic;
+      font-size: 0.8rem;
+      color: var(--text3);
+      margin-bottom: 24px;
+      letter-spacing: 0.5px;
+    }
+    .membership-cards {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 14px;
+      margin-bottom: 20px;
+    }
+    .mem-card {
+      border-radius: 14px;
+      padding: 20px 16px;
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+    }
+    .mem-card.silver {
+      background: linear-gradient(135deg, #2a2a2a 0%, #3a3a3a 100%);
+      border: 1px solid #555;
+    }
+    .mem-card.gold {
+      background: linear-gradient(135deg, #2a1f00 0%, #3d2e00 100%);
+      border: 1px solid #D4A017;
+      box-shadow: 0 0 20px rgba(212,160,23,0.15);
+    }
+    .mem-card.platinum {
+      background: linear-gradient(135deg, #1a1a1a 0%, #0d0d0d 100%);
+      border: 1px solid #888;
+    }
+    .mem-card .popular-badge {
+      position: absolute; top: 10px; right: 10px;
+      background: #D4A017; color: #000;
+      font-size: 0.6rem; font-weight: 800;
+      padding: 2px 8px; border-radius: 20px;
+      letter-spacing: 1px; text-transform: uppercase;
+    }
+    .mem-tier {
+      font-size: 0.7rem; font-weight: 700;
+      letter-spacing: 3px; text-transform: uppercase;
+      margin-bottom: 10px;
+    }
+    .mem-card.silver .mem-tier { color: #aaa; }
+    .mem-card.gold .mem-tier { color: #D4A017; }
+    .mem-card.platinum .mem-tier { color: #ccc; }
+    .mem-price {
+      font-size: 1.4rem; font-weight: 900;
+      color: #fff; line-height: 1.1;
+      margin-bottom: 4px;
+    }
+    .mem-duration {
+      font-size: 0.75rem; color: var(--text3);
+    }
+    .mem-info-row {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 24px;
+      flex-wrap: wrap;
+      padding: 14px 16px;
+      background: var(--surface2);
+      border-radius: 12px;
+      font-size: 0.82rem;
+    }
+    .mem-info-item { display: flex; align-items: center; gap: 8px; color: var(--text2); }
+    .mem-info-item span.label { color: var(--text3); font-size: 0.72rem; text-transform: uppercase; letter-spacing: 1px; }
+    .day-pass-badge {
+      background: #D4A017; color: #000;
+      font-weight: 800; font-size: 0.9rem;
+      padding: 4px 14px; border-radius: 8px;
+    }
+
     /* Footer */
     footer {
       border-top: 1px solid var(--border); padding: 28px 20px;
@@ -274,6 +367,49 @@
     <div><div class="stat-num">HD</div><div class="stat-lbl">Video Guides</div></div>
   </div>
 </header>
+
+<!-- ─── Membership ─── -->
+<section class="membership">
+  <div class="membership-inner">
+    <div class="membership-title">Member Prices</div>
+    <div class="membership-quote">"The pain you feel today will be the strength you feel tomorrow"</div>
+    <div class="membership-cards">
+
+      <div class="mem-card silver">
+        <div class="mem-tier">🥈 Silver Member</div>
+        <div class="mem-price">Rp 150.000</div>
+        <div class="mem-duration">1 Bulan</div>
+      </div>
+
+      <div class="mem-card gold">
+        <div class="popular-badge">Popular</div>
+        <div class="mem-tier">🥇 Gold Member</div>
+        <div class="mem-price">Rp 400.000</div>
+        <div class="mem-duration">3 Bulan</div>
+      </div>
+
+      <div class="mem-card platinum">
+        <div class="mem-tier">💎 Platinum Member</div>
+        <div class="mem-price">Rp 700.000</div>
+        <div class="mem-duration">6 Bulan</div>
+      </div>
+
+    </div>
+    <div class="mem-info-row">
+      <div class="mem-info-item">
+        <span>🕐</span>
+        <div><span class="label">Jam Buka</span><br>8.00 am – 8.00 pm</div>
+      </div>
+      <div class="mem-info-item">
+        <div><span class="label">Day Pass</span><br><span class="day-pass-badge">Rp 15.000</span></div>
+      </div>
+      <div class="mem-info-item">
+        <span>📞</span>
+        <div><span class="label">Hubungi Kami</span><br>087861548151</div>
+      </div>
+    </div>
+  </div>
+</section>
 
 <!-- ─── Filters ─── -->
 <div class="filters">
@@ -317,10 +453,11 @@
 
 <footer>
   <p style="font-size:1rem;font-weight:800;letter-spacing:3px;color:#D4A017">IRON GYM</p>
-  <p style="font-size:0.72rem;letter-spacing:2px;color:#666;margin-top:2px">UNDENIABLE RESULT</p>
-  <p style="margin-top:10px">📍 Desa Sukadana, Kecamatan Kubu, Kabupaten Karangasem, Bali</p>
-  <p style="margin-top:12px">🎥 Videos load from YouTube — tap the play button on any card.</p>
-  <p>Always warm up before training. Use a spotter for heavy compound lifts.</p>
+  <p style="font-size:0.72rem;letter-spacing:2px;color:#555;margin-top:2px">UNDENIABLE RESULT</p>
+  <p style="margin-top:10px">📍 Desa Sukadana, Kecamatan Kubu, Kabupaten Karangasem, Bali 80853</p>
+  <p style="margin-top:4px">📞 087861548151 &nbsp;·&nbsp; 🕐 8.00 am – 8.00 pm</p>
+  <p style="margin-top:12px;color:#444;font-size:0.75rem">🎥 Tap the play button on any card to load the video tutorial.</p>
+  <p style="color:#444;font-size:0.75rem">Always warm up before training. Use a spotter for heavy compound lifts.</p>
 </footer>
 
 <script>
