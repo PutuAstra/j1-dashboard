@@ -56,7 +56,7 @@ function doLogout() {
 function showApp() {
   document.getElementById('login-gate').style.display = 'none';
   document.getElementById('app').style.display = 'block';
-  const valid = ['ow-list', 'ow-create', 'tw-list', 'tw-schedule', 'scripts', 'booking', 'booking-create', 'holidays'];
+  const valid = ['ow-list', 'ow-create', 'tw-list', 'tw-schedule', 'scripts', 'booking', 'booking-create', 'booking-edit', 'holidays'];
   const hash  = window.location.hash.replace('#', '');
   gotoPage(valid.includes(hash) ? hash : 'ow-list');
 }
@@ -100,7 +100,7 @@ function gotoPage(page) {
   history.replaceState(null, '', '#' + page);
   const activeNav = ['ow-create', 'ow-list'].includes(page) ? 'ow-list'
                   : page === 'scripts' ? 'scripts'
-                  : ['booking', 'booking-create'].includes(page) ? 'booking'
+                  : ['booking', 'booking-create', 'booking-edit'].includes(page) ? 'booking'
                   : page === 'holidays' ? 'holidays'
                   : 'tw-list';
   document.querySelectorAll('.sidebar-item').forEach(btn =>
@@ -116,6 +116,7 @@ function gotoPage(page) {
   if (page === 'scripts')        renderScriptPage();
   if (page === 'booking')        renderBookingPage();
   if (page === 'booking-create') renderCreateBookingLinkPage();
+  if (page === 'booking-edit')   renderEditBookingLinkPage(_editingBookingToken);
   if (page === 'holidays')       renderHolidaysPage();
 }
 
@@ -1979,6 +1980,7 @@ async function downloadScriptDoc(positionId) {
 
 let _bookingLinks = [];
 let _editingSlotRules = [];
+let _editingBookingToken = null;
 
 const BOOKING_DAYS = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
 const BOOKING_DURATIONS = [15, 30, 45, 60, 90];
@@ -2058,6 +2060,8 @@ function renderBookingLinkCard(link) {
         <div style="display:flex;flex-direction:column;gap:6px;flex-shrink:0;align-items:flex-end">
           <button class="btn btn-outline" style="font-size:12px;padding:4px 14px"
             onclick="viewLinkBookings('${link.token}')">View Bookings</button>
+          <button class="btn btn-ghost" style="font-size:12px;padding:4px 10px"
+            onclick="editBookingLink('${link.token}')">Edit</button>
           <button class="btn btn-ghost" style="font-size:12px;padding:4px 10px"
             onclick="toggleBookingLink('${link.token}',${!link.active})">${link.active ? 'Deactivate' : 'Activate'}</button>
           <button class="btn btn-ghost" style="font-size:16px;padding:4px 8px" title="Delete link"
@@ -2587,6 +2591,130 @@ async function setBulkHolidayActive(type, active) {
     renderHolidaysContent();
     toast(`${active ? 'Enabled' : 'Disabled'} all ${type} holidays`, 'success');
   } catch (e) { toast(e.message, 'error'); }
+}
+
+// ── Edit Booking Link ─────────────────────────────────────────
+
+function editBookingLink(token) {
+  _editingBookingToken = token;
+  gotoPage('booking-edit');
+}
+
+async function renderEditBookingLinkPage(token) {
+  const main = document.getElementById('admin-main');
+  if (!token) { gotoPage('booking'); return; }
+
+  // Find from cache or refresh
+  let link = _bookingLinks.find(l => l.token === token);
+  if (!link) {
+    try {
+      const links = await apiJSON('GET', '/api/booking/links');
+      _bookingLinks = links;
+      link = links.find(l => l.token === token);
+    } catch (e) {
+      main.innerHTML = `<div class="empty-state" style="color:var(--red)">${esc(e.message)}</div>`;
+      return;
+    }
+  }
+  if (!link) {
+    main.innerHTML = `<div class="empty-state" style="color:var(--red)">Booking link not found.</div>`;
+    return;
+  }
+
+  // Pre-populate slot rules state
+  _editingSlotRules = (link.slotRules || []).map(r => ({ ...r }));
+  const tzOffset = link.tzOffset ?? 0;
+
+  main.innerHTML = `
+    <div style="max-width:700px">
+      <div style="margin-bottom:20px">
+        <button class="btn btn-ghost" style="padding:5px 12px;font-size:13px" onclick="gotoPage('booking')">← Booking Interview</button>
+      </div>
+      <h2 class="mb-16">Edit Booking Link</h2>
+      <div class="card">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+          <div class="form-group" style="margin-bottom:0;grid-column:1/-1">
+            <label>Link Title *</label>
+            <input type="text" id="bl-title" value="${esc(link.title)}" placeholder="e.g. Initial Screening – P&O Cruises" autocomplete="off" />
+          </div>
+          <div class="form-group" style="margin-bottom:0">
+            <label>Client Name</label>
+            <input type="text" id="bl-client" value="${esc(link.clientName || '')}" placeholder="e.g. P&O Cruises" autocomplete="off" />
+          </div>
+          <div class="form-group" style="margin-bottom:0">
+            <label>Position / Role</label>
+            <input type="text" id="bl-position" value="${esc(link.position || '')}" placeholder="e.g. Waiter" autocomplete="off" />
+          </div>
+          <div class="form-group" style="margin-bottom:0">
+            <label>Slot Duration</label>
+            <select id="bl-duration">
+              ${BOOKING_DURATIONS.map(d => `<option value="${d}" ${d === (link.duration || 30) ? 'selected' : ''}>${d} minutes</option>`).join('')}
+            </select>
+          </div>
+          <div class="form-group" style="margin-bottom:0">
+            <label>Timezone Offset</label>
+            <select id="bl-tz">
+              ${[-720,-660,-600,-570,-540,-480,-420,-360,-300,-240,-210,-180,-120,-60,0,60,120,180,210,240,270,300,330,345,360,390,420,480,510,525,540,570,600,630,660,720].map(o => {
+                return `<option value="${o}" ${o === tzOffset ? 'selected' : ''}>${formatTzOffset(o)}</option>`;
+              }).join('')}
+            </select>
+          </div>
+          <div class="form-group" style="margin-bottom:0">
+            <label>Days Available Ahead</label>
+            <select id="bl-days-ahead">
+              ${BOOKING_DAYS_AHEAD.map(d => `<option value="${d}" ${d === (link.daysAhead || 14) ? 'selected' : ''}>${d} days</option>`).join('')}
+            </select>
+          </div>
+        </div>
+
+        <hr class="divider" />
+        <h3 style="margin-bottom:14px">Weekly Availability</h3>
+        <div id="slot-rules-editor" style="display:grid;gap:8px">
+          ${renderSlotRulesEditor()}
+        </div>
+
+        <div class="flex gap-8 items-center" style="margin-top:24px">
+          <button class="btn btn-primary" id="bl-submit-btn" onclick="submitEditBookingLink('${token}')">Save Changes</button>
+          <button class="btn btn-outline" onclick="gotoPage('booking')">Cancel</button>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+async function submitEditBookingLink(token) {
+  const title      = document.getElementById('bl-title').value.trim();
+  const clientName = document.getElementById('bl-client').value.trim();
+  const position   = document.getElementById('bl-position').value.trim();
+  const duration   = parseInt(document.getElementById('bl-duration').value);
+  const tzOffset   = parseInt(document.getElementById('bl-tz').value);
+  const daysAhead  = parseInt(document.getElementById('bl-days-ahead').value);
+
+  if (!title) return toast('Title is required', 'error');
+  if (!_editingSlotRules.length) return toast('Please enable at least one day of availability', 'error');
+
+  for (const r of _editingSlotRules) {
+    const [fh, fm] = r.from.split(':').map(Number);
+    const [th, tm] = r.to.split(':').map(Number);
+    if (fh * 60 + fm >= th * 60 + tm) {
+      return toast(`${BOOKING_DAYS[r.day]}: each "From" time must be before its "To" time`, 'error');
+    }
+  }
+
+  const btn = document.getElementById('bl-submit-btn');
+  if (btn) { btn.disabled = true; btn.textContent = 'Saving…'; }
+
+  try {
+    await apiJSON('PUT', `/api/booking/link/${token}`, {
+      title, clientName, position, duration,
+      tzOffset, daysAhead, slotRules: _editingSlotRules,
+    });
+    toast('Booking link updated!', 'success');
+    gotoPage('booking');
+  } catch (e) {
+    toast(e.message, 'error');
+    if (btn) { btn.disabled = false; btn.textContent = 'Save Changes'; }
+  }
 }
 
 async function submitCreateBookingLink() {
