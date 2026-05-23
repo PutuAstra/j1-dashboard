@@ -366,13 +366,6 @@ function renderConfirmation(name, email, slot, result) {
         <div class="confirm-sub" style="margin-top:12px">
           A confirmation has been sent to <strong style="color:var(--text)">${esc(email)}</strong>.
         </div>
-        ${result?.meetingLink ? `
-          <div style="margin-top:24px">
-            <a href="${result.meetingLink}" target="_blank" class="btn btn-primary">
-              🔗 Join Meeting Link
-            </a>
-          </div>
-        ` : ''}
       </div>
     </div>
   `;
