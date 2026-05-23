@@ -460,6 +460,40 @@
     #adminCancel { background: #252525; color: #aaa; }
     #adminEnter:active, #adminCancel:active { opacity: 0.75; }
 
+
+    /* ── Video touch zone & fallback ── */
+    #vidTouchZone {
+      position: absolute; inset: 0; z-index: 2;
+      -webkit-tap-highlight-color: transparent;
+      cursor: pointer;
+    }
+    #vidPlayHint {
+      position: absolute; top: 50%; left: 50%;
+      transform: translate(-50%, -50%);
+      width: 90px; height: 90px; border-radius: 50%;
+      background: rgba(212,160,23,0.88);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 2.8rem; pointer-events: none; z-index: 3;
+      opacity: 0; transition: opacity 0.25s;
+    }
+    #vidPlayHint.show { opacity: 1; }
+    #vidFallback {
+      position: absolute; inset: 0; z-index: 6;
+      background: #111;
+      flex-direction: column; align-items: center; justify-content: center;
+      padding: 40px 32px; text-align: center; gap: 14px;
+      display: none;
+    }
+    #vidFallback.show { display: flex; }
+    .vf-icon { font-size: 3.5rem; }
+    .vf-name { color: #D4A017; font-size: 1.4rem; font-weight: 800; }
+    .vf-note { color: #888; font-size: 0.82rem; margin-bottom: 8px; }
+    .vf-tips { background: #1a1a1a; border-radius: 12px; padding: 20px 24px;
+                max-width: 640px; width: 100%; text-align: left; }
+    .vf-tips-title { color: #D4A017; font-weight: 700; font-size: 0.85rem;
+                     letter-spacing: 1px; text-transform: uppercase; margin-bottom: 10px; }
+    .vf-tip { color: #ccc; font-size: 0.9rem; line-height: 1.7; }
+
     /* ── Long-press ripple on logo ── */
     .header-logo-img { cursor: pointer; }
     #logoHoldBar {
@@ -1205,19 +1239,63 @@ function render() {
 }
 
 // ─── Video (in-app overlay) ──────────────────────────────────────────────────
+let _ytPaused = false, _ytHintTimer = null, _currentExId = null;
+
 function loadVid(id, vid) {
   const ex = EX.find(e => e.id === id);
+  _currentExId = id;
+  _ytPaused = false;
   document.getElementById('vidTitle').textContent = ex ? ex.name : '';
+  document.getElementById('vidFallback').className = '';
   document.getElementById('vidIframe').src =
-    'https://www.youtube-nocookie.com/embed/' + vid + '?autoplay=1&rel=0&modestbranding=1&playsinline=1';
+    'https://www.youtube-nocookie.com/embed/' + vid +
+    '?autoplay=1&rel=0&modestbranding=1&playsinline=1&controls=0&disablekb=1&enablejsapi=1';
   document.getElementById('vidOverlay').classList.add('open');
   document.body.classList.add('vid-open');
+  // Show fallback if video fails to start within 8 seconds
+  clearTimeout(_ytHintTimer);
+  _ytHintTimer = setTimeout(() => _checkVidLoaded(), 8000);
+}
+
+function _checkVidLoaded() {
+  // If iframe title still generic YouTube error page, show fallback
+  const fb = document.getElementById('vidFallback');
+  if (!fb.classList.contains('show') && _currentExId) {
+    const ex = EX.find(e => e.id === _currentExId);
+    if (ex) {
+      fb.innerHTML = '<div class="vf-icon">🎬</div>' +
+        '<div class="vf-name">' + ex.name + '</div>' +
+        '<div class="vf-note">Video sedang tidak tersedia — berikut tips tekniknya:</div>' +
+        '<div class="vf-tips"><div class="vf-tips-title">Tips Teknik (Bahasa Indonesia)</div>' +
+        ex.tips.map(t => '<div class="vf-tip">• ' + t + '</div>').join('') +
+        '</div>';
+      fb.className = 'show';
+    }
+  }
+}
+
+function ytToggle() {
+  const iframe = document.getElementById('vidIframe');
+  const hint = document.getElementById('vidPlayHint');
+  if (_ytPaused) {
+    iframe.contentWindow.postMessage('{"event":"command","func":"playVideo","args":""}', '*');
+    hint.textContent = '▶'; _ytPaused = false;
+  } else {
+    iframe.contentWindow.postMessage('{"event":"command","func":"pauseVideo","args":""}', '*');
+    hint.textContent = '⏸'; _ytPaused = true;
+  }
+  hint.classList.add('show');
+  clearTimeout(_ytHintTimer);
+  _ytHintTimer = setTimeout(() => hint.classList.remove('show'), 900);
 }
 
 function closeVid() {
   document.getElementById('vidOverlay').classList.remove('open');
   document.body.classList.remove('vid-open');
   document.getElementById('vidIframe').src = '';
+  document.getElementById('vidFallback').className = '';
+  clearTimeout(_ytHintTimer);
+  _ytPaused = false;
 }
 
 function toggleTips(id) {
@@ -1351,7 +1429,10 @@ render();
 <div id="vidOverlay">
   <div id="vidIframeWrap">
     <iframe id="vidIframe" allow="autoplay; fullscreen" allowfullscreen></iframe>
+    <div id="vidTouchZone" ontouchstart="ytToggle()" onclick="ytToggle()"></div>
+    <div id="vidPlayHint">▶</div>
     <div id="ytLogoBlock"></div>
+    <div id="vidFallback"></div>
   </div>
   <div id="vidCloseBar">
     <img id="vidBarLogo" alt="Iron Gym">
