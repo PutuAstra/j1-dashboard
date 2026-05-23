@@ -208,6 +208,25 @@
     .mc-rear-delt{ background: rgba(180,120,255,0.15);color: #c0a0ff; }
     .mc-rotator  { background: rgba(160,100,220,0.12);color: #b090e0; }
 
+    /* ── Muscle Anatomy Map ── */
+    .anatomy-wrap { position: absolute; inset: 0; background: #0a0a0a; overflow: hidden; }
+    .anatomy-wrap svg { width: 100%; height: 100%; pointer-events: none; display: block; }
+    .msvg-base { fill: #1c1c1c; stroke: #282828; stroke-width: 0.5; }
+    .msvg-label { font-size: 8px; fill: #2e2e2e; font-family: -apple-system, sans-serif; letter-spacing: 1.5px; }
+    .mg { fill: rgba(255,255,255,0.04); }
+    .mg.pri { fill: rgba(212,160,23,0.72); filter: drop-shadow(0 0 5px rgba(212,160,23,0.9)); animation: mpulse 1.8s ease-in-out infinite alternate; }
+    .mg.sec { fill: rgba(212,160,23,0.28); filter: drop-shadow(0 0 3px rgba(212,160,23,0.5)); animation: mpulse-sec 2.6s ease-in-out infinite alternate; }
+    @keyframes mpulse {
+      from { fill: rgba(212,160,23,0.58); filter: drop-shadow(0 0 4px rgba(212,160,23,0.7)); }
+      to   { fill: rgba(212,160,23,0.90); filter: drop-shadow(0 0 10px rgba(212,160,23,1.0)); }
+    }
+    @keyframes mpulse-sec {
+      from { fill: rgba(212,160,23,0.20); }
+      to   { fill: rgba(212,160,23,0.40); }
+    }
+    .anatomy-overlay { flex-direction: row !important; align-items: flex-end !important; justify-content: center !important; padding-bottom: 12px !important; gap: 0 !important; background: linear-gradient(to top, rgba(0,0,0,0.6) 0%, transparent 55%) !important; }
+    .anat-play-btn { display: inline-flex; align-items: center; gap: 6px; background: rgba(212,160,23,0.92); color: #000; padding: 6px 18px; border-radius: 20px; font-size: 0.72rem; font-weight: 800; letter-spacing: 1px; box-shadow: 0 2px 14px rgba(212,160,23,0.45); }
+
     /* Form tips */
     .tips-wrap { border-top: 1px solid var(--border); padding-top: 13px; }
     .tips-btn {
@@ -1170,8 +1189,84 @@ function filtered() {
 }
 
 // ─── Build card HTML ──────────────────────────────────────────────────────────
+// ─── Muscle Anatomy Map ──────────────────────────────────────────────
+function makeMuscleMap(ex) {
+  const PRI = new Set(ex.pri.map(([,k]) => k));
+  const SEC = new Set(ex.sec.map(([,k]) => k).filter(k => !PRI.has(k)));
+  const c  = k => PRI.has(k) ? 'mg pri' : SEC.has(k) ? 'mg sec' : 'mg';
+  const cb = (...keys) => keys.some(k => PRI.has(k)) ? 'mg pri' : keys.some(k => SEC.has(k)) ? 'mg sec' : 'mg';
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 202" preserveAspectRatio="xMidYMid meet">
+<rect width="360" height="202" fill="#0a0a0a"/>
+<line x1="180" y1="6" x2="180" y2="196" stroke="#1e1e1e" stroke-width="1"/>
+<text x="12" y="15" class="msvg-label">FRONT</text>
+<text x="194" y="15" class="msvg-label">BACK</text>
+<!-- FRONT silhouette -->
+<circle cx="89" cy="21" r="13" class="msvg-base"/>
+<rect x="83" y="33" width="12" height="11" rx="3" class="msvg-base"/>
+<path d="M 62,43 C 58,65 60,90 66,113 L 112,113 C 118,90 120,65 116,43 Z" class="msvg-base"/>
+<rect x="48" y="42" width="14" height="38" rx="7" class="msvg-base"/>
+<rect x="128" y="42" width="14" height="38" rx="7" class="msvg-base"/>
+<rect x="46" y="82" width="12" height="30" rx="6" class="msvg-base"/>
+<rect x="132" y="82" width="12" height="30" rx="6" class="msvg-base"/>
+<rect x="65" y="113" width="22" height="44" rx="11" class="msvg-base"/>
+<rect x="91" y="113" width="22" height="44" rx="11" class="msvg-base"/>
+<rect x="67" y="159" width="18" height="34" rx="9" class="msvg-base"/>
+<rect x="93" y="159" width="18" height="34" rx="9" class="msvg-base"/>
+<!-- FRONT muscles -->
+<ellipse class="${c('shoulders')}" cx="58" cy="49" rx="14" ry="10" transform="rotate(-20 58 49)"/>
+<ellipse class="${c('shoulders')}" cx="120" cy="49" rx="14" ry="10" transform="rotate(20 120 49)"/>
+<path class="${c('chest')}" d="M 65,44 C 63,50 63,62 66,68 L 82,68 L 82,44 Z"/>
+<path class="${c('chest')}" d="M 96,44 L 96,68 L 112,68 C 115,62 115,50 113,44 Z"/>
+<ellipse class="${c('biceps')}" cx="55" cy="67" rx="6" ry="15"/>
+<ellipse class="${c('biceps')}" cx="135" cy="67" rx="6" ry="15"/>
+<ellipse class="${c('forearms')}" cx="52" cy="98" rx="5.5" ry="12"/>
+<ellipse class="${c('forearms')}" cx="138" cy="98" rx="5.5" ry="12"/>
+<rect class="${c('core')}" x="80" y="69" width="7" height="9" rx="2"/>
+<rect class="${c('core')}" x="89" y="69" width="7" height="9" rx="2"/>
+<rect class="${c('core')}" x="80" y="80" width="7" height="9" rx="2"/>
+<rect class="${c('core')}" x="89" y="80" width="7" height="9" rx="2"/>
+<rect class="${c('core')}" x="80" y="91" width="7" height="8" rx="2"/>
+<rect class="${c('core')}" x="89" y="91" width="7" height="8" rx="2"/>
+<path class="${c('core')}" d="M 68,69 L 79,69 L 79,102 L 69,102 Z" opacity="0.7"/>
+<path class="${c('core')}" d="M 99,69 L 110,69 L 110,102 L 99,102 Z" opacity="0.7"/>
+<rect class="${c('quads')}" x="66" y="115" width="19" height="40" rx="9"/>
+<rect class="${c('quads')}" x="92" y="115" width="19" height="40" rx="9"/>
+<ellipse class="${c('calves')}" cx="76" cy="173" rx="8" ry="16"/>
+<ellipse class="${c('calves')}" cx="102" cy="173" rx="8" ry="16"/>
+<!-- BACK silhouette -->
+<circle cx="271" cy="21" r="13" class="msvg-base"/>
+<rect x="265" y="33" width="12" height="11" rx="3" class="msvg-base"/>
+<path d="M 244,43 C 240,65 242,90 248,113 L 294,113 C 300,90 302,65 298,43 Z" class="msvg-base"/>
+<rect x="230" y="42" width="14" height="38" rx="7" class="msvg-base"/>
+<rect x="310" y="42" width="14" height="38" rx="7" class="msvg-base"/>
+<rect x="228" y="82" width="12" height="30" rx="6" class="msvg-base"/>
+<rect x="312" y="82" width="12" height="30" rx="6" class="msvg-base"/>
+<rect x="247" y="113" width="22" height="44" rx="11" class="msvg-base"/>
+<rect x="273" y="113" width="22" height="44" rx="11" class="msvg-base"/>
+<rect x="249" y="159" width="18" height="34" rx="9" class="msvg-base"/>
+<rect x="275" y="159" width="18" height="34" rx="9" class="msvg-base"/>
+<!-- BACK muscles -->
+<ellipse class="${cb('rear-delt','shoulders')}" cx="240" cy="49" rx="14" ry="10" transform="rotate(20 240 49)"/>
+<ellipse class="${cb('rear-delt','shoulders')}" cx="302" cy="49" rx="14" ry="10" transform="rotate(-20 302 49)"/>
+<path class="${c('traps')}" d="M 248,41 L 271,55 L 294,41 L 283,63 L 259,63 Z"/>
+<ellipse class="${c('triceps')}" cx="237" cy="67" rx="6" ry="15"/>
+<ellipse class="${c('triceps')}" cx="317" cy="67" rx="6" ry="15"/>
+<ellipse class="${c('forearms')}" cx="234" cy="98" rx="5.5" ry="12"/>
+<ellipse class="${c('forearms')}" cx="320" cy="98" rx="5.5" ry="12"/>
+<path class="${c('lats')}" d="M 248,50 C 244,62 240,78 244,93 L 262,100 L 264,66 Z"/>
+<path class="${c('lats')}" d="M 294,50 C 298,62 302,78 298,93 L 280,100 L 278,66 Z"/>
+<path class="${c('back')}" d="M 265,56 L 277,56 L 281,80 L 261,80 Z"/>
+<rect class="${c('lower-back')}" x="261" y="88" width="20" height="16" rx="5"/>
+<ellipse class="${c('glutes')}" cx="258" cy="119" rx="12" ry="13"/>
+<ellipse class="${c('glutes')}" cx="284" cy="119" rx="12" ry="13"/>
+<rect class="${c('hams')}" x="248" y="119" width="20" height="36" rx="10"/>
+<rect class="${c('hams')}" x="274" y="119" width="20" height="36" rx="10"/>
+<ellipse class="${c('calves')}" cx="258" cy="173" rx="8" ry="16"/>
+<ellipse class="${c('calves')}" cx="284" cy="173" rx="8" ry="16"/>
+</svg>`;
+}
+
 function card(ex) {
-  const thumb = `https://img.youtube.com/vi/${ex.vid}/hqdefault.jpg`;
   const ytQ = encodeURIComponent(`${ex.name} proper form tutorial`);
 
   const tags = (arr, opacity) => arr.map(([n,k]) =>
@@ -1185,12 +1280,12 @@ function card(ex) {
   return `
 <div class="card">
   <div class="vid-area" id="va-${ex.id}" onclick="loadVid(${ex.id},'${ex.vid}')">
-    <div class="vid-bg" style="background-image:url('${thumb}')"></div>
-    <div class="vid-overlay">
-      <div class="play-btn">
-        <svg width="22" height="22" viewBox="0 0 24 24" fill="white"><polygon points="5,3 19,12 5,21"/></svg>
-      </div>
-      <div class="play-lbl">▶ Tonton Tutorial</div>
+    <div class="anatomy-wrap">${makeMuscleMap(ex)}</div>
+    <div class="vid-overlay anatomy-overlay">
+      <span class="anat-play-btn">
+        <svg width="11" height="11" viewBox="0 0 24 24" fill="black"><polygon points="5,3 19,12 5,21"/></svg>
+        Tonton Tutorial
+      </span>
     </div>
   </div>
   <div class="cbody">
