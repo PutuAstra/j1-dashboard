@@ -88,8 +88,14 @@
       color: var(--text-2);
       transition: border-color 0.12s, background 0.12s, color 0.12s;
     }
-    .slot-btn:hover { border-color: var(--accent); color: var(--text); background: rgba(176,26,24,0.08); }
+    .slot-btn:hover:not(.booked) { border-color: var(--accent); color: var(--text); background: rgba(176,26,24,0.08); }
     .slot-btn.selected { border-color: var(--accent); background: rgba(176,26,24,0.18); color: #fff; }
+    .slot-btn.booked {
+      opacity: 0.38;
+      cursor: not-allowed;
+      text-decoration: line-through;
+      color: var(--muted);
+    }
 
     /* Form */
     .form-section { margin-top: 24px; display: none; }
@@ -260,6 +266,9 @@ function renderSlotPicker(data) {
             <div class="slots-grid">
               ${slots.map(s => {
                 const timeStr = new Date(s.start).toLocaleTimeString(undefined, { hour:'2-digit', minute:'2-digit' });
+                if (s.booked) {
+                  return `<button class="slot-btn booked" disabled title="This slot is already taken">${timeStr}</button>`;
+                }
                 return `<button class="slot-btn" data-start="${s.start}" data-end="${s.end}" onclick="selectSlot(${s.start},${s.end},this)">${timeStr}</button>`;
               }).join('')}
             </div>
