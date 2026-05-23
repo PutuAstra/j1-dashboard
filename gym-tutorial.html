@@ -378,7 +378,7 @@
       align-items: center; justify-content: center; gap: 20px;
       text-align: center; padding: 32px;
     }
-    #fsPrompt img { max-width: 280px; height: auto; filter: drop-shadow(0 2px 16px rgba(212,160,23,0.4)); }
+    #fsPrompt img { max-width: 480px; width: 80vw; height: auto; filter: drop-shadow(0 2px 20px rgba(212,160,23,0.5)); }
     #fsPrompt h2 { font-size: 1.5rem; font-weight: 900; color: #D4A017; letter-spacing: 3px; }
     #fsPrompt p { color: #aaa; font-size: 0.9rem; }
     #fsPrompt button {
@@ -414,6 +414,7 @@
       border-top: 1px solid #2a2a2a;
     }
     #vidTitle { color: #f0f0f0; font-size: 0.9rem; font-weight: 600; flex: 1; }
+    #vidBarLogo { height: 36px; width: auto; opacity: 0.9; flex-shrink: 0; }
     #vidCloseBtn {
       background: #D4A017; color: #000;
       border: none; border-radius: 10px;
@@ -1235,7 +1236,10 @@ function startKiosk() {
 // Copy logo src into fullscreen prompt (wait for full DOM)
 document.addEventListener('DOMContentLoaded', function() {
   const logo = document.querySelector('.header-logo-img');
-  if (logo) document.getElementById('fsLogo').src = logo.src;
+  if (logo) {
+    document.getElementById('fsLogo').src = logo.src;
+    document.getElementById('vidBarLogo').src = logo.src;
+  }
 });
 
 // ─── Admin (long-press logo 3 sec) ───────────────────────────────────────────
@@ -1350,6 +1354,7 @@ render();
     <div id="ytLogoBlock"></div>
   </div>
   <div id="vidCloseBar">
+    <img id="vidBarLogo" alt="Iron Gym">
     <span id="vidTitle"></span>
     <button id="vidCloseBtn" ontouchstart="closeVid()" onclick="closeVid()">✕ Tutup Video</button>
   </div>
