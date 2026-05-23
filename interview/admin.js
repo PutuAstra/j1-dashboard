@@ -2111,7 +2111,7 @@ async function viewLinkBookings(token) {
       el.innerHTML = `<div class="empty-state" style="font-size:13px">No bookings yet for this link.</div>`;
       return;
     }
-    bookings.sort((a, b) => a.slotStart - b.slotStart);
+    bookings.sort((a, b) => a.slotStart - b.slotStart); // earliest first
     el.innerHTML = `
       <div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;color:var(--muted);margin-bottom:10px">
         Bookings (${bookings.length})
@@ -2136,8 +2136,10 @@ async function viewLinkBookings(token) {
                 <div style="font-size:11px;color:var(--muted)">${timeStr} – ${endStr}</div>
               </div>
               <span style="font-size:10px;padding:2px 8px;border-radius:10px;font-weight:600;${statusStyle}">${b.status}</span>
-              ${b.calendarEventUrl ? `<a href="${esc(b.calendarEventUrl)}" target="_blank" class="btn btn-ghost" style="font-size:11px;padding:2px 8px">📅</a>` : ''}
-              <button class="btn btn-ghost" style="font-size:14px;padding:3px 8px" title="Cancel booking"
+              ${b.meetingLink
+                ? `<a href="${esc(b.meetingLink)}" target="_blank" class="btn btn-outline" style="font-size:11px;padding:3px 12px;color:#6264a7;border-color:#6264a7;white-space:nowrap;flex-shrink:0">🟦 Join</a>`
+                : ''}
+              <button class="btn btn-ghost" style="font-size:14px;padding:3px 8px;flex-shrink:0" title="Cancel booking"
                 onclick="cancelAdminBooking('${b.id}','${token}','${esc(b.candidateName).replace(/'/g,"\\'")}')">🗑</button>
             </div>`;
         }).join('')}
