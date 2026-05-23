@@ -2235,7 +2235,11 @@ function renderSlotRulesEditor() {
               style="accent-color:var(--accent);width:15px;height:15px;cursor:pointer" />
             <span style="font-size:13px;font-weight:600;${enabled ? '' : 'color:var(--muted)'}">${dayName}</span>
           </label>
-          ${enabled ? `<button type="button" class="btn btn-ghost" style="font-size:11px;padding:2px 10px;margin-left:auto;color:var(--accent)" onclick="addDayRange(${dayIdx})">+ Add range</button>` : ''}
+          ${enabled ? `
+            <div style="display:flex;gap:6px;margin-left:auto">
+              <button type="button" class="btn btn-ghost" style="font-size:11px;padding:2px 10px;color:var(--muted)" onclick="applyRangesToAllDays(${dayIdx})" title="Copy this day's schedule to all enabled days">Apply to all</button>
+              <button type="button" class="btn btn-ghost" style="font-size:11px;padding:2px 10px;color:var(--accent)" onclick="addDayRange(${dayIdx})">+ Add range</button>
+            </div>` : ''}
         </div>
         ${enabled ? rules.map((rule, rIdx) => `
           <div style="display:flex;align-items:center;gap:8px;${rIdx > 0 ? 'margin-top:8px' : ''}">
@@ -2278,6 +2282,25 @@ function removeDayRange(dayIdx, rangeIdx) {
 function updateSlotRange(dayIdx, rangeIdx, field, value) {
   const dayRules = _editingSlotRules.filter(r => r.day === dayIdx);
   if (dayRules[rangeIdx]) dayRules[rangeIdx][field] = value;
+}
+
+function applyRangesToAllDays(sourceDayIdx) {
+  const sourceRanges = _editingSlotRules
+    .filter(r => r.day === sourceDayIdx)
+    .map(r => ({ from: r.from, to: r.to })); // copy only the times
+
+  const enabledDays = [...new Set(_editingSlotRules.map(r => r.day))];
+
+  // Replace all enabled days' ranges with the source day's ranges
+  _editingSlotRules = _editingSlotRules.filter(r => !enabledDays.includes(r.day));
+  for (const day of enabledDays) {
+    for (const range of sourceRanges) {
+      _editingSlotRules.push({ day, from: range.from, to: range.to });
+    }
+  }
+
+  document.getElementById('slot-rules-editor').innerHTML = renderSlotRulesEditor();
+  toast(`Applied ${BOOKING_DAYS[sourceDayIdx]}'s schedule to all ${enabledDays.length} enabled days`, 'success');
 }
 
 async function submitCreateBookingLink() {
