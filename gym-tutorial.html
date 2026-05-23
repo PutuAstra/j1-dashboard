@@ -324,17 +324,19 @@
       font-size: 0.75rem; color: var(--text3);
     }
     .mem-info-row {
-      display: flex;
-      justify-content: center;
+      display: grid;
+      grid-template-columns: 1fr auto 1fr;
       align-items: center;
-      gap: 24px;
-      flex-wrap: wrap;
-      padding: 14px 16px;
+      gap: 16px;
+      padding: 16px 20px;
       background: var(--surface2);
       border-radius: 12px;
       font-size: 0.82rem;
     }
     .mem-info-item { display: flex; align-items: center; gap: 8px; color: var(--text2); }
+    .mem-info-item:first-child { justify-content: flex-start; }
+    .mem-info-item:nth-child(2) { justify-content: center; }
+    .mem-info-item:last-child { justify-content: flex-end; }
     .mem-info-item span.label { color: var(--text3); font-size: 0.72rem; text-transform: uppercase; letter-spacing: 1px; }
     .day-pass-badge {
       background: #D4A017; color: #000;
@@ -394,10 +396,16 @@
       position: fixed; inset: 0; z-index: 15000;
       background: #000;
       flex-direction: column;
+      overflow: hidden;
     }
+    body.vid-open { overflow: hidden; }
     #vidOverlay.open { display: flex; }
-    #vidOverlay iframe {
-      flex: 1; width: 100%; border: none;
+    #vidIframeWrap { flex: 1; position: relative; width: 100%; overflow: hidden; }
+    #vidIframeWrap iframe { width: 100%; height: 100%; border: none; display: block; }
+    #ytLogoBlock {
+      position: absolute; bottom: 0; right: 0;
+      width: 110px; height: 46px;
+      background: #000; z-index: 1; pointer-events: all;
     }
     #vidCloseBar {
       background: #111;
@@ -1202,10 +1210,12 @@ function loadVid(id, vid) {
   document.getElementById('vidIframe').src =
     'https://www.youtube-nocookie.com/embed/' + vid + '?autoplay=1&rel=0&modestbranding=1&playsinline=1';
   document.getElementById('vidOverlay').classList.add('open');
+  document.body.classList.add('vid-open');
 }
 
 function closeVid() {
   document.getElementById('vidOverlay').classList.remove('open');
+  document.body.classList.remove('vid-open');
   document.getElementById('vidIframe').src = '';
 }
 
@@ -1335,7 +1345,10 @@ render();
 
 <!-- ─── Video Overlay ─── -->
 <div id="vidOverlay">
-  <iframe id="vidIframe" allow="autoplay; fullscreen" allowfullscreen></iframe>
+  <div id="vidIframeWrap">
+    <iframe id="vidIframe" allow="autoplay; fullscreen" allowfullscreen></iframe>
+    <div id="ytLogoBlock"></div>
+  </div>
   <div id="vidCloseBar">
     <span id="vidTitle"></span>
     <button id="vidCloseBtn" ontouchstart="closeVid()" onclick="closeVid()">✕ Tutup Video</button>
