@@ -142,6 +142,30 @@ async function route(request) {
     return getScriptClientLogoUrl(seg[2], request);
   }
 
+  // ── Booking Interview ────────────────────────────────────────
+  // Admin routes
+  if (seg[0] === 'booking' && seg[1] === 'links' && seg.length === 2) {
+    if (m === 'GET')  return listBookingLinks(request);
+    if (m === 'POST') return createBookingLink(request);
+  }
+  if (seg[0] === 'booking' && seg[1] === 'link' && seg.length === 3) {
+    if (m === 'PUT')    return updateBookingLink(seg[2], request);
+    if (m === 'DELETE') return deleteBookingLink(seg[2], request);
+  }
+  if (seg[0] === 'booking' && seg[1] === 'link' && seg[3] === 'bookings' && m === 'GET') {
+    return listLinkBookings(seg[2], request);
+  }
+  if (seg[0] === 'booking' && seg[1] === 'booking' && seg.length === 3 && m === 'DELETE') {
+    return cancelBookingHandler(seg[2], request);
+  }
+  // Public routes (no admin key required)
+  if (seg[0] === 'booking' && seg[1] === 'slots' && seg.length === 3 && m === 'GET') {
+    return getBookingSlots(seg[2]);
+  }
+  if (seg[0] === 'booking' && seg[1] === 'book' && seg.length === 3 && m === 'POST') {
+    return createBookingHandler(seg[2], request);
+  }
+
   return jsonRes({ error: 'Not found' }, 404);
 }
 
@@ -1333,4 +1357,287 @@ async function getScriptClientLogoUrl(id, request) {
   } catch (e) {
     return jsonRes({ error: e.message }, 500);
   }
+}
+
+// ── Booking Interview handlers ────────────────────────────────
+
+async function listBookingLinks(request) {
+  requireAdmin(request);
+  const tokens = (await kvGet('booking:link:list')) || [];
+  const links = await Promise.all(tokens.map(t => kvGet(`booking:link:${t}`)));
+  return jsonRes(links.filter(Boolean));
+}
+
+async function createBookingLink(request) {
+  requireAdmin(request);
+  const { title, clientName, position, interviewType, duration, tzOffset, daysAhead, slotRules } = await request.json();
+  if (!title) return jsonRes({ error: 'title required' }, 400);
+  if (!slotRules?.length) return jsonRes({ error: 'slotRules required' }, 400);
+
+  const token = uid();
+  const link = {
+    token, title,
+    clientName:    clientName || '',
+    position:      position || '',
+    interviewType: interviewType || 'Interview',
+    duration:      duration || 30,
+    tzOffset:      tzOffset ?? 0,
+    daysAhead:     daysAhead || 14,
+    slotRules,
+    active:        true,
+    createdAt:     Date.now(),
+  };
+  await kvPut(`booking:link:${token}`, link);
+  const list = (await kvGet('booking:link:list')) || [];
+  list.unshift(token);
+  await kvPut('booking:link:list', list);
+  return jsonRes(link, 201);
+}
+
+async function updateBookingLink(token, request) {
+  requireAdmin(request);
+  const existing = await kvGet(`booking:link:${token}`);
+  if (!existing) return jsonRes({ error: 'Not found' }, 404);
+  const updates = await request.json();
+  const updated = { ...existing, ...updates };
+  await kvPut(`booking:link:${token}`, updated);
+  return jsonRes(updated);
+}
+
+async function deleteBookingLink(token, request) {
+  requireAdmin(request);
+  // Delete all bookings for this link
+  const bookingIds = (await kvGet(`booking:link:${token}:bookings`)) || [];
+  await Promise.all(bookingIds.map(id => INTERVIEW_DATA.delete(`booking:booking:${id}`)));
+  await INTERVIEW_DATA.delete(`booking:link:${token}:bookings`);
+  await INTERVIEW_DATA.delete(`booking:link:${token}`);
+  const list = (await kvGet('booking:link:list')) || [];
+  await kvPut('booking:link:list', list.filter(t => t !== token));
+  return jsonRes({ ok: true });
+}
+
+async function listLinkBookings(token, request) {
+  requireAdmin(request);
+  const link = await kvGet(`booking:link:${token}`);
+  if (!link) return jsonRes({ error: 'Not found' }, 404);
+  const ids = (await kvGet(`booking:link:${token}:bookings`)) || [];
+  const bookings = await Promise.all(ids.map(id => kvGet(`booking:booking:${id}`)));
+  return jsonRes(bookings.filter(b => b && b.status !== 'cancelled'));
+}
+
+async function cancelBookingHandler(bookingId, request) {
+  requireAdmin(request);
+  const booking = await kvGet(`booking:booking:${bookingId}`);
+  if (!booking) return jsonRes({ error: 'Not found' }, 404);
+  booking.status = 'cancelled';
+  booking.cancelledAt = Date.now();
+  await kvPut(`booking:booking:${bookingId}`, booking);
+  // Free up the slot-lock key
+  await INTERVIEW_DATA.delete(`booking:slot:${booking.linkToken}:${booking.slotStart}`);
+  return jsonRes({ ok: true });
+}
+
+// ── Slot generation (public) ──────────────────────────────────
+
+function generateBookingSlots(link, bookedSlotStarts) {
+  const { slotRules = [], duration = 30, daysAhead = 14, tzOffset = 0 } = link;
+  const durationMs  = duration * 60 * 1000;
+  const tzOffsetMs  = tzOffset * 60 * 1000;
+  const now         = Date.now();
+  const bufferMs    = 2 * 60 * 60 * 1000; // 2-hour lead time
+  const slots       = [];
+
+  for (let d = 0; d < daysAhead; d++) {
+    const checkMs    = now + d * 24 * 60 * 60 * 1000;
+    // What weekday is this in the link's timezone?
+    const localMs    = checkMs + tzOffsetMs;
+    const localDate  = new Date(localMs);
+    const weekday    = localDate.getUTCDay(); // 0=Sun … 6=Sat in local TZ
+
+    const rule = slotRules.find(r => r.day === weekday);
+    if (!rule) continue;
+
+    // Compute UTC timestamp of local midnight for this date
+    const y  = localDate.getUTCFullYear();
+    const mo = localDate.getUTCMonth();
+    const dy = localDate.getUTCDate();
+    // local midnight = UTC midnight - tzOffsetMs  (because utc = local - tzOffsetMs)
+    const localMidnightUtc = Date.UTC(y, mo, dy) - tzOffsetMs;
+
+    const [fh, fm] = rule.from.split(':').map(Number);
+    const [th, tm] = rule.to.split(':').map(Number);
+    const startUtc = localMidnightUtc + (fh * 60 + fm) * 60 * 1000;
+    const endUtc   = localMidnightUtc + (th * 60 + tm) * 60 * 1000;
+
+    let t = startUtc;
+    while (t + durationMs <= endUtc) {
+      if (t > now + bufferMs && !bookedSlotStarts.has(t)) {
+        slots.push({ start: t, end: t + durationMs });
+      }
+      t += durationMs;
+    }
+  }
+  return slots;
+}
+
+async function getBookingSlots(token) {
+  const link = await kvGet(`booking:link:${token}`);
+  if (!link) return jsonRes({ error: 'Booking link not found' }, 404);
+  if (!link.active) return jsonRes({ error: 'This booking link is no longer active' }, 410);
+
+  const ids    = (await kvGet(`booking:link:${token}:bookings`)) || [];
+  const active = await Promise.all(ids.map(id => kvGet(`booking:booking:${id}`)));
+  const booked = new Set(
+    active.filter(b => b && b.status === 'confirmed').map(b => b.slotStart)
+  );
+
+  const slots = generateBookingSlots(link, booked);
+  return jsonRes({
+    title:         link.title,
+    clientName:    link.clientName,
+    position:      link.position,
+    interviewType: link.interviewType,
+    duration:      link.duration,
+    slots,
+  });
+}
+
+async function createBookingHandler(token, request) {
+  const link = await kvGet(`booking:link:${token}`);
+  if (!link) return jsonRes({ error: 'Booking link not found' }, 404);
+  if (!link.active) return jsonRes({ error: 'This booking link is no longer active' }, 410);
+
+  const { candidateName, candidateEmail, slotStart } = await request.json();
+  if (!candidateName || !candidateEmail || !slotStart) {
+    return jsonRes({ error: 'candidateName, candidateEmail and slotStart are required' }, 400);
+  }
+
+  const slotEnd = slotStart + (link.duration || 30) * 60 * 1000;
+
+  // ── Race-condition guard: attempt to claim the slot atomically ────
+  const lockKey = `booking:slot:${token}:${slotStart}`;
+  const existingLock = await kvGet(lockKey);
+  if (existingLock) {
+    return jsonRes({ error: 'Sorry, that slot was just taken. Please pick another time.' }, 409);
+  }
+
+  // Reserve the slot immediately (short TTL in case of crash mid-save)
+  const bookingId = uid();
+  await INTERVIEW_DATA.put(lockKey, bookingId, { expirationTtl: 3600 }); // 1-hour TTL
+
+  // Create booking record
+  const booking = {
+    id:             bookingId,
+    linkToken:      token,
+    candidateName:  candidateName.trim(),
+    candidateEmail: candidateEmail.trim(),
+    slotStart,
+    slotEnd,
+    status:         'confirmed',
+    createdAt:      Date.now(),
+    calendarEventId:  null,
+    calendarEventUrl: null,
+  };
+
+  // Attempt to create Teams calendar event
+  try {
+    const session = {
+      candidateName:  booking.candidateName,
+      candidateEmail: booking.candidateEmail,
+      position:       link.position || link.title,
+      scheduledAt:    slotStart,
+      duration:       link.duration || 30,
+      notes:          `Booking Interview — ${link.interviewType || ''}`,
+      id:             bookingId,
+    };
+    const meeting = await createTeamsMeeting(session);
+    booking.calendarEventId  = meeting.eventId;
+    booking.calendarEventUrl = meeting.webLink;
+    booking.meetingLink      = meeting.joinUrl;
+  } catch (e) {
+    console.error('[booking] calendar event failed:', e.message);
+    // Non-fatal — booking still confirmed
+  }
+
+  await kvPut(`booking:booking:${bookingId}`, booking);
+
+  // Update the slot-lock key to permanent (no TTL)
+  await INTERVIEW_DATA.put(lockKey, bookingId);
+
+  // Add to link's booking list
+  const ids = (await kvGet(`booking:link:${token}:bookings`)) || [];
+  ids.push(bookingId);
+  await kvPut(`booking:link:${token}:bookings`, ids);
+
+  // Send confirmation email to candidate
+  try {
+    await sendBookingConfirmationEmail(booking, link);
+  } catch (e) {
+    console.error('[booking] confirmation email failed:', e.message);
+  }
+
+  return jsonRes({
+    ok:           true,
+    bookingId,
+    slotStart,
+    slotEnd,
+    meetingLink:  booking.meetingLink || null,
+    calendarEventUrl: booking.calendarEventUrl || null,
+  }, 201);
+}
+
+async function sendBookingConfirmationEmail(booking, link) {
+  const sender = EMAIL_SENDER || ONEDRIVE_USER;
+  const dt     = new Date(booking.slotStart);
+  const dateStr = dt.toLocaleDateString('en-US', { weekday:'long', year:'numeric', month:'long', day:'numeric' });
+  const timeStr = dt.toLocaleTimeString('en-US', { hour:'2-digit', minute:'2-digit', timeZoneName:'short' });
+  const endStr  = new Date(booking.slotEnd).toLocaleTimeString('en-US', { hour:'2-digit', minute:'2-digit' });
+
+  const html = `
+    <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;border:1px solid #e5e7eb;border-radius:8px;overflow:hidden">
+      <div style="background:#B01A18;padding:28px 32px">
+        <h1 style="color:#fff;margin:0;font-size:22px;font-weight:700">Interview Confirmed</h1>
+        <p style="color:rgba(255,255,255,0.75);margin:4px 0 0;font-size:13px">CTI Group Worldwide Services, Inc.</p>
+      </div>
+      <div style="padding:32px;background:#ffffff">
+        <p style="font-size:15px;color:#1a1a1a">Dear <strong>${booking.candidateName}</strong>,</p>
+        <p style="color:#374151">Your interview has been confirmed. Here are the details:</p>
+        <div style="background:#f9fafb;border-left:4px solid #B01A18;padding:14px 18px;margin:20px 0;border-radius:0 6px 6px 0">
+          <strong style="font-size:15px;color:#1a1a1a">${link.title}</strong>
+          ${link.clientName ? `<div style="color:#6b7280;font-size:13px;margin-top:4px">${link.clientName}${link.position ? ' · ' + link.position : ''}</div>` : ''}
+        </div>
+        <table style="width:100%;border-collapse:collapse;margin:20px 0">
+          <tr><td style="padding:8px 0;color:#6b7280;font-size:13px;width:100px">Date</td><td style="padding:8px 0;color:#1a1a1a;font-size:14px;font-weight:600">${dateStr}</td></tr>
+          <tr><td style="padding:8px 0;color:#6b7280;font-size:13px">Time</td><td style="padding:8px 0;color:#1a1a1a;font-size:14px;font-weight:600">${timeStr} – ${endStr}</td></tr>
+          <tr><td style="padding:8px 0;color:#6b7280;font-size:13px">Type</td><td style="padding:8px 0;color:#1a1a1a;font-size:14px">${link.interviewType || 'Interview'}</td></tr>
+          ${booking.meetingLink ? `<tr><td style="padding:8px 0;color:#6b7280;font-size:13px">Meeting</td><td style="padding:8px 0"><a href="${booking.meetingLink}" style="color:#B01A18;font-weight:600">Join Meeting Link</a></td></tr>` : ''}
+        </table>
+        ${booking.meetingLink ? `
+        <div style="text-align:center;margin:32px 0">
+          <a href="${booking.meetingLink}" style="background:#B01A18;color:#fff;padding:14px 36px;text-decoration:none;border-radius:6px;font-size:15px;font-weight:700;display:inline-block">
+            Join Interview →
+          </a>
+        </div>` : ''}
+        <hr style="border:none;border-top:1px solid #e5e7eb;margin:28px 0" />
+        <p style="color:#9ca3af;font-size:11px;text-align:center;margin:0">
+          CTI Group Worldwide Services, Inc. &nbsp;·&nbsp; ClaudeHire Portal<br/>
+          This is an automated message — please do not reply to this email.
+        </p>
+      </div>
+    </div>`;
+
+  const accessToken = await getAccessToken();
+  await fetch(`https://graph.microsoft.com/v1.0/users/${sender}/sendMail`, {
+    method: 'POST',
+    headers: { 'Authorization': `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      message: {
+        subject: `Interview Confirmed: ${link.title} — CTI ClaudeHire`,
+        body: { contentType: 'HTML', content: html },
+        from: { emailAddress: { name: 'CTI ClaudeHire', address: sender } },
+        toRecipients: [{ emailAddress: { address: booking.candidateEmail } }],
+      },
+      saveToSentItems: true,
+    }),
+  });
 }

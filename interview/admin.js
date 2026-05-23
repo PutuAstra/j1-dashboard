@@ -56,7 +56,7 @@ function doLogout() {
 function showApp() {
   document.getElementById('login-gate').style.display = 'none';
   document.getElementById('app').style.display = 'block';
-  const valid = ['ow-list', 'ow-create', 'tw-list', 'tw-schedule', 'scripts'];
+  const valid = ['ow-list', 'ow-create', 'tw-list', 'tw-schedule', 'scripts', 'booking', 'booking-create'];
   const hash  = window.location.hash.replace('#', '');
   gotoPage(valid.includes(hash) ? hash : 'ow-list');
 }
@@ -100,6 +100,7 @@ function gotoPage(page) {
   history.replaceState(null, '', '#' + page);
   const activeNav = ['ow-create', 'ow-list'].includes(page) ? 'ow-list'
                   : page === 'scripts' ? 'scripts'
+                  : ['booking', 'booking-create'].includes(page) ? 'booking'
                   : 'tw-list';
   document.querySelectorAll('.sidebar-item').forEach(btn =>
     btn.classList.toggle('active', btn.dataset.page === activeNav)
@@ -107,11 +108,13 @@ function gotoPage(page) {
   const main = document.getElementById('admin-main');
   main.innerHTML = '<div class="spinner" style="margin:auto;margin-top:80px"></div>';
 
-  if (page === 'ow-list')     renderOWListPage();
-  if (page === 'ow-create')   renderOWCreatePage();
-  if (page === 'tw-list')     renderTWListPage();
-  if (page === 'tw-schedule') renderTWSchedulePage();
-  if (page === 'scripts')     renderScriptPage();
+  if (page === 'ow-list')        renderOWListPage();
+  if (page === 'ow-create')      renderOWCreatePage();
+  if (page === 'tw-list')        renderTWListPage();
+  if (page === 'tw-schedule')    renderTWSchedulePage();
+  if (page === 'scripts')        renderScriptPage();
+  if (page === 'booking')        renderBookingPage();
+  if (page === 'booking-create') renderCreateBookingLinkPage();
 }
 
 // ── One-Way: List page ────────────────────────────────────────
@@ -1968,4 +1971,336 @@ async function downloadScriptDoc(positionId) {
     if (!data.downloadUrl) return toast('Document not available', 'error');
     window.open(data.downloadUrl, '_blank');
   } catch (e) { toast(e.message, 'error'); }
+}
+
+// ── Booking Interview ─────────────────────────────────────────
+
+let _bookingLinks = [];
+let _editingSlotRules = [];
+
+const BOOKING_DAYS = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+const BOOKING_TYPES = ['Phone Screen', 'One-Way Video', 'Two-Way Video', 'In-Person'];
+const BOOKING_DURATIONS = [15, 30, 45, 60, 90];
+const BOOKING_DAYS_AHEAD = [7, 14, 21, 30, 60];
+
+async function renderBookingPage() {
+  const main = document.getElementById('admin-main');
+  main.innerHTML = `
+    <div style="max-width:820px">
+      <div class="flex justify-between items-center mb-16">
+        <h2>Booking Interview</h2>
+        <button class="btn btn-primary" onclick="gotoPage('booking-create')">+ New Booking Link</button>
+      </div>
+      <div id="booking-links-list"><div class="empty-state">Loading…</div></div>
+    </div>
+  `;
+  await loadBookingLinks();
+}
+
+async function loadBookingLinks() {
+  const el = document.getElementById('booking-links-list');
+  if (!el) return;
+  try {
+    _bookingLinks = await apiJSON('GET', '/api/booking/links');
+    if (!_bookingLinks.length) {
+      el.innerHTML = `<div class="empty-state">No booking links yet. Click "+ New Booking Link" to create one.</div>`;
+      return;
+    }
+    el.innerHTML = _bookingLinks.map(renderBookingLinkCard).join('');
+  } catch (e) {
+    el.innerHTML = `<div class="empty-state" style="color:var(--red)">${esc(e.message)}</div>`;
+  }
+}
+
+function buildBookUrl(token) {
+  const origin = window.location.origin;
+  let path = window.location.pathname;
+  if (path.includes('admin.html')) path = path.replace('admin.html', 'book.html');
+  else path = path.replace(/\/?$/, '/') + 'book.html';
+  return `${origin}${path}?t=${token}`;
+}
+
+function renderBookingLinkCard(link) {
+  const created = new Date(link.createdAt).toLocaleDateString();
+  const bookUrl = buildBookUrl(link.token);
+  const activeStyle = link.active
+    ? 'background:rgba(22,163,74,0.12);color:#16a34a'
+    : 'background:rgba(148,163,184,0.12);color:var(--muted)';
+  const activeDot = link.active ? '●' : '○';
+  const daysLabel = BOOKING_DAYS.filter((_, i) => link.slotRules?.some(r => r.day === i)).join(', ') || '—';
+  const tzLabel = formatTzOffset(link.tzOffset || 0);
+
+  return `
+    <div class="card" style="margin-bottom:10px">
+      <div class="flex justify-between items-start gap-12">
+        <div style="flex:1;min-width:0">
+          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:4px">
+            <span style="font-size:15px;font-weight:700">${esc(link.title)}</span>
+            <span style="font-size:11px;padding:2px 8px;border-radius:10px;font-weight:600;${activeStyle}">${activeDot} ${link.active ? 'Active' : 'Inactive'}</span>
+          </div>
+          <div class="text-muted text-sm" style="margin-bottom:6px">
+            ${link.clientName ? `<span>${esc(link.clientName)}</span> · ` : ''}
+            ${link.position ? `<span>${esc(link.position)}</span> · ` : ''}
+            <span>${link.interviewType || 'Interview'}</span> · <span>${link.duration || 30} min</span>
+          </div>
+          <div style="font-size:11px;color:var(--muted)">
+            Available: ${daysLabel} &nbsp;·&nbsp; ${tzLabel} &nbsp;·&nbsp; ${link.daysAhead || 14} days ahead &nbsp;·&nbsp; Created ${created}
+          </div>
+          <div style="margin-top:8px;display:flex;align-items:center;gap:6px">
+            <input type="text" value="${esc(bookUrl)}" readonly
+              style="flex:1;background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:5px 10px;color:var(--muted);font-size:11px;cursor:text"
+              onclick="this.select()" />
+            <button class="btn btn-ghost" style="padding:4px 10px;font-size:12px;flex-shrink:0"
+              onclick="navigator.clipboard.writeText('${esc(bookUrl)}');toast('Link copied!','success')">Copy</button>
+          </div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:6px;flex-shrink:0;align-items:flex-end">
+          <button class="btn btn-outline" style="font-size:12px;padding:4px 14px"
+            onclick="viewLinkBookings('${link.token}')">View Bookings</button>
+          <button class="btn btn-ghost" style="font-size:12px;padding:4px 10px"
+            onclick="toggleBookingLink('${link.token}',${!link.active})">${link.active ? 'Deactivate' : 'Activate'}</button>
+          <button class="btn btn-ghost" style="font-size:16px;padding:4px 8px" title="Delete link"
+            onclick="deleteBookingLink('${link.token}','${esc(link.title).replace(/'/g,"\\'")}')">🗑</button>
+        </div>
+      </div>
+      <div id="bookings-detail-${link.token}" style="display:none;margin-top:14px;border-top:1px solid var(--border);padding-top:14px"></div>
+    </div>
+  `;
+}
+
+function formatTzOffset(offsetMin) {
+  if (offsetMin === 0) return 'UTC';
+  const sign = offsetMin >= 0 ? '+' : '-';
+  const abs = Math.abs(offsetMin);
+  const h = Math.floor(abs / 60);
+  const m = abs % 60;
+  return `UTC${sign}${h}${m ? ':' + String(m).padStart(2,'0') : ''}`;
+}
+
+async function toggleBookingLink(token, active) {
+  try {
+    await apiJSON('PUT', `/api/booking/link/${token}`, { active });
+    toast(active ? 'Link activated' : 'Link deactivated', 'success');
+    await loadBookingLinks();
+  } catch (e) { toast(e.message, 'error'); }
+}
+
+async function deleteBookingLink(token, title) {
+  if (!confirm(`Delete booking link "${title}"?\n\nAll existing bookings for this link will also be deleted.`)) return;
+  try {
+    await apiJSON('DELETE', `/api/booking/link/${token}`);
+    toast('Booking link deleted', 'success');
+    await loadBookingLinks();
+  } catch (e) { toast(e.message, 'error'); }
+}
+
+async function viewLinkBookings(token) {
+  const el = document.getElementById(`bookings-detail-${token}`);
+  if (!el) return;
+  if (el.style.display === 'block') { el.style.display = 'none'; return; }
+  el.style.display = 'block';
+  el.innerHTML = '<div class="empty-state">Loading bookings…</div>';
+  try {
+    const bookings = await apiJSON('GET', `/api/booking/link/${token}/bookings`);
+    if (!bookings.length) {
+      el.innerHTML = `<div class="empty-state" style="font-size:13px">No bookings yet for this link.</div>`;
+      return;
+    }
+    bookings.sort((a, b) => a.slotStart - b.slotStart);
+    el.innerHTML = `
+      <div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;color:var(--muted);margin-bottom:10px">
+        Bookings (${bookings.length})
+      </div>
+      <div style="display:grid;gap:8px">
+        ${bookings.map(b => {
+          const dt = new Date(b.slotStart);
+          const dateStr = dt.toLocaleDateString(undefined, { weekday:'short', month:'short', day:'numeric', year:'numeric' });
+          const timeStr = dt.toLocaleTimeString(undefined, { hour:'2-digit', minute:'2-digit' });
+          const endStr  = new Date(b.slotEnd).toLocaleTimeString(undefined, { hour:'2-digit', minute:'2-digit' });
+          const statusStyle = b.status === 'confirmed'
+            ? 'background:rgba(22,163,74,0.12);color:#16a34a'
+            : 'background:rgba(239,68,68,0.12);color:var(--red)';
+          return `
+            <div style="display:flex;align-items:center;gap:12px;padding:10px 14px;background:var(--bg);border-radius:8px;border:1px solid var(--border)">
+              <div style="flex:1">
+                <div style="font-size:13px;font-weight:600">${esc(b.candidateName)}</div>
+                <div style="font-size:11px;color:var(--muted)">${esc(b.candidateEmail)}</div>
+              </div>
+              <div style="text-align:right;flex-shrink:0">
+                <div style="font-size:12px;font-weight:600">${dateStr}</div>
+                <div style="font-size:11px;color:var(--muted)">${timeStr} – ${endStr}</div>
+              </div>
+              <span style="font-size:10px;padding:2px 8px;border-radius:10px;font-weight:600;${statusStyle}">${b.status}</span>
+              ${b.calendarEventUrl ? `<a href="${esc(b.calendarEventUrl)}" target="_blank" class="btn btn-ghost" style="font-size:11px;padding:2px 8px">📅</a>` : ''}
+              <button class="btn btn-ghost" style="font-size:14px;padding:3px 8px" title="Cancel booking"
+                onclick="cancelAdminBooking('${b.id}','${token}','${esc(b.candidateName).replace(/'/g,"\\'")}')">🗑</button>
+            </div>`;
+        }).join('')}
+      </div>
+    `;
+  } catch (e) {
+    el.innerHTML = `<div class="empty-state" style="color:var(--red)">${esc(e.message)}</div>`;
+  }
+}
+
+async function cancelAdminBooking(bookingId, linkToken, name) {
+  if (!confirm(`Cancel booking for ${name}?`)) return;
+  try {
+    await apiJSON('DELETE', `/api/booking/booking/${bookingId}`);
+    toast('Booking cancelled', 'success');
+    await viewLinkBookings(linkToken);
+  } catch (e) { toast(e.message, 'error'); }
+}
+
+// ── Create Booking Link page ──────────────────────────────────
+
+function renderCreateBookingLinkPage() {
+  // Default slot rules: Mon–Fri 9am–5pm
+  _editingSlotRules = [1,2,3,4,5].map(d => ({ day: d, from: '09:00', to: '17:00' }));
+  // Auto-detect browser timezone offset
+  const tzOffset = -new Date().getTimezoneOffset();
+
+  const main = document.getElementById('admin-main');
+  main.innerHTML = `
+    <div style="max-width:700px">
+      <h2 class="mb-16">New Booking Link</h2>
+      <div class="card">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+          <div class="form-group" style="margin-bottom:0;grid-column:1/-1">
+            <label>Link Title *</label>
+            <input type="text" id="bl-title" placeholder="e.g. Initial Screening – P&O Cruises" autocomplete="off" />
+          </div>
+          <div class="form-group" style="margin-bottom:0">
+            <label>Client Name</label>
+            <input type="text" id="bl-client" placeholder="e.g. P&O Cruises" autocomplete="off" />
+          </div>
+          <div class="form-group" style="margin-bottom:0">
+            <label>Position / Role</label>
+            <input type="text" id="bl-position" placeholder="e.g. Waiter" autocomplete="off" />
+          </div>
+          <div class="form-group" style="margin-bottom:0">
+            <label>Interview Type</label>
+            <select id="bl-type">
+              ${BOOKING_TYPES.map(t => `<option value="${t}">${t}</option>`).join('')}
+            </select>
+          </div>
+          <div class="form-group" style="margin-bottom:0">
+            <label>Slot Duration</label>
+            <select id="bl-duration">
+              ${BOOKING_DURATIONS.map(d => `<option value="${d}" ${d===30?'selected':''}>${d} minutes</option>`).join('')}
+            </select>
+          </div>
+          <div class="form-group" style="margin-bottom:0">
+            <label>Timezone Offset</label>
+            <select id="bl-tz">
+              ${[-720,-660,-600,-570,-540,-480,-420,-360,-300,-240,-210,-180,-120,-60,0,60,120,180,210,240,270,300,330,345,360,390,420,480,510,525,540,570,600,630,660,720].map(o => {
+                const selected = o === tzOffset ? 'selected' : '';
+                return `<option value="${o}" ${selected}>${formatTzOffset(o)}</option>`;
+              }).join('')}
+            </select>
+          </div>
+          <div class="form-group" style="margin-bottom:0">
+            <label>Days Available Ahead</label>
+            <select id="bl-days-ahead">
+              ${BOOKING_DAYS_AHEAD.map(d => `<option value="${d}" ${d===14?'selected':''}>${d} days</option>`).join('')}
+            </select>
+          </div>
+        </div>
+
+        <hr class="divider" />
+        <h3 style="margin-bottom:14px">Weekly Availability</h3>
+        <div id="slot-rules-editor" style="display:grid;gap:8px">
+          ${renderSlotRulesEditor()}
+        </div>
+
+        <div class="flex gap-8 items-center" style="margin-top:24px">
+          <button class="btn btn-primary" id="bl-submit-btn" onclick="submitCreateBookingLink()">Create Booking Link</button>
+          <button class="btn btn-outline" onclick="gotoPage('booking')">Cancel</button>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function renderSlotRulesEditor() {
+  return BOOKING_DAYS.map((dayName, dayIdx) => {
+    const rule = _editingSlotRules.find(r => r.day === dayIdx);
+    const enabled = !!rule;
+    return `
+      <div style="display:flex;align-items:center;gap:12px;padding:10px 14px;background:var(--bg);border-radius:8px;border:1px solid ${enabled ? 'var(--accent)' : 'var(--border)'}">
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;min-width:60px">
+          <input type="checkbox" id="day-toggle-${dayIdx}" ${enabled ? 'checked' : ''}
+            onchange="toggleSlotDay(${dayIdx},this.checked)"
+            style="accent-color:var(--accent);width:15px;height:15px;cursor:pointer" />
+          <span style="font-size:13px;font-weight:600;${enabled ? '' : 'color:var(--muted)'}">${dayName}</span>
+        </label>
+        <div style="display:flex;align-items:center;gap:8px;flex:1;${enabled ? '' : 'opacity:0.35;pointer-events:none'}">
+          <input type="time" id="day-from-${dayIdx}" value="${rule?.from || '09:00'}"
+            onchange="updateSlotTime(${dayIdx},'from',this.value)"
+            style="background:var(--card);border:1px solid var(--border);border-radius:6px;padding:5px 8px;color:var(--text);font-size:13px" />
+          <span style="color:var(--muted);font-size:13px">to</span>
+          <input type="time" id="day-to-${dayIdx}" value="${rule?.to || '17:00'}"
+            onchange="updateSlotTime(${dayIdx},'to',this.value)"
+            style="background:var(--card);border:1px solid var(--border);border-radius:6px;padding:5px 8px;color:var(--text);font-size:13px" />
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+function toggleSlotDay(dayIdx, enabled) {
+  if (enabled) {
+    if (!_editingSlotRules.find(r => r.day === dayIdx)) {
+      _editingSlotRules.push({ day: dayIdx, from: '09:00', to: '17:00' });
+    }
+  } else {
+    _editingSlotRules = _editingSlotRules.filter(r => r.day !== dayIdx);
+  }
+  // Update border color and enable/disable time inputs
+  const row = document.getElementById(`day-toggle-${dayIdx}`)?.closest('div[style]');
+  if (row) row.style.borderColor = enabled ? 'var(--accent)' : 'var(--border)';
+  const timeWrap = document.getElementById(`day-from-${dayIdx}`)?.closest('div');
+  if (timeWrap) timeWrap.style.cssText = `display:flex;align-items:center;gap:8px;flex:1;${enabled ? '' : 'opacity:0.35;pointer-events:none'}`;
+}
+
+function updateSlotTime(dayIdx, field, value) {
+  const rule = _editingSlotRules.find(r => r.day === dayIdx);
+  if (rule) rule[field] = value;
+}
+
+async function submitCreateBookingLink() {
+  const title       = document.getElementById('bl-title').value.trim();
+  const clientName  = document.getElementById('bl-client').value.trim();
+  const position    = document.getElementById('bl-position').value.trim();
+  const interviewType = document.getElementById('bl-type').value;
+  const duration    = parseInt(document.getElementById('bl-duration').value);
+  const tzOffset    = parseInt(document.getElementById('bl-tz').value);
+  const daysAhead   = parseInt(document.getElementById('bl-days-ahead').value);
+
+  if (!title) return toast('Title is required', 'error');
+  if (!_editingSlotRules.length) return toast('Please enable at least one day of availability', 'error');
+
+  // Validate all enabled days have valid from < to
+  for (const r of _editingSlotRules) {
+    const [fh, fm] = r.from.split(':').map(Number);
+    const [th, tm] = r.to.split(':').map(Number);
+    if (fh * 60 + fm >= th * 60 + tm) {
+      return toast(`${BOOKING_DAYS[r.day]}: "From" time must be before "To" time`, 'error');
+    }
+  }
+
+  const btn = document.getElementById('bl-submit-btn');
+  if (btn) { btn.disabled = true; btn.textContent = 'Creating…'; }
+
+  try {
+    await apiJSON('POST', '/api/booking/links', {
+      title, clientName, position, interviewType, duration,
+      tzOffset, daysAhead, slotRules: _editingSlotRules,
+    });
+    toast('Booking link created!', 'success');
+    gotoPage('booking');
+  } catch (e) {
+    toast(e.message, 'error');
+    if (btn) { btn.disabled = false; btn.textContent = 'Create Booking Link'; }
+  }
 }
