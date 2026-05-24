@@ -680,6 +680,18 @@ function switchSessionTab(name) {
   ['invite', 'candidates'].forEach(t => {
     document.getElementById(`session-pane-${t}`).style.display = t === name ? 'block' : 'none';
   });
+  const modalEl = document.querySelector('#modal-sessions .modal');
+  if (modalEl) {
+    if (name === 'invite') {
+      modalEl.style.width = '';
+      modalEl.style.maxWidth = '660px';
+      modalEl.style.height = '';
+    } else {
+      modalEl.style.width = 'calc(100vw - 160px)';
+      modalEl.style.maxWidth = 'calc(100vw - 160px)';
+      modalEl.style.height = 'calc(100vh - 140px)';
+    }
+  }
 }
 
 function resetInviteForm() {
