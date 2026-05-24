@@ -2072,9 +2072,9 @@ function renderBookingLinkCard(link) {
           </div>
         </div>
         <div style="display:flex;flex-direction:column;gap:6px;flex-shrink:0;align-items:flex-end">
-          <button class="btn btn-outline" style="font-size:12px;padding:4px 14px"
+          <button class="btn btn-outline" style="font-size:12px;padding:4px 14px;width:100%;text-align:center"
             onclick="viewLinkBookings('${link.token}')">View Bookings</button>
-          <button class="btn btn-primary" style="font-size:12px;padding:4px 14px"
+          <button class="btn btn-primary" style="font-size:12px;padding:4px 14px;width:100%;text-align:center"
             onclick="openBookingInviteModal('${link.token}')">Invite to Book</button>
           <button class="btn btn-ghost" style="font-size:12px;padding:4px 10px"
             onclick="editBookingLink('${link.token}')">Edit</button>
