@@ -2076,12 +2076,14 @@ function renderBookingLinkCard(link) {
             onclick="viewLinkBookings('${link.token}')">View Bookings</button>
           <button class="btn btn-primary" style="font-size:12px;padding:4px 14px;width:100%;text-align:center"
             onclick="openBookingInviteModal('${link.token}')">Invite to Book</button>
-          <button class="btn btn-ghost" style="font-size:12px;padding:4px 10px"
-            onclick="editBookingLink('${link.token}')">Edit</button>
-          <button class="btn btn-ghost" style="font-size:12px;padding:4px 10px"
-            onclick="toggleBookingLink('${link.token}',${!link.active})">${link.active ? 'Deactivate' : 'Activate'}</button>
-          <button class="btn btn-ghost" style="font-size:16px;padding:4px 8px" title="Delete link"
-            onclick="deleteBookingLink('${link.token}','${esc(link.title).replace(/'/g,"\\'")}')">🗑</button>
+          <div style="display:flex;flex-direction:row;gap:4px">
+            <button class="btn btn-ghost" style="padding:6px 10px;font-size:15px" title="Edit"
+              onclick="editBookingLink('${link.token}')"><span style="display:inline-block;transform:rotate(45deg)">✏</span></button>
+            <button class="btn btn-ghost" style="padding:6px 10px;font-size:15px" title="${link.active ? 'Deactivate' : 'Activate'}"
+              onclick="toggleBookingLink('${link.token}',${!link.active})">${link.active ? '⏸' : '▶'}</button>
+            <button class="btn btn-ghost" style="padding:6px 10px;font-size:15px" title="Delete link"
+              onclick="deleteBookingLink('${link.token}','${esc(link.title).replace(/'/g,"\\'")}')">🗑</button>
+          </div>
         </div>
       </div>
       <div id="bookings-detail-${link.token}" style="display:none;margin-top:14px;border-top:1px solid var(--border);padding-top:14px"></div>
