@@ -2069,9 +2069,17 @@ function renderBookingLinkCard(link) {
               onclick="this.select()" />
             <button class="btn btn-ghost" style="padding:4px 10px;font-size:12px;flex-shrink:0"
               onclick="navigator.clipboard.writeText('${esc(bookUrl)}');toast('Link copied!','success')">Copy</button>
-            <button class="btn btn-ghost" style="padding:4px 8px;font-size:15px;flex-shrink:0" title="Edit"
+          </div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:6px;flex-shrink:0;align-items:flex-end">
+          <button class="btn btn-outline" style="font-size:12px;padding:4px 14px;width:100%;text-align:center"
+            onclick="viewLinkBookings('${link.token}')">View Bookings</button>
+          <button class="btn btn-primary" style="font-size:12px;padding:4px 14px;width:100%;text-align:center"
+            onclick="openBookingInviteModal('${link.token}')">Invite to Book</button>
+          <div style="display:flex;flex-direction:row;gap:4px;justify-content:flex-end">
+            <button class="btn btn-ghost" style="padding:4px 8px;font-size:15px" title="Edit"
               onclick="editBookingLink('${link.token}')"><span style="display:inline-block;transform:rotate(45deg)">✏</span></button>
-            <button class="btn btn-ghost" style="padding:2px 4px;background:transparent;border:none;flex-shrink:0" title="${link.active ? 'Deactivate' : 'Activate'}"
+            <button class="btn btn-ghost" style="padding:2px 4px;background:transparent;border:none" title="${link.active ? 'Deactivate' : 'Activate'}"
               onclick="toggleBookingLink('${link.token}',${!link.active})">
               ${link.active
                 ? `<span style="display:inline-flex;align-items:center;background:#16a34a;border-radius:20px;padding:2px;width:38px;height:22px;justify-content:flex-end">
@@ -2081,15 +2089,9 @@ function renderBookingLinkCard(link) {
                      <span style="width:18px;height:18px;background:#fff;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;color:#ef4444;font-weight:700;line-height:1">✕</span>
                    </span>`}
             </button>
-            <button class="btn btn-ghost" style="padding:4px 8px;font-size:15px;flex-shrink:0" title="Delete link"
+            <button class="btn btn-ghost" style="padding:4px 8px;font-size:15px" title="Delete link"
               onclick="deleteBookingLink('${link.token}','${esc(link.title).replace(/'/g,"\\'")}')">🗑</button>
           </div>
-        </div>
-        <div style="display:flex;flex-direction:column;gap:6px;flex-shrink:0;align-items:flex-end">
-          <button class="btn btn-outline" style="font-size:12px;padding:4px 14px;width:100%;text-align:center"
-            onclick="viewLinkBookings('${link.token}')">View Bookings</button>
-          <button class="btn btn-primary" style="font-size:12px;padding:4px 14px;width:100%;text-align:center"
-            onclick="openBookingInviteModal('${link.token}')">Invite to Book</button>
         </div>
       </div>
       <div id="bookings-detail-${link.token}" style="display:none;margin-top:14px;border-top:1px solid var(--border);padding-top:14px"></div>
