@@ -2079,8 +2079,16 @@ function renderBookingLinkCard(link) {
           <div style="display:flex;flex-direction:row;gap:4px">
             <button class="btn btn-ghost" style="padding:6px 10px;font-size:15px" title="Edit"
               onclick="editBookingLink('${link.token}')"><span style="display:inline-block;transform:rotate(45deg)">✏</span></button>
-            <button class="btn btn-ghost" style="padding:6px 10px;font-size:15px" title="${link.active ? 'Deactivate' : 'Activate'}"
-              onclick="toggleBookingLink('${link.token}',${!link.active})">${link.active ? '⏸' : '▶'}</button>
+            <button class="btn btn-ghost" style="padding:4px 6px;background:transparent;border:none" title="${link.active ? 'Deactivate' : 'Activate'}"
+              onclick="toggleBookingLink('${link.token}',${!link.active})">
+              ${link.active
+                ? `<span style="display:inline-flex;align-items:center;background:#16a34a;border-radius:20px;padding:2px;width:38px;height:22px;justify-content:flex-end">
+                     <span style="width:18px;height:18px;background:#fff;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;color:#16a34a;font-weight:700;line-height:1">✓</span>
+                   </span>`
+                : `<span style="display:inline-flex;align-items:center;background:#ef4444;border-radius:20px;padding:2px;width:38px;height:22px;justify-content:flex-start">
+                     <span style="width:18px;height:18px;background:#fff;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;color:#ef4444;font-weight:700;line-height:1">✕</span>
+                   </span>`}
+            </button>
             <button class="btn btn-ghost" style="padding:6px 10px;font-size:15px" title="Delete link"
               onclick="deleteBookingLink('${link.token}','${esc(link.title).replace(/'/g,"\\'")}')">🗑</button>
           </div>
