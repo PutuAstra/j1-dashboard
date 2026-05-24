@@ -261,9 +261,11 @@
     </div>
 
     <!-- Single / Bulk toggle -->
-    <div style="display:inline-flex;background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:2px;gap:2px;margin-bottom:20px">
-      <button class="invite-mode-btn active" id="bi-mode-single" onclick="switchBIMode('single')">Single</button>
-      <button class="invite-mode-btn"        id="bi-mode-bulk"   onclick="switchBIMode('bulk')">Bulk Import</button>
+    <div style="margin-bottom:20px">
+      <div style="display:inline-flex;background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:2px;gap:2px">
+        <button class="invite-mode-btn active" id="bi-mode-single" onclick="switchBIMode('single')">Single</button>
+        <button class="invite-mode-btn"        id="bi-mode-bulk"   onclick="switchBIMode('bulk')">Bulk Import</button>
+      </div>
     </div>
 
     <!-- ── Single ── -->
@@ -275,7 +277,7 @@
         <input type="email" id="bi-email" placeholder="Email *" autocomplete="off"
           style="flex:1;background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:8px 12px;color:var(--text);font-size:13px"
           onkeydown="if(event.key==='Enter')sendSingleBookingInvite()" />
-        <button class="btn btn-primary" id="bi-send-btn" onclick="sendSingleBookingInvite()">✉ Send Invite</button>
+        <button class="btn btn-primary" id="bi-send-btn" style="white-space:nowrap;flex-shrink:0" onclick="sendSingleBookingInvite()">✉ Send Invite</button>
       </div>
       <div id="bi-single-result" style="display:none;margin-bottom:14px"></div>
     </div>
@@ -340,6 +342,6 @@
 <div id="toast"></div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.2/cropper.min.js"></script>
-<script src="admin.js?v=20250524c"></script>
+<script src="admin.js?v=20250524d"></script>
 </body>
 </html>
