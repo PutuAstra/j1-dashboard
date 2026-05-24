@@ -1981,6 +1981,8 @@ async function downloadScriptDoc(positionId) {
 let _bookingLinks = [];
 let _editingSlotRules = [];
 let _editingBookingToken = null;
+let _inviteBookingToken = null;
+let _biBulkRows = [], _biBulkHeaders = [], _biBulkNameCol = null, _biBulkEmailCol = null;
 
 const BOOKING_DAYS = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
 const BOOKING_DURATIONS = [15, 30, 45, 60, 90];
@@ -2060,6 +2062,8 @@ function renderBookingLinkCard(link) {
         <div style="display:flex;flex-direction:column;gap:6px;flex-shrink:0;align-items:flex-end">
           <button class="btn btn-outline" style="font-size:12px;padding:4px 14px"
             onclick="viewLinkBookings('${link.token}')">View Bookings</button>
+          <button class="btn btn-primary" style="font-size:12px;padding:4px 14px"
+            onclick="openBookingInviteModal('${link.token}')">✉ Invite to Book</button>
           <button class="btn btn-ghost" style="font-size:12px;padding:4px 10px"
             onclick="editBookingLink('${link.token}')">Edit</button>
           <button class="btn btn-ghost" style="font-size:12px;padding:4px 10px"
@@ -2593,6 +2597,212 @@ async function setBulkHolidayActive(type, active) {
     renderHolidaysContent();
     toast(`${active ? 'Enabled' : 'Disabled'} all ${type} holidays`, 'success');
   } catch (e) { toast(e.message, 'error'); }
+}
+
+// ── Booking Invite Modal ──────────────────────────────────────
+
+function openBookingInviteModal(token) {
+  _inviteBookingToken = token;
+  const link = _bookingLinks.find(l => l.token === token);
+  document.getElementById('bi-modal-title').textContent = 'Invite to Book';
+  document.getElementById('bi-modal-sub').textContent = link ? link.title : '';
+  // Reset state
+  document.getElementById('bi-name').value = '';
+  document.getElementById('bi-email').value = '';
+  document.getElementById('bi-single-result').style.display = 'none';
+  const sendBtn = document.getElementById('bi-send-btn');
+  sendBtn.disabled = false; sendBtn.textContent = '✉ Send Invitation';
+  resetBIBulkUpload();
+  switchBIMode('single');
+  openModal('modal-booking-invite');
+  setTimeout(() => document.getElementById('bi-name')?.focus(), 80);
+}
+
+function switchBIMode(mode) {
+  document.getElementById('bi-single-section').style.display = mode === 'single' ? 'block' : 'none';
+  document.getElementById('bi-bulk-section').style.display   = mode === 'bulk'   ? 'block' : 'none';
+  document.getElementById('bi-mode-single').classList.toggle('active', mode === 'single');
+  document.getElementById('bi-mode-bulk').classList.toggle('active',   mode === 'bulk');
+}
+
+async function sendSingleBookingInvite() {
+  const name  = document.getElementById('bi-name').value.trim();
+  const email = document.getElementById('bi-email').value.trim();
+  if (!name)  return toast('Candidate name is required', 'error');
+  if (!email || !email.includes('@')) return toast('Valid email is required', 'error');
+
+  const btn = document.getElementById('bi-send-btn');
+  btn.disabled = true; btn.textContent = 'Sending…';
+
+  try {
+    await apiJSON('POST', `/api/booking/link/${_inviteBookingToken}/send-invite`, {
+      candidateName:  name,
+      candidateEmail: email,
+      bookUrl:        buildBookUrl(_inviteBookingToken),
+    });
+    const result = document.getElementById('bi-single-result');
+    result.style.display = 'block';
+    result.innerHTML = `<div style="background:rgba(22,163,74,0.1);border:1px solid rgba(22,163,74,0.3);border-radius:8px;padding:10px 14px;font-size:13px;color:#16a34a">
+      ✓ Invitation sent to <strong>${esc(name)}</strong> (${esc(email)})
+    </div>`;
+    document.getElementById('bi-name').value  = '';
+    document.getElementById('bi-email').value = '';
+    btn.disabled = false; btn.textContent = '✉ Send Another';
+    toast(`Invitation sent to ${name}`, 'success');
+  } catch (e) {
+    toast('Failed: ' + e.message, 'error');
+    btn.disabled = false; btn.textContent = '✉ Send Invitation';
+  }
+}
+
+// ── BI Bulk import ────────────────────────────────────────────
+
+async function handleBIBulkFile(file) {
+  if (!file) return;
+  const ext = file.name.split('.').pop().toLowerCase();
+  let rows, headers;
+  try {
+    if (ext === 'csv') {
+      ({ rows, headers } = parseCsvText(await file.text()));
+    } else if (ext === 'xlsx' || ext === 'xls') {
+      if (typeof XLSX === 'undefined') return toast('Excel library not loaded — try CSV', 'error');
+      ({ rows, headers } = parseXlsxBuffer(await file.arrayBuffer()));
+    } else {
+      return toast('Please upload .csv, .xlsx, or .xls', 'error');
+    }
+  } catch (e) { return toast('Could not read file: ' + e.message, 'error'); }
+  if (!rows.length) return toast('No data rows found', 'error');
+
+  _biBulkRows    = rows;
+  _biBulkHeaders = headers;
+  _biBulkNameCol  = detectBestCol(headers, ['full name','fullname','name','candidate']);
+  if (!_biBulkNameCol) {
+    const first = headers.find(h => /first.?name|fname/i.test(h));
+    const last  = headers.find(h => /last.?name|lname|surname/i.test(h));
+    if (first && last) _biBulkNameCol = `__concat__${first}__${last}`;
+    else _biBulkNameCol = first || last || headers[0];
+  }
+  _biBulkEmailCol = detectBestCol(headers, ['email','e-mail','mail']);
+  renderBIBulkPreview();
+}
+
+function getBIName(row) {
+  if (_biBulkNameCol?.startsWith('__concat__')) {
+    return _biBulkNameCol.slice('__concat__'.length).split('__').map(k => row[k]||'').filter(Boolean).join(' ');
+  }
+  return row[_biBulkNameCol] || '';
+}
+function getBIEmail(row) { return row[_biBulkEmailCol] || ''; }
+
+function renderBIBulkPreview() {
+  const section = document.getElementById('bi-bulk-preview');
+  const first = _biBulkHeaders.find(h => /first.?name|fname/i.test(h));
+  const last  = _biBulkHeaders.find(h => /last.?name|lname|surname/i.test(h));
+  const concatKey = first && last ? `__concat__${first}__${last}` : null;
+
+  const nameOpts = [
+    ...(concatKey ? [`<option value="${esc(concatKey)}" ${_biBulkNameCol===concatKey?'selected':''}>First + Last Name</option>`] : []),
+    ..._biBulkHeaders.map(h => `<option value="${esc(h)}" ${_biBulkNameCol===h?'selected':''}>${esc(h)}</option>`),
+  ].join('');
+  const emailOpts = _biBulkHeaders.map(h =>
+    `<option value="${esc(h)}" ${_biBulkEmailCol===h?'selected':''}>${esc(h)}</option>`
+  ).join('');
+
+  const preview    = _biBulkRows.slice(0, 5);
+  const validCount = _biBulkRows.filter(r => getBIName(r) && getBIEmail(r)).length;
+
+  section.style.display = 'block';
+  section.innerHTML = `
+    <div style="margin-top:14px;padding:14px 16px;background:var(--bg);border:1px solid var(--border);border-radius:8px">
+      <div style="display:grid;grid-template-columns:1fr 1fr auto;gap:12px;align-items:end;margin-bottom:14px">
+        <div>
+          <label style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;color:var(--muted);display:block;margin-bottom:4px">Name Column</label>
+          <select onchange="_biBulkNameCol=this.value;renderBIBulkPreview()"
+            style="width:100%;background:var(--card);border:1px solid var(--border);border-radius:6px;padding:7px 10px;color:var(--text);font-size:13px;font-family:inherit">${nameOpts}</select>
+        </div>
+        <div>
+          <label style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;color:var(--muted);display:block;margin-bottom:4px">Email Column</label>
+          <select onchange="_biBulkEmailCol=this.value;renderBIBulkPreview()"
+            style="width:100%;background:var(--card);border:1px solid var(--border);border-radius:6px;padding:7px 10px;color:var(--text);font-size:13px;font-family:inherit">${emailOpts}</select>
+        </div>
+        <button class="btn btn-ghost" style="font-size:12px" onclick="resetBIBulkUpload()">✕ Clear</button>
+      </div>
+      <div style="font-size:12px;color:var(--muted);margin-bottom:6px">
+        Preview — first 5 of <strong style="color:var(--text)">${_biBulkRows.length}</strong> rows
+        ${validCount < _biBulkRows.length ? `<span style="color:var(--red)">&nbsp;·&nbsp; ${_biBulkRows.length - validCount} rows missing name or email</span>` : ''}
+      </div>
+      <div style="border:1px solid var(--border);border-radius:6px;overflow:hidden;margin-bottom:14px">
+        <div style="display:grid;grid-template-columns:1fr 1fr;padding:7px 12px;background:var(--card-2);font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;color:var(--muted)">
+          <span>Name</span><span>Email</span>
+        </div>
+        ${preview.map(r => {
+          const n = getBIName(r), e = getBIEmail(r);
+          return `<div style="display:grid;grid-template-columns:1fr 1fr;padding:7px 12px;border-top:1px solid rgba(51,65,85,0.5);font-size:12px${!n||!e?';background:rgba(239,68,68,0.05)':''}">
+            <span style="${!n?'color:var(--red)':''}">${n||'⚠ missing'}</span>
+            <span style="${!e?'color:var(--red)':''}">${e||'⚠ missing'}</span>
+          </div>`;
+        }).join('')}
+        ${_biBulkRows.length > 5 ? `<div style="padding:6px 12px;border-top:1px solid rgba(51,65,85,0.5);font-size:11px;color:var(--muted);text-align:center">and ${_biBulkRows.length-5} more…</div>` : ''}
+      </div>
+      <button class="btn btn-primary" onclick="runBulkBookingInvite()">✉ Send Invitations to ${validCount}</button>
+    </div>`;
+}
+
+function resetBIBulkUpload() {
+  _biBulkRows = []; _biBulkHeaders = []; _biBulkNameCol = null; _biBulkEmailCol = null;
+  const preview  = document.getElementById('bi-bulk-preview');
+  const progress = document.getElementById('bi-bulk-progress');
+  if (preview)  { preview.style.display  = 'none'; preview.innerHTML  = ''; }
+  if (progress) { progress.style.display = 'none'; progress.innerHTML = ''; }
+  const fi = document.getElementById('bi-bulk-file');
+  if (fi) fi.value = '';
+}
+
+async function runBulkBookingInvite() {
+  const validRows = _biBulkRows.filter(r => getBIName(r) && getBIEmail(r));
+  if (!validRows.length) return toast('No valid rows to import', 'error');
+
+  document.getElementById('bi-bulk-preview').querySelectorAll('button,select').forEach(el => el.disabled = true);
+  const progress = document.getElementById('bi-bulk-progress');
+  progress.style.display = 'block';
+
+  let done = 0, failed = 0;
+  const errors = [];
+  const total  = validRows.length;
+  const bookUrl = buildBookUrl(_inviteBookingToken);
+
+  const showProgress = () => {
+    const pct = Math.round((done + failed) / total * 100);
+    progress.innerHTML = `
+      <div style="font-size:13px;color:var(--text-2);margin-bottom:8px">Sending invitations… <strong>${done+failed}</strong> / ${total}</div>
+      <div style="background:var(--border);border-radius:4px;height:6px;overflow:hidden">
+        <div style="background:var(--accent);height:100%;border-radius:4px;width:${pct}%;transition:width 0.15s"></div>
+      </div>`;
+  };
+  showProgress();
+
+  for (const row of validRows) {
+    try {
+      await apiJSON('POST', `/api/booking/link/${_inviteBookingToken}/send-invite`, {
+        candidateName:  getBIName(row),
+        candidateEmail: getBIEmail(row),
+        bookUrl,
+      });
+      done++;
+    } catch (e) { failed++; errors.push(e.message); }
+    showProgress();
+  }
+
+  progress.innerHTML = `
+    <div style="padding:14px 16px;background:var(--bg);border:1px solid var(--border);border-radius:8px">
+      <div style="font-size:14px;font-weight:600;margin-bottom:8px">Done</div>
+      <div class="flex gap-16">
+        <span style="color:var(--green)">✓ ${done} invitations sent</span>
+        ${failed ? `<span style="color:var(--red)">✗ ${failed} failed</span>` : ''}
+      </div>
+      ${errors.length ? `<div class="text-muted text-sm mt-8">${errors.slice(0,3).map(e=>`<div>• ${esc(e)}</div>`).join('')}${errors.length>3?`<div>…and ${errors.length-3} more</div>`:''}</div>` : ''}
+      <button class="btn btn-outline mt-16" onclick="resetBIBulkUpload();switchBIMode('single')">Done</button>
+    </div>`;
 }
 
 // ── Edit Booking Link ─────────────────────────────────────────

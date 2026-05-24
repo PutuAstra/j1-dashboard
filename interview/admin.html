@@ -249,6 +249,59 @@
   </div>
 </div>
 
+<!-- Modal: Booking Invite -->
+<div class="modal-overlay" id="modal-booking-invite">
+  <div class="modal" style="max-width:560px">
+    <div class="modal-header">
+      <div>
+        <h2 id="bi-modal-title">Invite to Book</h2>
+        <p id="bi-modal-sub" style="font-size:12px;color:var(--muted);margin-top:2px"></p>
+      </div>
+      <button class="btn btn-ghost" onclick="closeModal('modal-booking-invite')">✕</button>
+    </div>
+
+    <!-- Single / Bulk toggle -->
+    <div style="display:flex;background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:2px;gap:2px;margin-bottom:20px">
+      <button class="invite-mode-btn active" id="bi-mode-single" onclick="switchBIMode('single')">Single</button>
+      <button class="invite-mode-btn"        id="bi-mode-bulk"   onclick="switchBIMode('bulk')">Bulk Import</button>
+    </div>
+
+    <!-- ── Single ── -->
+    <div id="bi-single-section">
+      <div class="form-group">
+        <label>Full Name *</label>
+        <input type="text"  id="bi-name"  placeholder="Candidate full name" autocomplete="off" />
+      </div>
+      <div class="form-group">
+        <label>Email Address *</label>
+        <input type="email" id="bi-email" placeholder="candidate@email.com" autocomplete="off"
+          onkeydown="if(event.key==='Enter')sendSingleBookingInvite()" />
+      </div>
+      <div id="bi-single-result" style="display:none;margin-bottom:14px"></div>
+      <button class="btn btn-primary" id="bi-send-btn" onclick="sendSingleBookingInvite()">✉ Send Invitation</button>
+    </div>
+
+    <!-- ── Bulk ── -->
+    <div id="bi-bulk-section" style="display:none">
+      <div id="bi-bulk-drop-zone"
+        onclick="document.getElementById('bi-bulk-file').click()"
+        ondragover="event.preventDefault();this.classList.add('drag-over')"
+        ondragleave="this.classList.remove('drag-over')"
+        ondrop="event.preventDefault();this.classList.remove('drag-over');handleBIBulkFile(event.dataTransfer.files[0])"
+        style="border:2px dashed var(--border);border-radius:8px;padding:32px 20px;text-align:center;cursor:pointer;transition:border-color 0.15s"
+        onmouseenter="this.style.borderColor='var(--accent)'" onmouseleave="this.style.borderColor='var(--border)'">
+        <div style="font-size:28px;margin-bottom:8px">📂</div>
+        <div style="font-size:14px;font-weight:600;color:var(--text)">Drop Excel or CSV file here</div>
+        <div style="font-size:12px;color:var(--muted);margin-top:4px">or click to browse &nbsp;·&nbsp; .xlsx, .xls, .csv</div>
+      </div>
+      <input type="file" id="bi-bulk-file" accept=".csv,.xlsx,.xls" style="display:none"
+        onchange="handleBIBulkFile(this.files[0])" />
+      <div id="bi-bulk-preview" style="display:none"></div>
+      <div id="bi-bulk-progress" style="display:none;margin-top:16px"></div>
+    </div>
+  </div>
+</div>
+
 <!-- Modal: Add Script Client -->
 <div class="modal-overlay" id="modal-add-client">
   <div class="modal" style="max-width:460px">
@@ -288,6 +341,6 @@
 <div id="toast"></div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.2/cropper.min.js"></script>
-<script src="admin.js?v=20250523g"></script>
+<script src="admin.js?v=20250524a"></script>
 </body>
 </html>
