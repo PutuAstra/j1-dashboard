@@ -2075,7 +2075,7 @@ function renderBookingLinkCard(link) {
           <button class="btn btn-outline" style="font-size:12px;padding:4px 14px"
             onclick="viewLinkBookings('${link.token}')">View Bookings</button>
           <button class="btn btn-primary" style="font-size:12px;padding:4px 14px"
-            onclick="openBookingInviteModal('${link.token}')">✉ Invite to Book</button>
+            onclick="openBookingInviteModal('${link.token}')">Invite to Book</button>
           <button class="btn btn-ghost" style="font-size:12px;padding:4px 10px"
             onclick="editBookingLink('${link.token}')">Edit</button>
           <button class="btn btn-ghost" style="font-size:12px;padding:4px 10px"
